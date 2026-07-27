@@ -47,6 +47,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:security": "grep -r 'sk-\\|AIza\\|ghp_' src/ && echo '⚠️ 发现硬编码的 API Key！' || echo '✅ 未发现硬编码的 API Key'",
     "lint": "eslint src/**/*.ts",
     "prepublishOnly": "npm run build && npm test"
   },
