@@ -7,14 +7,28 @@
   "keywords": [
     "yijiandaodi",
     "ai-safety",
+    "ai-security",
+    "ai-monitoring",
+    "ai-audit",
     "security-monitor",
     "audit",
     "clipboard-monitor",
     "file-monitor",
-    "sensitive-data-detection"
+    "sensitive-data-detection",
+    "data-leak-prevention",
+    "api-key-detection",
+    "sql-injection-detection",
+    "xss-detection",
+    "security-knowledge-base",
+    "audit-trail",
+    "blockchain-audit",
+    "hash-chain",
+    "tamper-proof",
+    "typescript",
+    "npm-package"
   ],
   "author": "一鉴到底团队",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/yijiandaodi/core.git"
@@ -31,8 +45,10 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build && npm test"
   },
   "dependencies": {
     "axios": "^1.6.2"

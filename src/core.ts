@@ -63,7 +63,7 @@ export class YijianDaoDiCore {
       context: context || '',
       explanation: `检测到${highRisks.length}个高风险，${mediumRisks.length}个中风险`,
       timestamp: new Date().toISOString(),
-      audit_hash: this.generateHash()
+      audit_hash: this.generateAuditHash(content, risks, new Date().toISOString())
     };
 
     // 保存记录
@@ -129,6 +129,62 @@ export class YijianDaoDiCore {
   /**
    * 生成审计哈希
    */
+  /**
+   * 生成审计哈希（链式存证）
+   * 五元组联合哈希：操作指令 + 校验结果 + 确认凭证 + 时间戳 + 前次指纹
+   */
+  private generateAuditHash(content: string, risks: RiskResult[], timestamp: string): string {
+    const crypto = require('crypto');
+    
+    // 获取前一次哈希（链式存证的关键）
+    const previousHash = this.getLastAuditHash();
+    
+    // 五元组
+    const operation = content.substring(0, 100); // 操作指令（截取前100字符）
+    const result = risks.length > 0 ? 'flagged' : 'passed'; // 校验结果
+    const credential = risks.map(r => r.type).join(','); // 确认凭证（风险类型）
+    const time = timestamp; // 时间戳
+    const previous = previousHash || '0000000000000000'; // 前次指纹（首次为0）
+    
+    // 联合哈希
+    const combined = `${operation}|${result}|${credential}|${time}|${previous}`;
+    const hash = crypto.createHash('sha256').update(combined).digest('hex');
+    
+    // 返回16位短哈希（方便展示）
+    return hash.substring(0, 16);
+  }
+  
+  /**
+   * 获取最后一次审计哈希
+   */
+  private getLastAuditHash(): string | null {
+    try {
+      if (!this.storageService) return null;
+      
+      // 使用同步方法获取记录
+      const fs = require('fs');
+      const path = require('path');
+      const operationsFile = path.join(
+        require('os').homedir(),
+        '.yijiandaodi',
+        'data',
+        'operations.json'
+      );
+      
+      if (!fs.existsSync(operationsFile)) return null;
+      
+      const data = fs.readFileSync(operationsFile, 'utf-8');
+      const records: OperationRecord[] = JSON.parse(data);
+      
+      if (records.length === 0) return null;
+      
+      const lastRecord = records[records.length - 1];
+      return lastRecord.audit_hash || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
   private generateHash(): string {
     return `hash-${Date.now()}-${Math.random().toString(36).substring(7)}`;
   }

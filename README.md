@@ -1,9 +1,15 @@
 # 一鉴到底核心库 (yijiandaodi-security-core)
 
-> AI操作行为实时审计和安全监控核心库
+> 🇨🇳 AI操作行为实时审计和安全监控核心库  
+> 🇺🇸 AI Operation Behavior Audit and Security Monitoring Core Library
 
 [![npm version](https://img.shields.io/npm/v/yijiandaodi-security-core.svg)](https://www.npmjs.com/package/yijiandaodi-security-core)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
+
+🔒 **企业级 AI 安全审计解决方案** - 支持敏感信息检测、文件监控、剪贴板监控、链式存证、风险拦截。用于企业安全合规、数据防泄漏、AI Agent 行为审计。
+
+**🔗 相关链接**：[官网](https://yijiandaodi.com) · [文档](https://docs.yijiandaodi.com) · [在线演示](https://demo.yijiandaodi.com)
 
 ## 📖 简介
 
@@ -13,7 +19,45 @@
 - 📁 **文件监控** - 实时监控文件系统，检测文件中的安全风险
 - 📋 **剪贴板监控** - 监控剪贴板内容，防止敏感信息泄露
 - 💾 **数据存储** - 本地存储审计记录，支持导出
+- 🔗 **链式存证** - 基于哈希链的不可篡改审计存证
 - 🛡️ **风险拦截** - 可配置的风险拦截机制
+
+## 🏗️ 架构设计
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    YijianDaoDiCore                      │
+│                   （核心协调层）                          │
+└─────────────────────────────────────────────────────────┘
+                          │
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+        ▼                 ▼                 ▼
+┌─────────────┐   ┌─────────────┐   ┌─────────────┐
+│  Detectors  │   │  Monitors   │   │  Services   │
+│  (检测层)   │   │  (监控层)   │   │  (服务层)   │
+└─────────────┘   └─────────────┘   └─────────────┘
+        │                 │                 │
+        ▼                 ▼                 ▼
+┌─────────────┐   ┌─────────────┐   ┌─────────────┐
+│ Risk        │   │ File        │   │ Storage     │
+│ Detector    │   │ Monitor     │   │ Service     │
+└─────────────┘   └─────────────┘   └─────────────┘
+        │                 │                 │
+        └─────────────────┼─────────────────┘
+                          │
+                          ▼
+              ┌─────────────────────┐
+              │ Security Knowledge  │
+              │ Base (安全知识库)    │
+              └─────────────────────┘
+
+系统流程：
+1. 用户操作 → Monitor 捕获
+2. Detector 检测 → 风险识别
+3. Storage 存储 → 链式存证
+4. Callback 通知 → 外部响应
+```
 
 ## 🚀 快速开始
 
@@ -102,6 +146,56 @@ const records = await core.getRecords();
 const exportPath = await core.exportRecords('json');
 console.log('导出路径:', exportPath);
 ```
+
+## 🔗 链式存证（核心特性）
+
+本库实现了基于哈希链的不可篡改审计存证：
+
+### 技术原理
+
+**五元组联合哈希**：
+```
+hash = SHA256(操作指令 | 校验结果 | 确认凭证 | 时间戳 | 前次指纹)
+```
+
+- **操作指令**：用户操作内容（前100字符）
+- **校验结果**：passed 或 flagged
+- **确认凭证**：检测到的风险类型
+- **时间戳**：ISO 8601 格式
+- **前次指纹**：上一次审计的哈希值（首次为0）
+
+### 链式结构
+
+```typescript
+记录1: hash_1 = SHA256(操作1 | 结果1 | 凭证1 | 时间1 | 000000...)
+记录2: hash_2 = SHA256(操作2 | 结果2 | 凭证2 | 时间2 | hash_1)
+记录3: hash_3 = SHA256(操作3 | 结果3 | 凭证3 | 时间3 | hash_2)
+...
+```
+
+### 验证方法
+
+```typescript
+// 验证哈希链完整性
+const records = core.getRecords();
+for (let i = 1; i < records.length; i++) {
+  const prev = records[i - 1];
+  const curr = records[i];
+  
+  // 重新计算哈希，验证是否匹配
+  const expected = calculateHash(prev.content, prev.risks, curr.timestamp, prev.audit_hash);
+  if (curr.audit_hash !== expected) {
+    console.error('❌ 哈希链断裂，记录可能被篡改！');
+  }
+}
+```
+
+### 安全特性
+
+- ✅ **不可篡改**：任何记录修改都会导致哈希链断裂
+- ✅ **可追溯**：每条记录都链接到前一条记录
+- ✅ **时间证明**：时间戳嵌入哈希计算
+- ✅ **完整性验证**：可验证整个审计链的完整性
 
 ## 📚 API 文档
 
