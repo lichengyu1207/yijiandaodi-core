@@ -18,14 +18,54 @@ export interface OperationRecord {
   audit_hash?: string;
 }
 
+/**
+ * 安全知识库配置
+ */
+export interface SecurityKnowledgeBaseConfig {
+  // SQL 注入规则
+  sqli?: string[];
+  // XSS 规则
+  xss?: string[];
+  // 密码字典
+  passwords?: string[];
+  // API Key 模式
+  apiKeys?: string[];
+  // 敏感关键词
+  sensitive?: string[];
+  // 自定义规则
+  custom?: CustomRule[];
+  // 从文件加载规则
+  loadFromFile?: {
+    sqli?: string;
+    xss?: string;
+    passwords?: string;
+    sensitive?: string;
+  };
+  // 从 URL 加载规则
+  loadFromUrl?: {
+    [key: string]: string;
+  };
+}
+
+/**
+ * 自定义规则
+ */
+export interface CustomRule {
+  name: string;
+  patterns: string[];
+  risk_level: 'low' | 'medium' | 'high';
+  description?: string;
+}
+
 export interface RiskResult {
-  type: 'sqli' | 'xss' | 'password' | 'apikey' | 'sensitive';
+  type: 'sqli' | 'xss' | 'password' | 'apikey' | 'sensitive' | 'custom';
   matched: string;
   risk: 'high' | 'medium' | 'low';
   position?: {
     start: number;
     end: number;
   };
+  description?: string;
 }
 
 export interface MonitorConfig {
