@@ -1,0 +1,151 @@
+.roles-page {
+  padding: 0;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.roles-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.roles-left {
+  flex: 0 0 60%;
+  min-width: 0;
+}
+
+.roles-right {
+  flex: 0 0 calc(40% - 20px);
+  min-width: 0;
+  position: sticky;
+  top: 24px;
+}
+
+.role-table .ant-table-thead > tr > th {
+  background: #FBF9F6 !important;
+  font-weight: 600;
+  color: #2D2A26;
+  border-bottom: 1px solid #E8E4DE;
+}
+
+.role-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #F0EDE7;
+  transition: background-color 0.2s ease;
+}
+
+.role-table .ant-table-tbody > tr:hover > td {
+  background: #FAF8F5 !important;
+}
+
+.role-table .ant-table-tbody > tr.role-row-selected > td {
+  background: #EBF3FB !important;
+}
+
+.role-table .ant-table-tbody > tr.role-row-selected:hover > td {
+  background: #DCEAF7 !important;
+}
+
+.perm-card {
+  border-radius: 6px !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  min-height: 480px;
+}
+
+.perm-card .ant-card-head {
+  border-bottom: 1px solid #E8E4DE;
+  padding: 12px 20px;
+  min-height: auto;
+}
+
+.perm-card .ant-card-head-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2D2A26;
+}
+
+.perm-card .ant-card-body {
+  padding: 16px 20px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.perm-card-empty .ant-card-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+}
+
+.perm-tree-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perm-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+}
+
+.perm-name {
+  font-size: 13px;
+  color: #333;
+}
+
+.perm-tree .ant-tree-node-content-wrapper {
+  border-radius: 4px;
+  padding: 2px 4px;
+  transition: background-color 0.15s ease;
+}
+
+.perm-tree .ant-tree-node-content-wrapper:hover {
+  background: #F5F5F5;
+}
+
+.perm-tree .ant-tree-checkbox-checked .ant-tree-checkbox-inner {
+  background-color: #1A6BA8;
+  border-color: #1A6BA8;
+}
+
+.role-form .ant-form-item-label > label {
+  font-weight: 500;
+  color: #2D2A26;
+}
+
+.role-form .ant-input,
+.role-form .ant-input-number,
+.role-form .ant-select-selector,
+.role-form .ant-input-textarea textarea {
+  border-radius: 6px !important;
+  border-color: #E8E4DE !important;
+}
+
+.role-form .ant-select-focused .ant-select-selector {
+  border-color: #1A6BA8 !important;
+  box-shadow: 0 0 0 2px rgba(26, 107, 168, 0.1) !important;
+}
+
+.role-form .ant-input:focus,
+.role-form .ant-input-number-focused,
+.role-form .ant-input-textarea textarea:focus {
+  border-color: #1A6BA8 !important;
+  box-shadow: 0 0 0 2px rgba(26, 107, 168, 0.1) !important;
+}
+
+.role-form .ant-switch:checked {
+  background-color: #1A6BA8;
+}

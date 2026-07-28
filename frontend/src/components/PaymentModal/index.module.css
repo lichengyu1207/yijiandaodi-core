@@ -1,0 +1,531 @@
+/* ============================================================
+   PaymentModal — 支付弹窗 (Dark Tech Theme)
+   Alipay payment modal with dark sci-fi style
+   ============================================================ */
+
+/* ---------- Modal Container ---------- */
+.paymentModal {
+  :global(.ant-modal-content) {
+    background: linear-gradient(160deg, #111827 0%, #0d1224 100%) !important;
+    border: 1px solid rgba(102, 126, 234, 0.2) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(102, 126, 234, 0.06) !important;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  :global(.ant-modal-header) {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(102, 126, 234, 0.12) !important;
+    border-radius: 16px 16px 0 0 !important;
+    padding: 18px 24px !important;
+  }
+
+  :global(.ant-modal-title) {
+    color: #e0e6f0 !important;
+    font-size: 17px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.3px;
+  }
+
+  :global(.ant-modal-close-x) {
+    color: #7a8599 !important;
+    font-size: 16px !important;
+    width: 48px !important;
+    height: 48px !important;
+    line-height: 48px !important;
+  }
+
+  :global(.ant-modal-body) {
+    padding: 28px 24px !important;
+    color: #c8cfe0 !important;
+  }
+}
+
+/* ---------- Amount Display Section ---------- */
+.amountSection {
+  text-align: center;
+  padding: 20px 0 24px;
+  position: relative;
+}
+
+.amountLabel {
+  font-size: 13px;
+  color: #8892a6;
+  margin-bottom: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.amountValue {
+  font-size: 42px;
+  font-weight: 800;
+  color: #f0f3ff;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.amountCurrency {
+  font-size: 26px;
+  font-weight: 700;
+  color: #86caff;
+}
+
+.amountGlow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 100px;
+  background: radial-gradient(ellipse, rgba(102, 126, 234, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---------- Order Info Section ---------- */
+.orderInfoSection {
+  background: rgba(15, 22, 42, 0.6);
+  border: 1px solid rgba(102, 126, 234, 0.12);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+
+  :global(.ant-descriptions-item-label) {
+    color: #8892a6 !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+  }
+
+  :global(.ant-descriptions-item-content) {
+    color: #d0d8ec !important;
+    font-size: 13px !important;
+  }
+}
+
+.orderInfoTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #b0b8cc;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.orderInfoIcon {
+  color: #667eea;
+  font-size: 14px;
+}
+
+/* ---------- Payment Method Selection ---------- */
+.paymentMethodSection {
+  margin-bottom: 24px;
+}
+
+.paymentMethodTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #b0b8cc;
+  margin-bottom: 14px;
+  letter-spacing: 0.3px;
+}
+
+.paymentMethodList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.paymentMethodItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(15, 22, 42, 0.5);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.paymentMethodItem::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.25s ease;
+}
+
+.paymentMethodItem:hover {
+  border-color: rgba(102, 126, 234, 0.3);
+  background: rgba(20, 28, 52, 0.7);
+}
+
+.paymentMethodItem.selected {
+  border-color: rgba(22, 119, 255, 0.5);
+  background: rgba(22, 119, 255, 0.06);
+  box-shadow: 0 0 20px rgba(22, 119, 255, 0.08);
+}
+
+.paymentMethodItem.selected::before {
+  background: linear-gradient(180deg, #1677FF, #4096ff);
+}
+
+.paymentMethodIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  background: rgba(22, 119, 255, 0.1);
+  color: #1677FF;
+}
+
+.paymentMethodInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.paymentMethodName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #d0d8ec;
+  margin-bottom: 3px;
+}
+
+.paymentMethodDesc {
+  font-size: 11px;
+  color: #6b768c;
+  line-height: 1.4;
+}
+
+.paymentMethodCheck {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #4a5568;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.25s ease;
+}
+
+.paymentMethodItem.selected .paymentMethodCheck {
+  border-color: #1677FF;
+  background: #1677FF;
+}
+
+.paymentMethodCheckIcon {
+  color: #fff;
+  font-size: 11px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.2s ease;
+}
+
+.paymentMethodItem.selected .paymentMethodCheckIcon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Mock payment special styling */
+.paymentMethodItem.mock .paymentMethodIcon {
+  background: rgba(245, 166, 35, 0.1);
+  color: #f5a623;
+}
+
+.paymentMethodItem.mock.selected {
+  border-color: rgba(245, 166, 35, 0.5);
+  background: rgba(245, 166, 35, 0.06);
+  box-shadow: 0 0 20px rgba(245, 166, 35, 0.08);
+}
+
+.paymentMethodItem.mock.selected::before {
+  background: linear-gradient(180deg, #f5a623, #ffc53d);
+}
+
+.paymentMethodItem.mock.selected .paymentMethodCheck {
+  border-color: #f5a623;
+  background: #f5a623;
+}
+
+/* ---------- Device Type Indicator ---------- */
+.deviceIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(102, 126, 234, 0.08);
+  color: #86caff;
+  font-size: 11px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.deviceIndicatorIcon {
+  font-size: 13px;
+}
+
+/* ---------- Pay Button ---------- */
+.payButton {
+  width: 100%;
+  height: 48px !important;
+  border-radius: 12px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  background: #1677FF !important;
+  border: none !important;
+  box-shadow: 0 4px 16px rgba(22, 119, 255, 0.3) !important;
+  transition: all 0.25s ease !important;
+  letter-spacing: 0.5px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.payButton:hover:not(:disabled) {
+  background: #4096ff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(22, 119, 255, 0.45) !important;
+}
+
+.payButton:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.payButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.payButtonIcon {
+  font-size: 18px;
+}
+
+/* ---------- Loading State ---------- */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+  gap: 16px;
+}
+
+.loadingText {
+  font-size: 14px;
+  color: #86caff;
+  font-weight: 500;
+  animation: loadingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.loadingSubText {
+  font-size: 12px;
+  color: #6b768c;
+}
+
+/* ---------- Success State ---------- */
+.successContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+  gap: 16px;
+}
+
+.successIcon {
+  font-size: 56px;
+  color: #00b42a;
+  animation: successPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes successPop {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.successTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #00b42a;
+}
+
+.successDesc {
+  font-size: 13px;
+  color: #8892a6;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.successButton {
+  margin-top: 12px;
+  padding: 8px 28px !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/* ---------- Security Badge ---------- */
+.securityBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0 0;
+  font-size: 12px;
+  color: #5a657a;
+}
+
+.securityBadgeIcon {
+  font-size: 14px;
+  color: #00b42a;
+}
+
+/* ---------- Divider ---------- */
+.sectionDivider {
+  border-color: rgba(102, 126, 234, 0.12) !important;
+  margin: 20px 0 !important;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .paymentModal {
+    :global(.ant-modal) {
+      max-width: calc(100% - 16px) !important;
+      margin: 8px !important;
+      top: 0 !important;
+      max-height: calc(100vh - 16px);
+      overflow-y: auto;
+    }
+
+    :global(.ant-modal-content) {
+      border-radius: 20px !important; /* 大圆角 */
+      overflow: hidden;
+    }
+
+    :global(.ant-modal-header) {
+      padding: 20px 20px 16px !important;
+      border-bottom: none !important;
+    }
+
+    :global(.ant-modal-body) {
+      padding: 0 20px 20px !important;
+    }
+
+    :global(.ant-modal-close) {
+      top: 12px !important;
+      right: 12px !important;
+    }
+  }
+
+  /* 价格大字显示 */
+  .amountSection .amountValue,
+  .amountValue {
+    font-size: 36px !important;
+    font-weight: 800 !important;
+    text-align: center;
+    padding: 16px 0 !important;
+  }
+
+  /* 支付方式选项 */
+  .paymentMethodItem {
+    padding: 16px !important;
+    border-radius: 14px !important;
+    margin-bottom: 10px !important;
+    border: 2px solid transparent !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .paymentMethodItem:active,
+  .paymentMethodItem.selected {
+    border-color: #165DFF !important;
+    background: rgba(22,93,255,0.04) !important;
+  }
+
+  /* 支付按钮 */
+  .payButton {
+    height: 54px !important;
+    border-radius: 27px !important; /* 完全圆角胶囊形 */
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    letter-spacing: 2px !important;
+    margin-top: 16px !important;
+    box-shadow: 0 4px 16px rgba(22,93,255,0.3) !important;
+  }
+
+  .amountSection {
+    padding: 14px 0 18px;
+  }
+
+  .amountCurrency {
+    font-size: 22px;
+  }
+
+  .payButtonIcon {
+    font-size: 20px;
+  }
+
+  .paymentMethodIcon {
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
+  }
+
+  .orderInfoSection {
+    padding: 14px 14px;
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 520px) {
+  .paymentModal {
+    :global(.ant-modal-content) {
+      max-width: calc(100% - 16px);
+      margin: 8px auto;
+      border-radius: 14px !important;
+    }
+
+    :global(.ant-modal-body) {
+      padding: 18px 16px !important;
+    }
+  }
+
+  .amountValue {
+    font-size: 34px;
+  }
+
+  .amountCurrency {
+    font-size: 22px;
+  }
+
+  .paymentMethodItem {
+    padding: 12px 12px;
+  }
+
+  .payButton {
+    height: 50px !important;
+    font-size: 16px !important;
+  }
+}

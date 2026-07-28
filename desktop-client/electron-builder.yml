@@ -1,0 +1,19 @@
+appId: com.yijiandaodi.desktop
+productName: 一鉴到底算力节点
+
+directories:
+  output: release
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+
+win:
+  target:
+    - nsis
+  icon: assets/icon.ico
+
+mac:
+  target:
+    - dmg
+  icon: assets/icon.icns

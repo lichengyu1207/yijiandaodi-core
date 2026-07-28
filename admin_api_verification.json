@@ -1,0 +1,30 @@
+{
+  "database_connection": {
+    "status": "PASS",
+    "message": "数据库连接正常，用户数: 13",
+    "user_count": 13
+  },
+  "admin_user_exists": {
+    "status": "PASS",
+    "message": "管理员用户存在: admin",
+    "username": "admin",
+    "is_staff": true,
+    "is_superuser": true
+  },
+  "admin_login": {
+    "status": "FAIL",
+    "message": "管理员登录失败，请检查密码"
+  },
+  "admin_api_routes": {
+    "status": "FAIL",
+    "message": "管理员路由异常，状态码: 400"
+  },
+  "frontend_api_config": {
+    "status": "PASS",
+    "message": "前端API配置正确"
+  },
+  "data_synchronization": {
+    "status": "ERROR",
+    "message": "数据同步验证失败: no such table: auth_app_extensionsession"
+  }
+}

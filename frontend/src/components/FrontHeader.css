@@ -1,0 +1,28 @@
+/* 前台顶部导航 - 三重保险：Portal + useLayoutEffect + CSS属性选择器 */
+header[data-front-header] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 99999 !important;
+  /* 不用 100vw（移动端含滚动条会溢出），用 left:0+right:0 自动撑满 */
+}
+
+/* 前台内容区 - 预留导航高度 */
+.front-layout-main {
+  padding-top: 72px !important;
+  min-height: calc(100vh - 72px) !important;
+}
+
+/* 移动端底部TabBar样式 */
+.mobile-tab-bar {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* 移动端有TabBar时，主内容区预留底部空间 */
+@media (max-width: 768px) {
+  .front-layout-main {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom)) !important;
+  }
+}

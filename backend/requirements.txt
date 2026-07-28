@@ -1,0 +1,36 @@
+# ============================================================
+# 一鉴到底 - 后端依赖清单
+# 安装: pip install -r requirements.txt
+# ============================================================
+
+# --- 核心框架 ---
+Django==4.2.16
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.3.1
+
+# --- 数据库 ---
+psycopg2-binary==2.9.9          # PostgreSQL 驱动（生产环境）
+
+# --- 跨域 & 安全 ---
+django-cors-headers==4.4.0
+
+# --- 配置管理 ---
+python-dotenv==1.2.2             # .env 文件加载
+python-decouple==3.8
+
+# --- WSGI 服务器（生产）---
+gunicorn==22.0.0
+
+# --- 异步支持（Channels）---
+channels>=4.0.0
+# channels-redis>=4.1.0         # 生产环境 Redis Channel Layer（取消注释启用）
+
+# --- 支付宝支付 ---
+alipay-sdk-python>=3.7.0        # 支付宝开放平台 SDK
+
+# --- 图片处理（可选，用于缩略图）---
+# Pillow>=10.0.0                # 取消注释如需图片处理
+
+# --- 开发工具 ---
+# pytest-django>=4.5.0           # 取消注释用于测试
+# black>=23.0.0                  # 取消注释用于代码格式化

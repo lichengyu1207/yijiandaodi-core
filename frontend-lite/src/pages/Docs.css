@@ -1,0 +1,132 @@
+/* 文档页面样式 */
+
+.docs-page {
+  min-height: 100vh;
+  background: #0f172a;
+  color: #fff;
+}
+
+.docs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.docs-header .logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #fff;
+}
+
+.docs-header .logo img {
+  width: 32px;
+  height: 32px;
+}
+
+.docs-header .logo span {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.docs-header nav {
+  display: flex;
+  gap: 32px;
+}
+
+.docs-header nav a {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.docs-header nav a:hover,
+.docs-header nav a.active {
+  color: #fff;
+}
+
+.docs-container {
+  display: flex;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.docs-sidebar {
+  width: 240px;
+  padding: 40px 20px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-item {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 4px;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-item.active {
+  background: rgba(22, 93, 255, 0.2);
+  color: #165DFF;
+}
+
+.docs-content {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+}
+
+.markdown pre {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.docs-footer {
+  padding: 24px 40px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.docs-footer p {
+  margin: 0 0 8px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+}
+
+.docs-footer .icp-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.docs-footer .icp-info a {
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.docs-footer .icp-info a:hover {
+  color: #fff;
+}
+
+.docs-footer .divider {
+  color: rgba(255, 255, 255, 0.3);
+}

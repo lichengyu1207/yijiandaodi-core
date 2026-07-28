@@ -1,0 +1,46 @@
+.settings-page {
+  padding: 0;
+}
+
+.settings-card .ant-card-head-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.config-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 10px 0;
+  border-bottom: 1px solid #F0EDE7;
+}
+
+.config-item:last-child {
+  border-bottom: none;
+}
+
+.config-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+}
+
+.config-key {
+  font-size: 14px;
+  color: #2D2A26;
+  font-weight: 500;
+}
+
+.config-desc {
+  font-size: 12px;
+  color: #B8B3AC;
+  font-family: monospace;
+}

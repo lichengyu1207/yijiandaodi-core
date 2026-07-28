@@ -1,0 +1,50 @@
+.content-articles-page {
+  padding: 0;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.article-table .ant-table-thead > tr > th {
+  background: #FBF9F6 !important;
+  font-weight: 600;
+  color: #2D2A26;
+  border-bottom: 1px solid #E8E4DE;
+}
+
+.article-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #F0EDE7;
+}
+
+.article-table .ant-table-tbody > tr:hover > td {
+  background: #FAF8F5 !important;
+}
+
+.article-editor-wrapper {
+  background: #FFFFFF;
+  border: 1px solid #E8E4DE;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.article-editor-form .ant-form-item-label > label {
+  font-weight: 500;
+  color: #2D2A26;
+}
+
+.editor-toolbar {
+  border: 1px solid #E8E4DE;
+  border-radius: 6px 6px 0 0;
+  background: #FBF9F6;
+}
+
+.editor-container {
+  border: 1px solid #E8E4DE;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  overflow: hidden;
+}

@@ -1,0 +1,106 @@
+.users-page {
+  padding: 0;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.page-header .ant-typography {
+  font-weight: 600;
+  color: #2D2A26;
+  white-space: nowrap;
+}
+
+.user-table .ant-table-thead > tr > th {
+  background: #FBF9F6 !important;
+  font-weight: 600;
+  color: #2D2A26;
+  border-bottom: 1px solid #E8E4DE;
+}
+
+.user-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #F0EDE7;
+}
+
+.user-table .ant-table-tbody > tr:hover > td {
+  background: #FAF8F5 !important;
+}
+
+.user-form .ant-form-item-label > label {
+  font-weight: 500;
+  color: #2D2A26;
+}
+
+.user-form .ant-select-selector,
+.user-form .ant-input,
+.user-form .ant-input-password {
+  border-color: #E8E4DE !important;
+  border-radius: 6px !important;
+}
+
+.user-form .ant-select-focused .ant-select-selector,
+.user-form .ant-input:focus,
+.user-form .ant-input-affix-wrapper-focused,
+.user-form .ant-input-password:focus-within {
+  border-color: #1A6BA8 !important;
+  box-shadow: 0 0 0 2px rgba(26, 107, 168, 0.1) !important;
+}
+
+.user-form .ant-switch {
+  background: #d9d9d9;
+}
+
+.user-form .ant-switch-checked {
+  background: #389e0d;
+}
+
+.page-header .ant-input-search .ant-input {
+  border-radius: 6px;
+  border-color: #E8E4DE;
+  font-size: 13px;
+}
+
+.page-header .ant-input-search .ant-input:focus,
+.page-header .ant-input-search .ant-input:hover {
+  border-color: #1A6BA8;
+}
+
+.page-header .ant-select .ant-select-selector {
+  border-radius: 6px !important;
+  border-color: #E8E4DE !important;
+  min-height: 32px;
+  font-size: 13px;
+}
+
+.page-header .ant-select:hover .ant-select-selector {
+  border-color: #1A6BA8 !important;
+}
+
+.page-header .ant-btn-primary {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.page-header .ant-btn-default {
+  border-radius: 6px;
+}
+
+.ant-avatar {
+  flex-shrink: 0;
+}
+
+.user-table .ant-tag {
+  border-radius: 4px;
+  font-size: 12px;
+  margin-inline-end: 0;
+}
+
+.user-table .ant-space-item:last-child .ant-tag {
+  margin-inline-end: 0;
+}

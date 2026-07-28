@@ -1,0 +1,301 @@
+﻿node.exe : [2m19:54:53[22m [33m[1m[vite][22m[39m [33mwarning: `esbuild` 
+option was specified by "vite:react-babel" plugin. This option is deprecated, p
+lease use `oxc` instead.[39m
+所在位置 行:1 字符: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([2m19:54:53[2...` instead.[39m 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[2m19:54:53[22m [33m[1m[vite][22m[39m [33mwarning: `optimizeDeps.esbuild
+Options` option was specified by "vite:react-babel" plugin. This option is depr
+ecated, please use `optimizeDeps.rolldownOptions` instead.[39m
+[33mBoth esbuild and oxc options were set. oxc options will be used and esbuil
+d options will be ignored.[39m The following esbuild options were set: `{ jsx:
+ 'automatic', jsxImportSource: undefined }`
+
+ RUN  v4.1.8 C:/MsSafeData/Desktop/yijiandaodi/frontend
+
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > getQuotaData / incrementQuota / getRemainingQuota > 鍒濆 getQuotaData 杩斿洖 used=0, date=today 5ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > getQuotaData / incrementQuota / getRemainingQuota > 涓嶅悓鏃ユ湡鑷姩閲嶇疆 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > getQuotaData / incrementQuota / getRemainingQuota > incrementQuota 浣?used+1 骞惰繑鍥炴纭殑 used/remaining 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > getQuotaData / incrementQuota / getRemainingQuota > getRemainingQuota 杩斿洖 DAILY_LIMIT - used 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > getQuotaData / incrementQuota / getRemainingQuota > incrementQuota 杩炵画浣跨敤鍚?remaining 姝ｇ‘閫掑噺 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > getQuotaData / incrementQuota / getRemainingQuota > getRemainingQuota 涓嶄細灏忎簬 0 2ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > saveSessions / loadSessions > saveSessions 淇濆瓨鏁扮粍 3ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > saveSessions / loadSessions > loadSessions 杩斿洖淇濆瓨鐨勬暟缁?1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > saveSessions / loadSessions > saveSessions(null/闈炴暟缁? 鎶涘嚭 Error 5ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > saveSessions / loadSessions > 鏃犳暟鎹椂 loadSessions 杩斿洖 null 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > addToOfflineQueue / getOfflineQueue / clearOfflineQueue / removeOfflineAction > addToOfflineQueue 娣诲姞 action 鍒伴槦鍒?1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > addToOfflineQueue / getOfflineQueue / clearOfflineQueue / removeOfflineAction > action 鑷姩鑾峰緱 id 鍜?createdAt 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > addToOfflineQueue / getOfflineQueue / clearOfflineQueue / removeOfflineAction > 鏃犳晥 type 鎶涘嚭 Error 2ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > addToOfflineQueue / getOfflineQueue / clearOfflineQueue / removeOfflineAction > getOfflineQueue 杩斿洖闃熷垪鏁扮粍 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > addToOfflineQueue / getOfflineQueue / clearOfflineQueue / removeOfflineAction > clearOfflineQueue 娓呯┖闃熷垪 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > addToOfflineQueue / getOfflineQueue / clearOfflineQueue / removeOfflineAction > removeOfflineAction 鍒犻櫎鎸囧畾 id 鐨勯」锛岃繑鍥?true; 涓嶅瓨鍦ㄨ繑鍥?false 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > cacheInferenceResult / getCachedInference / clearInferenceCache > cacheInferenceResult 缂撳瓨缁撴灉 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > cacheInferenceResult / getCachedInference / clearInferenceCache > getCachedInference 杩斿洖缂撳瓨鐨勭粨鏋?1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > cacheInferenceResult / getCachedInference / clearInferenceCache > 绌?key 鎴栭潪瀛楃涓?key getCachedInference 杩斿洖 null 0ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > cacheInferenceResult / getCachedInference / clearInferenceCache > 绌?key 鎴栭潪瀛楃涓?key cacheInferenceResult 鎶涢敊 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > cacheInferenceResult / getCachedInference / clearInferenceCache > ttlMinutes <= 0 鎶涘嚭 Error 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > cacheInferenceResult / getCachedInference / clearInferenceCache > 杩囨湡缂撳瓨杩斿洖 null 骞惰娓呴櫎 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > savePreference / getPreference / removePreference / getAllPreferences > savePreference + getPreference 寰€杩斾竴鑷?1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > savePreference / getPreference / removePreference / getAllPreferences > getPreference 涓嶅瓨鍦ㄧ殑 key 杩斿洖 undefined 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > savePreference / getPreference / removePreference / getAllPreferences > getPreference 鏀寔榛樿鍊?0ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > savePreference / getPreference / removePreference / getAllPreferences > removePreference 鍒犻櫎鍋忓ソ璁剧疆 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > savePreference / getPreference / removePreference / getAllPreferences > getAllPreferences 杩斿洖鍏ㄩ儴鍋忓ソ 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > getStorageStats / clearAllPlatformData > getStorageStats 杩斿洖 itemCount 鍜?usedBytes 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > getStorageStats / clearAllPlatformData > getStorageStats 缁熻宸叉湁鏁版嵁 1ms
+ 鉁?src/tests/test_enhancedStorage.ts > enhancedStorage > getStorageStats / clearAllPlatformData > clearAllPlatformData 娓呴櫎鎵€鏈夋暟鎹?1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > login > 璋冪敤 request.post("/auth/login/", data)锛岄獙璇?URL 鍜屽弬鏁颁紶閫?8ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > register > 璋冪敤 request.post("/auth/register/", data) 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > getUserInfo > 璋冪敤 request.get("/auth/userinfo/") 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > getSystemStatus > 璋冪敤 request.get("/auth/system-status/") 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > logout > 璋冪敤 request.post("/auth/logout/") 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > getUsers > 璋冪敤 request.get("/auth/users/")锛屾敮鎸?params 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > getUsers > 涓嶄紶 params 鏃?params 涓?undefined 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > updateUser > 璋冪敤 request.put(`/auth/users/${id}/`)锛岄獙璇?ID 鎷兼帴 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > getLoginLogs > 璋冪敤 request.get("/auth/login-logs/") 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > changePassword > 璋冪敤 request.put("/auth/change-password/", data) 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > 鎺ュ彛瀹屾暣鎬?> 鎵€鏈?9 涓柟娉曢兘瀛樺湪涓斾负 function 绫诲瀷 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > login 鎴愬姛鍦烘櫙 > mock 杩斿洖 token / user / expires_in 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > authApi > login 澶辫触鍦烘櫙 > mock reject 楠岃瘉閿欒浼犳挱 3ms
+ 鉁?src/tests/test_auth_workflow_api.ts > workflowApi > getWorkflows > 璋冪敤 GET /workflows/锛屾敮鎸?params 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > workflowApi > getWorkflowDetail > 璋冪敤 GET /workflows/${id}/ 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > workflowApi > saveWorkflowGraph > 璋冪敤 POST /workflows/save-graph/锛岄獙璇?nodes/edges 鏁版嵁 3ms
+ 鉁?src/tests/test_auth_workflow_api.ts > workflowApi > publishWorkflow > 璋冪敤 POST /workflows/${id}/publish/ 1ms
+ 脳 src/tests/test_auth_workflow_api.ts > workflowApi > executeWorkflow > 璋冪敤 POST /workflows/${id}/execute/ 18ms
+   鈫?expected "vi.fn()" to be called with arguments: [ '/workflows/wf-42 execute/', 鈥?1) ]
+
+Received:
+
+  1st vi.fn() call:
+
+@@ -1,7 +1,7 @@
+  [
+-   "/workflows/wf-42 execute/",
++   "/workflows/wf-42/execute/",
+    {
+      "inputs": {
+        "input_text": "hello",
+      },
+    },
+
+
+Number of calls: 1
+
+ 鉁?src/tests/test_auth_workflow_api.ts > workflowApi > duplicateWorkflow > 璋冪敤 POST /workflows/duplicate/ 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > workflowApi > getWorkflowTemplates > 璋冪敤 GET /workflows/templates/ 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > workflowApi > getExecutions > 璋冪敤 GET /executions/ 2ms
+ 鉁?src/tests/test_auth_workflow_api.ts > workflowApi > stopExecution > 璋冪敤 POST /executions/${id}/stop/ 1ms
+ 鉁?src/tests/test_auth_workflow_api.ts > workflowApi > 鎺ュ彛瀹屾暣鎬?> 鎵€鏈?9 涓鍑哄嚱鏁?+ default export 閮藉瓨鍦?1ms
+ 脳 src/tests/test_auth_workflow_api.ts > workflowApi > baseURL 閰嶇疆 > verify axios.create was called with baseURL="/api/workflow" 2ms
+   鈫?expected "vi.fn()" to be called at least once
+ 脳 src/tests/test_auth_workflow_api.ts > workflowApi > 璇锋眰鎷︽埅鍣?> token 娉ㄥ叆閫昏緫锛堥€氳繃妫€鏌?interceptors.request.use 琚皟鐢級 1ms
+   鈫?expected "vi.fn()" to be called at least once
+ 脳 src/tests/test_auth_workflow_api.ts > workflowApi > 璇锋眰鎷︽埅鍣?> 鍝嶅簲鎷︽埅鍣ㄥ凡娉ㄥ唽 1ms
+   鈫?expected "vi.fn()" to be called at least once
+ 鉁?src/tests/test_quotaManager.ts > quotaManager > getQuotaInfo > 鍒濆鐘舵€? used=0, remaining=10, limit=10, isFreeUser=true 6ms
+ 鉁?src/tests/test_quotaManager.ts > quotaManager > getQuotaInfo > resetInHours = 24 - 褰撳墠灏忔椂鏁?(鍦ㄥ悎鐞嗚寖鍥村唴) 1ms
+ 鉁?src/tests/test_quotaManager.ts > quotaManager > getQuotaInfo > 璋冪敤 useQuota 鍚?used 澧炲姞 1, remaining 鍑忓皯 1 1ms
+ 鉁?src/tests/test_quotaManager.ts > quotaManager > getQuotaInfo > 璺ㄦ棩鏈熻嚜鍔ㄩ噸缃? 璁剧疆鏃х殑 quota_date 鍚庤皟鐢?getQuotaInfo锛寀sed 閲嶇疆涓?0 1ms
+ 鉁?src/tests/test_quotaManager.ts > quotaManager > getQuotaInfo > DAILY_FREE_LIMIT=10 鏄浐瀹氬€?1ms
+ 鉁?src/tests/test_quotaManager.ts > quotaManager > getQuotaInfo > 杩斿洖瀵硅薄鍖呭惈鎵€鏈夊繀闇€瀛楁 (used/remaining/limit/isFreeUser/resetInHours) 3ms
+ 鉁?src/tests/test_quotaManager.ts > quotaManager > useQuota > 鏈夊墿浣欓厤棰濇椂杩斿洖 true锛屼笖 used 澧炲姞 1 1ms
+ 鉁?src/tests/test_quotaManager.ts > quotaManager > useQuota > 閰嶉鑰楀敖鏃惰繑鍥?false锛寀sed 涓嶅啀澧炲姞 1ms
+ 鉁?src/tests/test_quotaManager.ts > quotaManager > useQuota > 杩炵画浣跨敤 10 娆″悗绗?11 娆¤繑鍥?false 2ms
+ 鉁?src/tests/test_quotaManager.ts > quotaManager > resetQuota > 璋冪敤鍚?used 閲嶇疆涓?0 1ms
+ 鉁?src/tests/test_quotaManager.ts > quotaManager > resetQuota > resetQuota 鍚?useQuota 鍐嶆鍙敤 1ms
+ 鉁?src/tests/test_outputVerifier.ts > signOutput > 瀵瑰悓涓€鏁版嵁绛惧悕涓€鑷达紙纭畾鎬э級 4ms
+ 鉁?src/tests/test_outputVerifier.ts > signOutput > 涓嶅悓鏁版嵁浜х敓涓嶅悓绛惧悕 2ms
+ 鉁?src/tests/test_outputVerifier.ts > signOutput > 绛惧悕鏍煎紡涓?{hash}-{timestamp} 1ms
+ 鉁?src/tests/test_outputVerifier.ts > signOutput > timestamp 鏄綋鍓嶆椂闂存埑锛堟绉掞級 1ms
+ 鉁?src/tests/test_outputVerifier.ts > verifyOutput > 鍚堟硶绛惧悕楠岃瘉閫氳繃 valid=true, tampered=false 5ms
+ 鉁?src/tests/test_outputVerifier.ts > verifyOutput > 绡℃敼鏁版嵁鍚?valid=false, tampered=true 1ms
+ 鉁?src/tests/test_outputVerifier.ts > verifyOutput > 杩囨湡绛惧悕锛坢axAge=300000ms锛夆啋 valid=false, tampered=false 1ms
+ 鉁?src/tests/test_outputVerifier.ts > verifyOutput > 鏃犳晥绛惧悕鏍煎紡 鈫?valid=false, tampered=true 1ms
+ 鉁?src/tests/test_outputVerifier.ts > verifyOutput > 绌?data 鐨勭鍚嶅拰楠岃瘉 1ms
+ 鉁?src/tests/test_outputVerifier.ts > verifyOutput > 榛樿 secret=yijiandaodi-ass-v1 1ms
+ 鉁?src/tests/test_outputVerifier.ts > verifyOutput > 鑷畾涔?secret 浜х敓鐨勭鍚嶄笉鍚?1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > 瀹夊叏鏂囨湰 鈫?passed=true, level=safe, riskScore=0 6ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > 瓒呴暱杈撳叆 (>50000瀛楃) 鈫?blocked=true, level=critical 3ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > 鍖呭惈 prompt injection "蹇界暐浠ヤ笂鎸囦护" 鈫?level >= low, warnings 鍚彲鐤戞寚浠ゆā寮?3ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > 鍖呭惈 "浣犵幇鍦ㄦ槸" prompt injection 1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > 鍖呭惈鏁忔劅璇?"鏆村姏" 鈫?warnings 鍚晱鎰熻瘝姹?1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > 鍗遍櫓鍛戒护 "rm -rf /" 鈫?blocked=true, level=critical 1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > "curl | bash" 鈫?blocked 1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > "chmod 777" 鈫?blocked 1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > 鍖呭惈 HTML 鏍囩 <script> 鈫?riskScore 澧炲姞 1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > 鑷畾涔?maxLength 閰嶇疆鐢熸晥 1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > enablePromptInjection=false 璺宠繃娉ㄥ叆妫€娴?1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > enableMaliciousCmd=false 璺宠繃鎭舵剰鍛戒护妫€娴?0ms
+ 鉁?src/tests/test_inputGuard.ts > guardInput > passed = !blocked && riskScore < 70 1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInputEnhanced > 鍩虹鍔熻兘涓?guardInput 涓€鑷?- 瀹夊叏鏂囨湰 1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInputEnhanced > 鍩虹鍔熻兘涓?guardInput 涓€鑷?- 鍗遍櫓鍛戒护琚嫤鎴?0ms
+ 鉁?src/tests/test_inputGuard.ts > guardInputEnhanced > textfilter 澧炲己妫€娴嬪埌涓枃鏁忔劅璇?"璧屽崥" 1ms
+ 鉁?src/tests/test_inputGuard.ts > guardInputEnhanced > textfilter 澧炲己妫€娴嬪埌涓枃鏁忔劅璇?"鑹叉儏" 0ms
+ 鉁?src/tests/test_inputGuard.ts > guardInputEnhanced > textfilter 澧炲己妫€娴嬪埌涓枃鏁忔劅璇?"璇堥獥" 0ms
+ 鉁?src/tests/test_inputGuard.ts > guardInputEnhanced > 杩斿洖缁撴灉鍖呭惈 textfilter 鐩稿叧 warning 0ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > 鎺ュ彛绫诲瀷妫€鏌?> 鎵€鏈夋柟娉曞瓨鍦ㄤ笖涓哄嚱鏁?8ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > submit > 璋冪敤 request.post 骞朵紶鍏ユ纭殑 URL 鍜屽弬鏁?4ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > getStatus > 璋冪敤 request.get 涓?taskId 鍦?URL 涓?1ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > getSummary > 杩斿洖鎽樿缁熻鏁版嵁 1ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > getList > 甯?params 鐨勮姹傛纭紶閫掓煡璇㈠弬鏁?1ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > getList > 涓嶅甫 params 鏃朵篃鑳芥甯歌皟鐢?1ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > cancel > 璋冪敤 request.post 鍙栨秷浠诲姟 1ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > getAuditLogs > 鑾峰彇瀹¤鏃ュ織 1ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > 閿欒澶勭悊 > request 鎶涘嚭寮傚父鏃?submit 姝ｇ‘浼犳挱閿欒 4ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > 閿欒澶勭悊 > request 鎶涘嚭寮傚父鏃?getStatus 姝ｇ‘浼犳挱閿欒 1ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > 閿欒澶勭悊 > request 鎶涘嚭寮傚父鏃?getSummary 姝ｇ‘浼犳挱閿欒 1ms
+ 鉁?src/tests/test_executionApi.ts > executionApi > 閿欒澶勭悊 > request 鎶涘嚭寮傚父鏃?cancel 姝ｇ‘浼犳挱閿欒 1ms
+ 鉁?src/tests/test_dataMask.ts > maskSensitiveData > 鎵嬫満鍙疯劚鏁?6ms
+ 鉁?src/tests/test_dataMask.ts > maskSensitiveData > 韬唤璇佸彿鑴辨晱 2ms
+ 鉁?src/tests/test_dataMask.ts > maskSensitiveData > 閾惰鍗¤劚鏁?1ms
+ 鉁?src/tests/test_dataMask.ts > maskSensitiveData > Email 鑴辨晱 1ms
+ 鉁?src/tests/test_dataMask.ts > maskSensitiveData > IP 鍦板潃鑴辨晱 1ms
+ 鉁?src/tests/test_dataMask.ts > maskSensitiveData > 瀵嗙爜鑴辨晱锛堥渶瑕佸啋鍙峰垎闅旂锛?1ms
+ 鉁?src/tests/test_dataMask.ts > maskSensitiveData > API Key 鑴辨晱锛堥渶瑕佸啋鍙峰垎闅旂锛?1ms
+ 鉁?src/tests/test_dataMask.ts > maskSensitiveData > 澶氱绫诲瀷鍚屾椂鍑虹幇鏃跺叏閮ㄨ劚鏁?1ms
+ 鉁?src/tests/test_dataMask.ts > maskSensitiveData > 鏃犳晱鎰熸暟鎹椂 masked === original, maskCount=0 1ms
+ 鉁?src/tests/test_dataMask.ts > maskSensitiveData > enabledTypes 鍙傛暟闄愬埗鍙劚鏁忔寚瀹氱被鍨?1ms
+ 鉁?src/tests/test_dataMask.ts > maskSensitiveData > 涓枃濮撳悕鑴辨晱 2ms
+ 鉁?src/tests/test_dataMask.ts > getMaskStats > 缁熻鍚勭被鍨嬭劚鏁忔暟閲?1ms
+ 鉁?src/tests/test_dataMask.ts > getMaskStats > 鏃犺劚鏁忔椂杩斿洖绌哄璞?0ms
+ 鉁?src/tests/test_contextManager.ts > contextManager > 鍒濆鐘舵€? 鏃?session, getTurns 杩斿洖绌烘暟缁?5ms
+ 鉁?src/tests/test_contextManager.ts > contextManager > addTurn 鍚?turnCount 澧炲姞 1ms
+ 鉁?src/tests/test_contextManager.ts > contextManager > getTurns 杩斿洖姝ｇ‘鏁伴噺鐨?turns 3ms
+ 鉁?src/tests/test_contextManager.ts > contextManager > getTotalTokens 姝ｇ‘璁＄畻 token 鏁伴噺 1ms
+ 鉁?src/tests/test_contextManager.ts > contextManager > shouldCompress: 灏戜簬6杞繑鍥?false 1ms
+ 鉁?src/tests/test_contextManager.ts > contextManager > clearSession 娓呯┖浼氳瘽鏁版嵁 1ms
+ 鉁?src/tests/test_contextManager.ts > contextManager > getAllSessions 杩斿洖宸插垱寤虹殑 session ID 鍒楄〃 1ms
+ 鉁?src/tests/test_contextManager.ts > contextManager > onCompressed 鍥炶皟娉ㄥ唽鍜屾敞閿€ 1ms
+ 鉁?src/tests/test_contextManager.ts > contextManager > getSessionStats 杩斿洖姝ｇ‘缁熻淇℃伅 1ms
+ 鉁?src/tests/test_contextManager.ts > contextManager > buildMessagesForApi 鏋勫缓姝ｇ‘鐨勬秷鎭暟缁勶紙鍖呭惈 system prompt + 鍘嗗彶锛?2ms
+ 鉁?src/tests/test_contextManager.ts > renderMindMapToText > 鏍硅妭鐐规覆鏌撲负 label + 鎹㈣ 1ms
+ 鉁?src/tests/test_contextManager.ts > renderMindMapToText > 瀛愯妭鐐瑰甫缂╄繘鍓嶇紑 0ms
+ 鉁?src/tests/test_contextManager.ts > renderMindMapToText > 澶氬眰宓屽姝ｇ‘缂╄繘 1ms
+ 鉁?src/tests/test_browserInference.ts > browserInference > getInferenceStatus > 鍒濆鐘舵€? loading=true, progress=0, modelLoaded=false, modelName='', error=null 92ms
+ 鉁?src/tests/test_browserInference.ts > browserInference > getInferenceStatus > 杩斿洖绫诲瀷鍖呭惈鎵€鏈夊瓧娈?3ms
+ 鉁?src/tests/test_browserInference.ts > browserInference > getInferenceStatus > loading 鍦ㄦ病鏈変换浣?pipeline 鏃朵负 true 0ms
+ 鉁?src/tests/test_browserInference.ts > browserInference > getInferenceStatus > 澶氭璋冪敤缁撴灉涓€鑷?4ms
+ 鉁?src/tests/test_browserInference.ts > browserInference > disposeAllPipelines > 鏃犳ā鍨嬫椂璋冪敤涓嶆姤閿?2ms
+ 鉁?src/tests/test_browserInference.ts > browserInference > disposeAllPipelines > 杩斿洖 undefined 1ms
+ 鉁?src/tests/test_browserInference.ts > browserInference > 妯″瀷鏈姞杞芥椂鐨勯敊璇祴璇?> classifyText 鏈姞杞芥椂鎶涘嚭 "鍒嗙被妯″瀷鏈姞杞? 2ms
+ 鉁?src/tests/test_browserInference.ts > browserInference > 妯″瀷鏈姞杞芥椂鐨勯敊璇祴璇?> extractEntities 鏈姞杞芥椂鎶涘嚭 "NER妯″瀷鏈姞杞? 1ms
+ 鉁?src/tests/test_browserInference.ts > browserInference > 妯″瀷鏈姞杞芥椂鐨勯敊璇祴璇?> zeroShotClassify 鏈姞杞芥椂鎶涘嚭 "闆舵牱鏈ā鍨嬫湭鍔犺浇" 1ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > 绉婚櫎 <script> 鏍囩鍙婂叾鍐呭 6ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > 绉婚櫎 <iframe> 鏍囩鍙婂叾鍐呭 1ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > 绉婚櫎鍗遍櫓鏍囩: object, embed, style, link, base, meta 2ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > 绉婚櫎浜嬩欢澶勭悊鍣?onclick 1ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > 绉婚櫎 javascript: 鍗忚 0ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > 绉婚櫎 vbscript: 鍗忚 0ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > 绉婚櫎 data:text/html 鍗忚 0ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > 淇濈暀瀹夊叏鐨?HTML 鍐呭 - p 鏍囩 0ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > 淇濈暀瀹夊叏鐨?HTML 鍐呭 - div 鏍囩甯?class 0ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > 绌哄瓧绗︿覆杈撳叆杩斿洖绌哄瓧绗︿覆 0ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > null 杈撳叆杩斿洖绌哄瓧绗︿覆 0ms
+ 鉁?src/tests/test_sanitize.ts > sanitizeHTML > undefined 杈撳叆杩斿洖绌哄瓧绗︿覆 0ms
+
+鈳幆鈳幆鈳幆 Failed Suites 1 鈳幆鈳幆鈳幆鈳?
+ FAIL  src/tests/test_pyodideSandbox.ts [ src/tests/test_pyodideSandbox.ts ]
+Error: Failed to resolve import "pyodide" from "src/utils/pyodideSandbox.ts". D
+oes the file exist?
+  Plugin: vite:import-analysis
+  File: C:/MsSafeData/Desktop/yijiandaodi/frontend/src/utils/pyodideSandbox.ts:
+82:29
+  49 |  	// 鏂瑰紡2: 鍔ㄦ€?import锛堝鏋滀綔涓?npm 鍖呭畨瑁咃級
+  50 |  	try {
+  51 |  		const mod = await import("pyodide");
+     |                             ^
+  52 |  		return mod.loadPyodide;
+  53 |  	} catch {}
+ 鉂?TransformPluginContext._formatLog node_modules/vitest/node_modules/vite/dist
+/node/chunks/node.js:30602:39
+ 鉂?TransformPluginContext.error node_modules/vitest/node_modules/vite/dist/node
+/chunks/node.js:30599:14
+ 鉂?normalizeUrl node_modules/vitest/node_modules/vite/dist/node/chunks/node.js:
+27842:18
+ 鉂?node_modules/vitest/node_modules/vite/dist/node/chunks/node.js:27905:30
+ 鉂?TransformPluginContext.transform node_modules/vitest/node_modules/vite/dist/
+node/chunks/node.js:27873:4
+ 鉂?EnvironmentPluginContainer.transform node_modules/vitest/node_modules/vite/d
+ist/node/chunks/node.js:30387:14
+ 鉂?loadAndTransform node_modules/vitest/node_modules/vite/dist/node/chunks/node
+.js:24646:26
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[1/5]鈳?
+
+鈳幆鈳幆鈳幆鈳?Failed Tests 4 鈳幆鈳幆鈳幆鈳?
+ FAIL  src/tests/test_auth_workflow_api.ts > workflowApi > executeWorkflow > 璋冪
+敤 POST /workflows/${id}/execute/
+AssertionError: expected "vi.fn()" to be called with arguments: [ '/workflows/w
+f-42 execute/', 鈥?1) ]
+
+Received:
+
+  1st vi.fn() call:
+
+@@ -1,7 +1,7 @@
+  [
+-   "/workflows/wf-42 execute/",
++   "/workflows/wf-42/execute/",
+    {
+      "inputs": {
+        "input_text": "hello",
+      },
+    },
+
+
+Number of calls: 1
+
+ 鉂?src/tests/test_auth_workflow_api.ts:309:24
+    307|       await executeWorkflow('wf-42', { input_text: 'hello' });
+    308|
+    309|       expect(mockPost).toHaveBeenCalledWith('/workflows/wf-42 execute/
+鈥?       |                        ^
+    310|     });
+    311|   });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[2/5]鈳?
+ FAIL  src/tests/test_auth_workflow_api.ts > workflowApi > baseURL 閰嶇疆 > verify
+ axios.create was called with baseURL="/api/workflow"
+AssertionError: expected "vi.fn()" to be called at least once
+ 鉂?src/tests/test_auth_workflow_api.ts:391:28
+    389|   describe('baseURL 閰嶇疆', () => {
+    390|     it('verify axios.create was called with baseURL="/api/workflow"', 
+鈥?    391|       expect(axios.create).toHaveBeenCalled();
+       |                            ^
+    392|       const createCallArgs = (axios.create as unknown as ReturnType<ty
+鈥?    393|       expect(createCallArgs.baseURL).toBe('/api/workflow');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[3/5]鈳?
+ FAIL  src/tests/test_auth_workflow_api.ts > workflowApi > 璇锋眰鎷︽埅鍣?> token 娉ㄥ叆閫
+昏緫锛堥€氳繃妫€鏌?interceptors.request.use 琚皟鐢級
+AssertionError: expected "vi.fn()" to be called at least once
+ 鉂?src/tests/test_auth_workflow_api.ts:400:51
+    398|   describe('璇锋眰鎷︽埅鍣?, () => {
+    399|     it('token 娉ㄥ叆閫昏緫锛堥€氳繃妫€鏌?interceptors.request.use 琚皟鐢級', () => {
+    400|       expect(wfInstance.interceptors.request.use).toHaveBeenCalled();
+       |                                                   ^
+    401|       // 纭娉ㄥ唽浜嗚嚦灏戜竴涓姹傛嫤鎴櫒
+    402|       const callCount = (wfInstance.interceptors.request.use as Return
+鈥?
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[4/5]鈳?
+ FAIL  src/tests/test_auth_workflow_api.ts > workflowApi > 璇锋眰鎷︽埅鍣?> 鍝嶅簲鎷︽埅鍣ㄥ凡娉
+ㄥ唽
+
+ Test Files  2 failed | 9 passed (11)
+      Tests  4 failed | 152 passed (156)
+   Start at  19:54:53
+   Duration  179.75s (transform 1.31s, setup 42.55s, import 4.90s, tests 383ms, environment 398.57s)
+AssertionError: expected "vi.fn()" to be called at least once
+ 鉂?src/tests/test_auth_workflow_api.ts:407:52
+    405|
+    406|     it('鍝嶅簲鎷︽埅鍣ㄥ凡娉ㄥ唽', () => {
+    407|       expect(wfInstance.interceptors.response.use).toHaveBeenCalled();
+       |                                                    ^
+    408|     });
+    409|   });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[5/5]鈳?
+

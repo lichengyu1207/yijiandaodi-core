@@ -1,0 +1,149 @@
+/* ===== 后台管理布局 ===== */
+.admin-layout {
+  min-height: 100vh;
+}
+
+/* ===== 右侧内容区 ===== */
+.admin-right {
+  transition: margin-left 0.2s ease;
+  /* 桌面端默认左边距由 JS 控制，这里用 CSS class 区分 */
+}
+
+/* 桌面端：侧边栏展开时 */
+.admin-right:not(.admin-right--mobile) {
+  margin-left: 220px;
+}
+
+/* 桌面端：侧边栏折叠时（由父组件加 .admin-collapsed 控制） */
+.admin-right.admin-collapsed:not(.admin-right--mobile) {
+  margin-left: 72px;
+}
+
+/* ===== 内容区 ===== */
+.admin-content {
+  margin: 20px;
+  padding: 24px;
+  background: #FBF9F6;
+  min-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+
+/* ===== 移动端遮罩层 ===== */
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 98;
+}
+
+/* ========================================
+   移动端适配 (≤768px)
+   ======================================== */
+@media (max-width: 768px) {
+  .mobile-overlay {
+    display: block;
+  }
+
+  /* 移动端：侧边栏隐藏时不要左边距（侧边栏是 fixed 定位 + transform 隐藏） */
+  .admin-right--mobile {
+    margin-left: 0 !important;
+  }
+
+  /* 移动端侧边栏打开时：内容区不移动（侧边栏以抽屉形式浮在上面） */
+  .admin-content {
+    margin: 8px;
+    padding: 12px;
+    min-height: calc(100vh - 64px);
+    border-radius: 8px;
+  }
+
+  /* ===== Ant Design 表格移动端适配 ===== */
+  .admin-content .ant-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-content .ant-table {
+    min-width: 600px;
+  }
+
+  .admin-content .ant-table-thead > tr > th,
+  .admin-content .ant-table-tbody > tr > td {
+    padding: 8px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  /* ===== 卡片/表单移动端适配 ===== */
+  .admin-content .ant-card {
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+
+  .admin-content .ant-card-body {
+    padding: 14px !important;
+  }
+
+  .admin-content .ant-form-item-label > label {
+    font-size: 13px;
+  }
+
+  .admin-content .ant-input,
+  .admin-content .ant-select-selector,
+  .admin-content .ant-picker {
+    font-size: 14px !important;
+  }
+
+  .admin-content .ant-btn {
+    height: 38px;
+    font-size: 13px;
+  }
+
+  /* ===== 分页器移动端 ===== */
+  .admin-content .ant-pagination {
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  /* ===== 统计卡片网格移动端 ===== */
+  .admin-content .ant-row > .ant-col {
+    margin-bottom: 10px !important;
+  }
+}
+
+/* ========================================
+   超小屏适配 (≤480px)
+   ======================================== */
+@media (max-width: 480px) {
+  .admin-content {
+    margin: 4px;
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .admin-content .ant-table-thead > tr > th,
+  .admin-content .ant-table-tbody > tr > td {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .admin-content .ant-card-body {
+    padding: 10px !important;
+  }
+
+  .admin-content .ant-form-item {
+    margin-bottom: 14px;
+  }
+
+  /* Tab 标签页移动端 */
+  .admin-content .ant-tabs-nav {
+    margin-bottom: 10px !important;
+  }
+
+  .admin-content .ant-tabs-tab {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+}

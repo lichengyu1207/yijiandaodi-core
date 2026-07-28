@@ -1,0 +1,314 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  background: #F8FAFC;
+}
+
+/* ===== 左侧品牌区 — Hero 风格 ===== */
+.login-left {
+  width: 520px;
+  min-height: 100vh;
+  background: #0A1628;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  overflow-y: auto;
+}
+
+/* 渐变遮罩层 */
+.left-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(15,118,110,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse at center, transparent 20%, rgba(10,22,40,0.88) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 内容区 */
+.left-inner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 380px;
+  padding: 48px 32px 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #FFFFFF;
+}
+
+/* Logo */
+.left-logo-wrap {
+  margin-bottom: 20px;
+}
+
+.left-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 16px;
+  filter: drop-shadow(0 6px 20px rgba(20,184,166,0.25));
+}
+
+/* 品牌名 */
+.left-title {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 4px;
+  margin: 0 0 4px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* 英文副标题 */
+.left-subtitle {
+  font-size: 0.8rem;
+  color: rgba(224,242,254,0.45);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0 0 20px;
+  font-weight: 400;
+}
+
+/* 核心主张 */
+.left-claim {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.claim-zh {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #E0F2FE;
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+
+.claim-en {
+  font-size: 0.78rem;
+  color: rgba(224,242,254,0.4);
+  font-style: italic;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* 三段式价值主张 */
+.left-values {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.value-card {
+  padding: 14px 16px;
+  border-radius: 10px;
+  border-left: 3px solid rgba(20,184,166,0.25);
+  background: rgba(255,255,255,0.02);
+  transition: background 0.3s ease;
+}
+
+.value-card:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.value-card-highlight {
+  border-left-color: #14B8A6;
+  background: rgba(20,184,166,0.06);
+}
+
+.value-card-highlight:hover {
+  background: rgba(20,184,166,0.09);
+}
+
+.value-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: rgba(224,242,254,0.8);
+  margin: 0 0 4px;
+  line-height: 1.4;
+}
+
+.value-card-highlight .value-title {
+  color: #E0F2FE;
+}
+
+.value-desc {
+  font-size: 0.78rem;
+  color: rgba(224,242,254,0.4);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.value-card-highlight .value-desc {
+  color: rgba(224,242,254,0.6);
+}
+
+/* 底部诗意文案 */
+.left-poetry {
+  text-align: center;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.poetry-line {
+  font-size: 0.85rem;
+  line-height: 1.8;
+  font-style: italic;
+  margin: 0;
+}
+
+.poetry-dim {
+  color: rgba(224,242,254,0.32);
+}
+
+.poetry-light {
+  color: rgba(224,242,254,0.5);
+}
+
+.poetry-brand {
+  font-size: 0.72rem;
+  color: rgba(20,184,166,0.4);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 12px 0 0;
+  font-style: normal;
+  font-weight: 500;
+}
+
+/* ===== 右侧表单区 ===== */
+.login-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #FFFFFF;
+}
+
+.right-form-area {
+  width: 100%;
+  max-width: 380px;
+}
+
+.form-subtitle {
+  color: #94A3B8;
+  font-size: 13px;
+  display: block;
+  margin-bottom: 28px;
+}
+
+.login-form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.forgot-link {
+  color: #0F766E;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  color: #14B8A6;
+  text-decoration: underline;
+}
+
+.login-btn {
+  height: 44px !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  background: linear-gradient(135deg, #14B8A6, #0F766E) !important;
+  border: none !important;
+  letter-spacing: 3px;
+  transition: all 0.25s ease !important;
+  box-shadow: 0 2px 8px rgba(20,184,166,0.2) !important;
+}
+
+.login-btn:hover {
+  background: linear-gradient(135deg, #0F766E, #0d5c54) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(20,184,166,0.35) !important;
+}
+
+/* Tabs 样式优化 */
+.right-form-area .ant-tabs-nav {
+  margin-bottom: 20px !important;
+}
+
+.right-form-area .ant-tabs-tab {
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  padding: 8px 20px !important;
+}
+
+.right-form-area .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #0F766E !important;
+  font-weight: 600 !important;
+}
+
+.right-form-area .ant-tabs-ink-bar {
+  background: #14B8A6 !important;
+  border-radius: 2px !important;
+  height: 3px !important;
+}
+
+/* 输入框微调 */
+.right-form-area .ant-input,
+.right-form-area .ant-input-password .ant-input {
+  border-radius: 8px !important;
+}
+
+.right-form-area .ant-input-affix-wrapper {
+  border-radius: 8px !important;
+}
+
+/* 隐私协议勾选 */
+.register-agreement {
+  font-size: 12px !important;
+  color: #64748B !important;
+}
+.register-agreement .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #0F766E !important;
+  border-color: #0F766E !important;
+}
+.register-agreement a {
+  color: #0F766E !important;
+  text-decoration: underline;
+}
+.register-agreement a:hover {
+  color: #14B8A6 !important;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 960px) {
+  .login-left {
+    display: none;
+  }
+
+  .login-right {
+    padding: 24px;
+    background: #FFFFFF;
+  }
+
+  .right-form-area {
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-right {
+    padding: 16px;
+  }
+}

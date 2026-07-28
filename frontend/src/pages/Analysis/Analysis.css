@@ -1,0 +1,79 @@
+.analysis-page {
+  padding: 0;
+}
+
+.analysis-card .ant-card-head-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bar-chart.compact {
+  gap: 6px;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar-label {
+  font-size: 12px;
+  color: #6B6560;
+  min-width: 45px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.bar-track {
+  flex: 1;
+  height: 20px;
+  background: #F5F3EF;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: #1A6BA8;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  min-width: 2px;
+}
+
+.bar-fill.login-bar {
+  background: #107C10;
+}
+
+.bar-value {
+  font-size: 12px;
+  color: #2D2A26;
+  min-width: 28px;
+  text-align: right;
+  font-weight: 500;
+}
+
+.dist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dist-name {
+  font-size: 13px;
+  color: #2D2A26;
+  min-width: 80px;
+  flex-shrink: 0;
+}

@@ -1,0 +1,163 @@
+.yi-sider {
+  height: 100vh;
+  background: #FBF9F6 !important;
+  border-right: 1px solid #E8E4DE;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 99;
+  width: 220px;
+  overflow-y: auto;
+  transition: width 0.2s ease, transform 0.25s ease;
+}
+
+.yi-sider-collapsed {
+  width: 72px !important;
+}
+
+.sider-logo {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 10px;
+  border-bottom: 1px solid #E8E4DE;
+  background: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.sider-logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sider-logo-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2D2A26;
+  white-space: nowrap;
+  letter-spacing: 1px;
+}
+
+.sider-menu {
+  flex: 1;
+  border-right: none !important;
+  background: transparent !important;
+  padding: 12px 8px;
+}
+
+.sider-menu .ant-menu-item {
+  margin: 2px 0 !important;
+  border-radius: 6px !important;
+  height: 38px;
+  line-height: 38px;
+}
+
+.sider-menu .ant-menu-item-selected {
+  background-color: rgba(26, 107, 168, 0.07) !important;
+  color: #1A6BA8 !important;
+}
+
+.sider-menu .ant-menu-item:hover:not(.ant-menu-item-selected) {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+.sider-menu .ant-menu-submenu-title {
+  margin: 2px 0 !important;
+  border-radius: 6px !important;
+  height: 38px;
+  line-height: 38px;
+}
+
+.sider-menu .ant-menu-submenu-title:hover {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+.yi-sider::-webkit-scrollbar {
+  width: 4px;
+}
+
+.yi-sider::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.yi-sider::-webkit-scrollbar-thumb {
+  background: #E8E4DE;
+  border-radius: 4px;
+}
+
+/* ====== 移动端适配 ====== */
+/* 移动端遮罩层 */
+.mobile-sider-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-sider-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1001;
+    animation: fadeIn 0.25s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .yi-sider {
+    transform: translateX(-100%);
+    width: 280px !important;
+    z-index: 1002;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .yi-sider.mobile-visible {
+    transform: translateX(0);
+  }
+
+  .yi-sider-collapsed.mobile-visible {
+    width: 280px !important;
+  }
+
+  /* 移动端关闭按钮 */
+  .mobile-sider-close-btn {
+    display: flex;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6B6560;
+    font-size: 14px;
+    z-index: 10;
+    transition: all 0.15s ease;
+  }
+
+  .mobile-sider-close-btn:hover {
+    background: rgba(0, 0, 0, 0.12);
+    color: #1A6BA8;
+  }
+
+  /* 移动端logo区域增加右侧padding，避免与关闭按钮重叠 */
+  .yi-sider.mobile-visible .sider-logo {
+    padding-right: 48px;
+  }
+}

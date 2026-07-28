@@ -1,0 +1,37 @@
+{
+  "passed": 0,
+  "total": 5,
+  "success_rate": "0.0%",
+  "results": [
+    {
+      "step": "注册",
+      "success": false,
+      "message": "请求异常: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/auth/register/ (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8000): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+      "timestamp": "2026-07-29T01:03:46.139185"
+    },
+    {
+      "step": "登录",
+      "success": false,
+      "message": "请求异常: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/auth/login/ (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8000): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+      "timestamp": "2026-07-29T01:03:50.212549"
+    },
+    {
+      "step": "获取用户信息",
+      "success": false,
+      "message": "未登录，无Token",
+      "timestamp": "2026-07-29T01:03:50.213762"
+    },
+    {
+      "step": "登出",
+      "success": false,
+      "message": "无refresh_token",
+      "timestamp": "2026-07-29T01:03:50.214614"
+    },
+    {
+      "step": "Token失效验证",
+      "success": false,
+      "message": "请求异常: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/auth/user/ (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8000): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。\"))",
+      "timestamp": "2026-07-29T01:03:54.299176"
+    }
+  ]
+}
