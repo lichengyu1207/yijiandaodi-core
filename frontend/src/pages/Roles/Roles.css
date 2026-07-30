@@ -149,3 +149,91 @@
 .role-form .ant-switch:checked {
   background-color: #1A6BA8;
 }
+
+/* ====== 移动端适配 ====== */
+@media (max-width: 768px) {
+  .roles-page {
+    padding: 0 8px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .page-header .ant-typography {
+    font-size: 18px !important;
+  }
+
+  /* 左右分栏改为单列 */
+  .roles-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .roles-left,
+  .roles-right {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .roles-right {
+    position: static;
+    margin-top: 16px;
+  }
+
+  .perm-card {
+    min-height: auto;
+  }
+
+  .perm-card .ant-card-body {
+    max-height: 300px;
+  }
+
+  /* 表格横向滚动 */
+  .role-table .ant-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .role-table .ant-table {
+    min-width: 500px;
+  }
+
+  .role-table .ant-table-thead > tr > th,
+  .role-table .ant-table-tbody > tr > td {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .roles-page {
+    padding: 0 4px;
+  }
+
+  .page-header .ant-typography {
+    font-size: 16px !important;
+  }
+
+  .perm-card .ant-card-head {
+    padding: 10px 12px;
+  }
+
+  .perm-card .ant-card-body {
+    padding: 12px;
+    max-height: 250px;
+  }
+
+  .role-table .ant-table-thead > tr > th,
+  .role-table .ant-table-tbody > tr > td {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  .perm-name {
+    font-size: 12px;
+  }
+}

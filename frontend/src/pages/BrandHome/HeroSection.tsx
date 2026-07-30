@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { Copy, Check, ArrowRight } from 'lucide-react';
+import { Copy, Check, ArrowRight, Download, Monitor } from 'lucide-react';
 import ParticleNetwork from './components/ParticleNetwork';
 
 interface HeroSectionProps {
@@ -762,6 +762,35 @@ export default function HeroSection({ onCTAClick }: HeroSectionProps) {
               }}
             >
               API 开发文档
+            </motion.a>
+            {/* 桌面端下载入口 */}
+            <motion.a
+              href="/download"
+              whileHover={{ y: -2 }}
+              style={{
+                padding: '10px 24px',
+                borderRadius: 8,
+                border: '1px solid rgba(20,184,166,0.3)',
+                color: '#14B8A6',
+                fontSize: '0.9rem',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                transition: 'all 0.25s ease',
+                background: 'rgba(20,184,166,0.08)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(20,184,166,0.15)';
+                e.currentTarget.style.borderColor = 'rgba(20,184,166,0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(20,184,166,0.08)';
+                e.currentTarget.style.borderColor = 'rgba(20,184,166,0.3)';
+              }}
+            >
+              <Monitor size={14} />
+              下载桌面端
             </motion.a>
           </motion.div>
         </motion.div>

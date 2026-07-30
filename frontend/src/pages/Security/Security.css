@@ -84,3 +84,83 @@
 .security-card .ant-statistic-content {
   font-size: 24px;
 }
+
+/* ====== 移动端适配 ====== */
+@media (max-width: 768px) {
+  .security-page {
+    padding: 0 8px;
+  }
+
+  .security-header {
+    margin-bottom: 16px;
+  }
+
+  .security-card {
+    margin-bottom: 16px;
+  }
+
+  .security-card .ant-card-head-title {
+    font-size: 14px;
+  }
+
+  .log-table .ant-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .log-table .ant-table {
+    min-width: 500px;
+  }
+
+  .log-table .ant-table-thead > tr > th,
+  .log-table .ant-table-tbody > tr > td {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  .password-form .ant-input,
+  .password-form .ant-input-password {
+    font-size: 14px;
+  }
+
+  .security-card .ant-statistic-content {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .security-page {
+    padding: 0 4px;
+  }
+
+  .security-card .ant-card-body {
+    padding: 12px;
+  }
+
+  .security-card .ant-card-head {
+    padding: 0 12px;
+    min-height: 40px;
+  }
+
+  .log-table .ant-table-thead > tr > th,
+  .log-table .ant-table-tbody > tr > td {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+
+  .password-form .ant-form-item {
+    margin-bottom: 16px;
+  }
+
+  .password-form .ant-btn-primary {
+    height: 36px;
+    font-size: 13px;
+  }
+
+  .security-card .ant-statistic-title {
+    font-size: 12px;
+  }
+
+  .security-card .ant-statistic-content {
+    font-size: 18px;
+  }
+}

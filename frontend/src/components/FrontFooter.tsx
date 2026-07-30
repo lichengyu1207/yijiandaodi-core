@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Mail, MapPin, GitFork, MessageCircle, Globe } from 'lucide-react';
+import './FrontFooter.css';
 
 const FOOTER_LINKS = {
   about: [
@@ -130,13 +131,13 @@ const FrontFooter: React.FC = () => {
         <div style={STYLES.column}>
           <h3 style={STYLES.columnTitle}>联系方式</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <span style={STYLES.contactItem}>
+            <span style={STYLES.contactItem} className="contact-item">
               <Mail size={16} style={{ flexShrink: 0 }} />
               <a href="mailto:lichengyu@fangsuanyun.cn" style={{ color: '#94A3B8', textDecoration: 'none' }}>
                 lichengyu@fangsuanyun.cn
               </a>
             </span>
-            <span style={STYLES.contactItem}>
+            <span style={STYLES.contactItem} className="contact-item">
               <MapPin size={16} style={{ flexShrink: 0 }} />
               湖南省湘潭市
             </span>
@@ -158,6 +159,7 @@ const FrontFooter: React.FC = () => {
                 key={social.label}
                 href="#"
                 style={STYLES.socialIcon}
+                className="social-icon"
                 aria-label={social.label}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#2563EB';
@@ -175,9 +177,9 @@ const FrontFooter: React.FC = () => {
         </div>
       </div>
 
-      <div style={STYLES.divider} />
+      <div style={STYLES.divider} className="footer-divider" />
 
-      <div style={STYLES.copyright}>
+      <div style={STYLES.copyright} className="footer-copyright">
         &copy; {currentYear} 一鉴到底 All Rights Reserved. |{' '}
         <a
           href="https://beian.miit.gov.cn/"

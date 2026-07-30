@@ -44,3 +44,55 @@
   color: #B8B3AC;
   font-family: monospace;
 }
+
+/* ====== 移动端适配 ====== */
+@media (max-width: 768px) {
+  .settings-page {
+    padding: 0 8px;
+  }
+
+  .settings-card .ant-card-head-title {
+    font-size: 14px;
+  }
+
+  .config-list {
+    gap: 10px;
+  }
+
+  .config-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .config-label {
+    min-width: auto;
+  }
+
+  .config-key {
+    font-size: 13px;
+  }
+
+  .config-desc {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-page {
+    padding: 0 4px;
+  }
+
+  .settings-card .ant-card-body {
+    padding: 12px;
+  }
+
+  .config-item {
+    padding: 10px 0;
+  }
+
+  .config-key {
+    font-size: 12px;
+  }
+}

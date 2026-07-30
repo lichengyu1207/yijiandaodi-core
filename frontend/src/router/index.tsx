@@ -79,10 +79,12 @@ import CreatorApplicationPage from '@/pages/CreatorApplication';
 import CreatorReviewPage from '@/pages/CreatorReview';
 import DeveloperApplicationPage from '@/pages/DeveloperApplication';
 import DeveloperReviewPage from '@/pages/DeveloperReview';
+import DownloadPage from '@/pages/Download';
 // 行为监控仪表盘
 import BehaviorMonitorDashboard from '@/pages/BehaviorMonitor';
 // 可信时间戳页面
 import TrustedTimestampPage from '@/pages/TrustedTimestamp';
+import LogoAnimationTest from '@/pages/LogoAnimationTest';
 const LazyExecutionCenter = React.lazy(() => import('@/pages/ExecutionCenter'));
 
 const router = createBrowserRouter(
@@ -156,6 +158,10 @@ const router = createBrowserRouter(
           element: <TrustedTimestampPage />,
         },
         {
+          path: 'logo-animation-test',
+          element: <LogoAnimationTest />,
+        },
+        {
           path: 'order-center',
           element: <OrderCenter />,
         },
@@ -190,6 +196,10 @@ const router = createBrowserRouter(
         {
           path: 'developer',
           element: <DeveloperPortal />,
+        },
+        {
+          path: 'download',
+          element: <DownloadPage />,
         },
         {
           path: 'data-classification',

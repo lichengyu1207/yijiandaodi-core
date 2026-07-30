@@ -1,10 +1,11 @@
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import Dashboard from './pages/Dashboard'
 import Evidence from './pages/Evidence'
 import Auth from './pages/Auth'
 import Settings from './pages/Settings'
 import DesktopPet from './components/DesktopPet'
+import { authService } from './services/authService'
 import './index.css'
 
 const NAV_ITEMS = [
@@ -123,7 +124,7 @@ function Sidebar() {
   )
 }
 
-function Header() {
+function Header({ username, onLogout }: { username?: string; onLogout: () => void }) {
   const location = useLocation()
   
   const getPageTitle = () => {
@@ -135,38 +136,124 @@ function Header() {
     <header className="app-header" style={{ height: 48 }}>
       <h1 className="header-title">{getPageTitle()}</h1>
       <div className="header-actions">
-        <span style={{ 
-          fontSize: 11,
-          color: 'var(--text-tertiary)',
-          padding: '4px 8px',
-          background: 'var(--bg-tertiary)',
-          borderRadius: 4
-        }}>
-          免责声明：本工具仅供辅助分析，最终决定权归用户
-        </span>
+        {username && <span style={{ marginRight: 12, fontSize: 12 }}>{username}</span>}
+        <button 
+          onClick={onLogout}
+          style={{
+            fontSize: 12,
+            color: 'var(--text-secondary)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          退出
+        </button>
       </div>
     </header>
   )
 }
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // 检查是否已登录
+        if (authService.isAuthenticated()) {
+          // 验证Token是否有效
+          const isValid = await authService.validateToken()
+          
+          if (isValid) {
+            // Token有效，自动登录成功
+            setIsAuthenticated(true)
+            setCurrentUser(authService.getCurrentUser())
+          } else {
+            // Token无效，尝试刷新
+            const refreshed = await authService.refreshToken()
+            if (refreshed) {
+              setIsAuthenticated(true)
+              setCurrentUser(authService.getCurrentUser())
+            } else {
+              setIsAuthenticated(false)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('认证检查失败:', error)
+        setIsAuthenticated(false)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [])
+
+  // 登出处理
+  const handleLogout = async () => {
+    try {
+      await authService.logout()
+    } catch (error) {
+      console.error('登出失败:', error)
+    } finally {
+      setIsAuthenticated(false)
+      setCurrentUser(null)
+    }
+  }
+
+  // 加载中显示
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        fontSize: 16,
+        color: '#666'
+      }}>
+        正在加载...
+      </div>
+    )
+  }
+
   return (
     <BrowserRouter>
       <div className="app-layout">
-        <Sidebar />
+        {isAuthenticated && <Sidebar />}
         <div className="app-main">
-          <Header />
+          {isAuthenticated && (
+            <Header 
+              username={currentUser?.username}
+              onLogout={handleLogout}
+            />
+          )}
           <main className="app-content">
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/evidence" element={<Evidence />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/settings" element={<Settings />} />
+              {isAuthenticated ? (
+                <>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/evidence" element={<Evidence />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/auth" element={<Navigate to="/" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/auth" element={<Auth onLoginSuccess={() => {
+                    setIsAuthenticated(true)
+                    setCurrentUser(authService.getCurrentUser())
+                  }} />} />
+                  <Route path="*" element={<Navigate to="/auth" replace />} />
+                </>
+              )}
             </Routes>
           </main>
         </div>
-        {/* 桌宠组件 */}
-        <DesktopPet />
+        {isAuthenticated && <DesktopPet />}
       </div>
     </BrowserRouter>
   )

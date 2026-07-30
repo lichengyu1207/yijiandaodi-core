@@ -381,7 +381,7 @@ export default function APIDocsCenter() {
   return (
     <div className="apidocs-page" style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ marginBottom: 32 }}>
-        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>一鉴到底 AI Agent行为安全平台 API 文档中心</h2>
+        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>一鉴到底 - AI Agent行为安全平台 API 文档中心</h2>
         <p style={{ margin: '6px 0 0', color: '#6B7280', fontSize: 14 }}>OpenAPI 3.0 规范 · RESTful 接口 · JWT/API Key 双重认证 · Agent行为监控API</p>
 
         <div style={{ display: 'flex', gap: 12, marginTop: 20, flexWrap: 'wrap' }}>

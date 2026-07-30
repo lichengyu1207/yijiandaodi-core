@@ -28,7 +28,7 @@ RUN npx tsc -b && npx vite build
 FROM nginx:1.25-alpine AS production
 
 LABEL maintainer="yijiandaodi"
-LABEL description="一鉴到底智能内容安全检测平台 - 前端"
+LABEL description="一鉴到底 AI Agent行为安全平台 - 前端"
 LABEL version="1.0.0"
 
 # 删除默认 Nginx 配置

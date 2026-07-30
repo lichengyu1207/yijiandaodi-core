@@ -60,6 +60,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'auth_app.apikey_middleware.APIKeyAuthenticationMiddleware',  # API Key认证中间件
     'fangdudu_backend.tracing_middleware.TracingMiddleware',  # 请求追踪中间件（新增）
     'fangdudu_backend.tenant_middleware.TenantIsolationMiddleware',  # 租户隔离中间件
     'fangdudu_backend.security_middleware.SecurityAuditMiddleware',
@@ -149,6 +150,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Django REST Framework configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'auth_app.apikey_authentication.APIKeyAuthentication',  # API Key认证
         'auth_app.cookie_auth.JWTCookieAuthentication',  # httpOnly Cookie 优先
         'rest_framework_simplejwt.authentication.JWTAuthentication',  # 兼容 Header
     ),

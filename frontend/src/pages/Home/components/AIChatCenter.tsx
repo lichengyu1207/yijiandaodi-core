@@ -920,7 +920,7 @@ th{background:#F2F3F5;padding:12px;border:1px solid #C9CDD4;text-align:left;font
 ${r.agentAnalysis ? `<h2>🔗 Agent 链式分析</h2><pre style="background:#F7F8FA;padding:16px;border-radius:10px;overflow-x:auto;line-height:1.7;color:#4E5969;white-space:pre-wrap">${r.agentAnalysis.replace(/</g,'&lt;')}</pre>` : ''}
 
 <footer style="margin-top:48px;padding-top:16px;border-top:1px solid #E5E6EB;color:#C9CDD4;font-size:12px;text-align:center">
-  一鉴到底 AI 内容安全检测平台 · 报告自动生成
+  一鉴到底 AI Agent行为安全平台 · 报告自动生成
 </footer></body></html>`;
 
     // 触发下载
@@ -1327,7 +1327,7 @@ ${r.agentAnalysis ? `<h2>🔗 Agent 链式分析</h2><pre style="background:#F7F
             backgroundClip: 'text',
           }}
         >
-          AI 内容安全检测平台        </motion.h2>
+          AI Agent行为安全平台        </motion.h2>
         {/* 副标题：stagger fadeUp */}
         <motion.p
           initial={{ opacity: 0, y: 14 }}

@@ -3,7 +3,7 @@ productName: 一鉴到底
 copyright: Copyright © 2026 一鉴到底
 
 directories:
-  output: release
+  output: release-new
   buildResources: build
 
 files:
@@ -16,12 +16,15 @@ files:
 extraResources:
   - from: public/logo.png
     to: logo.png
+  # 确保 ffmpeg.dll 被包含
+  - from: node_modules/electron/dist/ffmpeg.dll
+    to: ffmpeg.dll
 
 # Windows 配置
 win:
   icon: public/logo.png
   target:
-    - target: nsis
+    - target: portable
       arch:
         - x64
   artifactName: ${productName}-${version}-Setup.${ext}

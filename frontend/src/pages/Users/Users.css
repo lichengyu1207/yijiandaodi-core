@@ -104,3 +104,76 @@
 .user-table .ant-space-item:last-child .ant-tag {
   margin-inline-end: 0;
 }
+
+/* ====== 移动端适配 ====== */
+@media (max-width: 768px) {
+  .users-page {
+    padding: 0 8px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .page-header .ant-typography {
+    font-size: 18px !important;
+    margin-bottom: 8px;
+  }
+
+  /* 表格横向滚动 */
+  .user-table .ant-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .user-table .ant-table {
+    min-width: 600px;
+  }
+
+  /* 搜索框和按钮调整 */
+  .page-header .ant-input-search {
+    width: 100% !important;
+  }
+
+  .page-header .ant-select {
+    width: 100% !important;
+  }
+
+  .page-header .ant-btn {
+    width: 100%;
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .users-page {
+    padding: 0 4px;
+  }
+
+  .page-header .ant-typography {
+    font-size: 16px !important;
+  }
+
+  /* 隐藏部分表格列 */
+  .user-table .ant-table-thead > tr > th:nth-child(n+5),
+  .user-table .ant-table-tbody > tr > td:nth-child(n+5) {
+    display: none;
+  }
+
+  /* 操作按钮调整 */
+  .user-table .ant-space {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .user-table .ant-space-item {
+    margin: 0 !important;
+  }
+
+  .user-table .ant-btn {
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+  }
+}

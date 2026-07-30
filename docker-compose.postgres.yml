@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: yijiandaodi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: yijiandaodi
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: YourStrongPassword123!
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Django 后端
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: yijiandaodi-backend
+    restart: unless-stopped
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=yijiandaodi
+      - DB_USER=postgres
+      - DB_PASSWORD=YourStrongPassword123!
+      - DB_PORT=5432
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=False
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    volumes:
+      - ./backend:/app
+      - static_files:/app/staticfiles
+      - media_files:/app/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn fangdudu_backend.wsgi:application --bind 0.0.0.0:8000"
+
+  # 自动备份服务
+  backup:
+    image: postgres:15-alpine
+    container_name: yijiandaodi-backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: yijiandaodi
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: YourStrongPassword123!
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    entrypoint: |
+      sh -c "while true; do
+        TIMESTAMP=$$(date +%Y%m%d_%H%M%S)
+        pg_dump -h postgres -U postgres yijiandaodi > /backups/backup_$$TIMESTAMP.sql
+        gzip /backups/backup_$$TIMESTAMP.sql
+        find /backups -name '*.gz' -mtime +7 -delete
+        sleep 86400
+      done"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+    driver: local
+  static_files:
+  media_files:
+
+networks:
+  default:
+    name: yijiandaodi-network

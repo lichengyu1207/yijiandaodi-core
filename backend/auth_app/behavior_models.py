@@ -66,9 +66,9 @@ class AgentBehaviorLog(models.Model):
 
 class BehaviorBaseline(models.Model):
     """行为基线（完整版）"""
-    baseline_id = models.CharField(max_length=64, unique=True, db_index=True, default=generate_baseline_id)
-    agent_code = models.CharField(max_length=50, db_index=True)
-    behavior_type = models.CharField(max_length=50)
+    baseline_id = models.CharField(max_length=64, db_index=True, default=generate_baseline_id)  # 移除unique约束
+    agent_code = models.CharField(max_length=50, db_index=True, default='')  # 添加默认值
+    behavior_type = models.CharField(max_length=50, default='unknown')  # 添加默认值
     baseline_type = models.CharField(max_length=50, default='statistical', verbose_name='基线类型')
     version = models.CharField(max_length=20, default='v1.0', verbose_name='版本')
     baseline_data = models.JSONField(default=dict)
@@ -107,10 +107,10 @@ class BehaviorBaseline(models.Model):
 
 class BehaviorPattern(models.Model):
     """行为模式（完整版）"""
-    pattern_id = models.CharField(max_length=64, unique=True, db_index=True, default=generate_pattern_id)
-    agent_code = models.CharField(max_length=50, db_index=True)
-    pattern_name = models.CharField(max_length=100)
-    pattern_type = models.CharField(max_length=50)
+    pattern_id = models.CharField(max_length=64, db_index=True, default=generate_pattern_id)  # 移除unique约束
+    agent_code = models.CharField(max_length=50, db_index=True, default='')  # 添加默认值
+    pattern_name = models.CharField(max_length=100, default='')  # 添加默认值
+    pattern_type = models.CharField(max_length=50, default='unknown')  # 添加默认值
     pattern_data = models.JSONField(default=dict)
     pattern_definition = models.JSONField(default=dict, verbose_name='模式定义')
     frequency = models.IntegerField(default=0)
@@ -142,10 +142,10 @@ class BehaviorPattern(models.Model):
 
 class AnomalyDetection(models.Model):
     """异常检测结果（完整版）"""
-    anomaly_id = models.CharField(max_length=64, unique=True, db_index=True, default=generate_anomaly_id)
-    agent_code = models.CharField(max_length=50, db_index=True)
+    anomaly_id = models.CharField(max_length=64, db_index=True, default=generate_anomaly_id)  # 移除unique约束
+    agent_code = models.CharField(max_length=50, db_index=True, default='')  # 添加默认值
     behavior_id = models.CharField(max_length=64, db_index=True, default=generate_behavior_id)
-    anomaly_type = models.CharField(max_length=50)
+    anomaly_type = models.CharField(max_length=50, default='unknown')  # 添加默认值
     deviation_score = models.FloatField(default=0.0)
     severity = models.CharField(max_length=20, default='medium')
     description = models.TextField(default='')

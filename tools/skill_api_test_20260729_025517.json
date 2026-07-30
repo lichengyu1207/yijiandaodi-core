@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-07-29T02:55:17.906828",
+  "total_tests": 4,
+  "passed": 3,
+  "failed": 0,
+  "errors": 1,
+  "results": [
+    {
+      "test": "public_list",
+      "status": "PASS",
+      "status_code": 200
+    },
+    {
+      "test": "categories",
+      "status": "ERROR",
+      "error": "0"
+    },
+    {
+      "test": "stats",
+      "status": "PASS",
+      "status_code": 200
+    },
+    {
+      "test": "public_search",
+      "status": "PASS",
+      "status_code": 200
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+# PostgreSQL告警规则
+# 文件：/etc/prometheus/alert_rules.yml
+
+groups:
+  - name: postgresql_alerts
+    rules:
+      # 数据库连接数告警
+      - alert: PostgreSQLTooManyConnections
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL连接数过高"
+          description: "数据库连接数超过80，当前值：{{ $value }}"
+
+      # 慢查询告警
+      - alert: PostgreSQLSlowQueries
+        expr: pg_stat_statements_mean_time > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL慢查询过多"
+          description: "平均查询时间超过1秒，当前值：{{ $value }}ms"
+
+      # 数据库大小告警
+      - alert: PostgreSQLDatabaseSizeHigh
+        expr: pg_database_size_bytes / 1024 / 1024 / 1024 > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL数据库过大"
+          description: "数据库大小超过50GB，当前值：{{ $value }}GB"
+
+      # 主从延迟告警
+      - alert: PostgreSQLReplicationLag
+        expr: pg_replication_lag > 60
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL主从延迟过高"
+          description: "主从延迟超过60秒，当前值：{{ $value }}秒"
+
+      # 备份失败告警
+      - alert: PostgreSQLBackupFailed
+        expr: time() - pg_backup_last_success_timestamp > 86400 * 2
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL备份失败"
+          description: "超过48小时未成功备份"
+
+      # 磁盘空间不足告警
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 20
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "磁盘空间不足"
+          description: "根分区剩余空间低于20%，当前值：{{ $value }}%"
+
+      # CPU使用率过高
+      - alert: CPUUsageHigh
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU使用率过高"
+          description: "CPU使用率超过80%，当前值：{{ $value }}%"
+
+      # 内存使用率过高
+      - alert: MemoryUsageHigh
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "内存使用率过高"
+          description: "内存使用率超过85%，当前值：{{ $value }}%"

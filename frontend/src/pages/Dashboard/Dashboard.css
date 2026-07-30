@@ -34,3 +34,50 @@
   font-size: 14px;
   color: #6B6560;
 }
+
+/* ====== 移动端适配 ====== */
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding-bottom: 12px;
+  }
+
+  .content-card {
+    min-height: 150px;
+    margin-bottom: 16px;
+  }
+
+  .content-card .ant-card-head-title {
+    font-size: 13px;
+  }
+
+  .safe-status-list {
+    gap: 12px;
+    padding: 4px 0;
+  }
+
+  .safe-status-item {
+    font-size: 13px;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-card {
+    min-height: 120px;
+    margin-bottom: 12px;
+  }
+
+  .content-card .ant-card-head {
+    min-height: 40px;
+    padding: 0 12px;
+  }
+
+  .content-card .ant-card-body {
+    padding: 12px;
+  }
+
+  .safe-status-item {
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+}

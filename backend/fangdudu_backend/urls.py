@@ -9,6 +9,9 @@ from django.utils.functional import lazy
 from content_app.front_views import BannerPublicListView as FrontBannerView
 from .sitemap import sitemaps as yijiandaodi_sitemaps
 
+# 导入实名认证视图（使用绝对导入）
+from auth_app import realname_views
+
 
 def health_check(request):
     """健康检查端点（Docker/Nginx 负载均衡探活用）"""
@@ -42,6 +45,15 @@ urlpatterns = [
     path('api/health/', health_check, name='health-check'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('auth_app.urls')),
+    path('api/auth/verify-realname/', realname_views.verify_realname, name='verify-realname'),
+    path('api/auth/verify-status/', realname_views.verify_status, name='verify-status'),
+    
+    # API Key管理
+    path('api/api-keys/', include('auth_app.apikey_urls')),
+
+    # 双因子认证
+    path('api/auth/2fa/', include('auth_app.two_factor_urls')),
+
     path('api/rbac/', include('auth_app.rbac_urls')),
     path('api/agent/', include('auth_app.agent_urls')),
     path('api/security/', include('auth_app.security_urls')),
@@ -80,6 +92,8 @@ urlpatterns = [
     path('api/tipping/', include('content_app.tipping_urls')),
     path('api/workflow/', include('auth_app.workflow_urls')),
     path('api/pet/', include('auth_app.pet_urls')),  # 桌宠交互记录（新增）
+    path('api/extension/', include('auth_app.extension_sync_urls')),  # 浏览器插件同步（新增）
+    path('api/behavior/', include('auth_app.behavior_urls')),  # Agent行为监控（新增）
     path('api/p2p/v1/', include('p2p_app.urls')),
     path('api/platform/v1/capabilities/', include('auth_app.platform_urls')),
 

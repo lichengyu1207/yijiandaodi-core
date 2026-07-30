@@ -13,8 +13,8 @@ import json
 from datetime import datetime
 
 BASE_URL = "http://localhost:8000"
-USERNAME = f"test_user_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-EMAIL = f"{USERNAME}@test.com"
+USERNAME = "testuser2026"  # 固定用户名，避免频率限制
+EMAIL = "testuser2026@test.com"
 PASSWORD = "Test@123456"
 
 
@@ -47,7 +47,8 @@ class AuthFlowTester:
                     "username": USERNAME,
                     "email": EMAIL,
                     "password": PASSWORD,
-                    "password2": PASSWORD
+                    "confirm_password": PASSWORD,
+                    "privacy_agreed": True  # 修正字段名
                 },
                 timeout=5
             )
@@ -77,18 +78,23 @@ class AuthFlowTester:
                 },
                 timeout=5
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
-                self.token = data.get('access')
+                self.token = data.get('access') or data.get('token')
                 self.refresh_token = data.get('refresh')
-                self.log("登录", True, f"登录成功，获取Token: {self.token[:20]}...")
-                return True
+                
+                if self.token:
+                    self.log("登录", True, f"登录成功，获取Token: {self.token[:20]}...")
+                    return True
+                else:
+                    self.log("登录", False, "登录成功但未获取到Token")
+                    return False
             else:
                 error = response.json() if response.headers.get('content-type', '').startswith('application/json') else response.text
                 self.log("登录", False, f"登录失败: {error}")
                 return False
-                
+
         except Exception as e:
             self.log("登录", False, f"请求异常: {str(e)}")
             return False
