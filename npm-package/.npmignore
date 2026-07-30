@@ -1,0 +1,20 @@
+# 忽略开发文件
+src/
+tsconfig.json
+*.test.ts
+**/*.test.ts
+node_modules/
+
+# 忽略临时文件
+*.log
+.DS_Store
+Thumbs.db
+
+# 忽略编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 忽略构建中间文件
+*.tsbuildinfo
