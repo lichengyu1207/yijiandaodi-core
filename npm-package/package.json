@@ -31,10 +31,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yijiandaodi/core.git"
+    "url": "git+https://github.com/lichengyu1207/yijiandaodi-core.git"
   },
   "bugs": {
-    "url": "https://github.com/yijiandaodi/core/issues"
+    "url": "https://github.com/lichengyu1207/yijiandaodi-core/issues"
   },
   "homepage": "https://yijiandaodi.com",
   "files": [
