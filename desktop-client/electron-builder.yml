@@ -1,0 +1,31 @@
+appId: com.yijiandaodi.desktop
+productName: 一鉴到底算力节点
+
+directories:
+  output: release
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+
+# 确保 ffmpeg.dll 等二进制文件不被打包到 asar 中
+asarUnpack:
+  - "**/*.node"
+  - "**/*.dll"
+
+win:
+  target:
+    - nsis
+    - portable
+  icon: assets/icon.ico
+  # 包含额外的资源文件
+  extraResources:
+    - from: "node_modules/electron/dist/ffmpeg.dll"
+      to: "ffmpeg.dll"
+    - from: "node_modules/electron/dist/*.dll"
+      to: "."
+
+mac:
+  target:
+    - dmg
+  icon: assets/icon.icns

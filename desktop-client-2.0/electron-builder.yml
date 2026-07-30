@@ -1,0 +1,43 @@
+appId: com.yijiandaodi.desktop
+productName: 一鉴到底
+copyright: Copyright © 2026 一鉴到底
+
+directories:
+  output: release-new
+  buildResources: build
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+  - "!**/*.map"
+  - "!**/node_modules/.cache/**/*"
+
+extraResources:
+  - from: public/logo.png
+    to: logo.png
+  # 确保 ffmpeg.dll 被包含
+  - from: node_modules/electron/dist/ffmpeg.dll
+    to: ffmpeg.dll
+
+# Windows 配置
+win:
+  icon: public/logo.png
+  target:
+    - target: portable
+      arch:
+        - x64
+  artifactName: ${productName}-${version}-Setup.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: ${productName}
+
+# 优化配置
+compression: maximum
+asar: true

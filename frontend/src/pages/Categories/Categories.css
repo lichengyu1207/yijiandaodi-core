@@ -1,0 +1,63 @@
+.categories-page {
+  padding: 0;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.category-table .ant-table-thead > tr > th {
+  background: #FBF9F6 !important;
+  font-weight: 600;
+  color: #2D2A26;
+  border-bottom: 1px solid #E8E4DE;
+}
+
+.category-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #F0EDE7;
+}
+
+.category-table .ant-table-tbody > tr:hover > td {
+  background: #FAF8F5 !important;
+}
+
+.category-form .ant-form-item-label > label {
+  font-weight: 500;
+  color: #2D2A26;
+}
+
+.category-form .ant-input,
+.category-form .ant-input-number {
+  border-color: #E8E4DE;
+  border-radius: 6px;
+}
+
+.category-form .ant-input:focus,
+.category-form .ant-input-number-focused,
+.category-form .ant-input-number:focus-within {
+  border-color: #1A6BA8;
+  box-shadow: 0 0 0 2px rgba(26, 107, 168, 0.1);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .category-table .ant-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 480px) {
+  .categories-page {
+    padding: 12px !important;
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "name": "yijiandaodi-security-core",
+  "version": "1.0.0",
+  "description": "一鉴到底核心库 - AI操作行为实时审计和安全监控",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": [
+    "yijiandaodi",
+    "ai-safety",
+    "ai-security",
+    "ai-monitoring",
+    "ai-audit",
+    "security-monitor",
+    "audit",
+    "clipboard-monitor",
+    "file-monitor",
+    "sensitive-data-detection",
+    "data-leak-prevention",
+    "api-key-detection",
+    "sql-injection-detection",
+    "xss-detection",
+    "security-knowledge-base",
+    "audit-trail",
+    "blockchain-audit",
+    "hash-chain",
+    "tamper-proof",
+    "typescript",
+    "npm-package"
+  ],
+  "author": "一鉴到底团队",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yijiandaodi/core.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yijiandaodi/core/issues"
+  },
+  "homepage": "https://yijiandaodi.com",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:security": "grep -r 'sk-\\|AIza\\|ghp_' src/ && echo '⚠️ 发现硬编码的 API Key！' || echo '✅ 未发现硬编码的 API Key'",
+    "lint": "eslint src/**/*.ts",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "dependencies": {
+    "axios": "^1.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.0",
+    "ts-jest": "^29.1.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

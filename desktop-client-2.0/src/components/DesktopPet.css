@@ -1,0 +1,173 @@
+/* 一鉴到底桌宠样式 */
+
+.desktop-pet {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 9999;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.pet-container {
+  width: 140px;
+  height: 170px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+/* PNG图片样式 */
+.pet-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  max-width: 140px;
+  max-height: 170px;
+  background: transparent;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+}
+
+/* 状态指示器 */
+.status-indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* 气泡提示 */
+.bubble {
+  position: absolute;
+  bottom: 100%;
+  right: 50%;
+  transform: translateX(50%);
+  margin-bottom: 10px;
+  animation: fadeInUp 0.3s ease;
+}
+
+.bubble-content {
+  background: white;
+  padding: 10px 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+  font-size: 14px;
+  color: #333;
+  position: relative;
+}
+
+.bubble-content::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid white;
+}
+
+/* 动画效果 */
+
+/* 呼吸动画 */
+.idle .pet-image {
+  animation: breathe 3s ease-in-out infinite, float 4s ease-in-out infinite;
+}
+
+/* 检测中动画 */
+.thinking .pet-image {
+  animation: breathe 2s ease-in-out infinite, think 2s ease-in-out infinite;
+}
+
+/* 警示动画 */
+.alert .pet-image {
+  animation: alert 0.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba(231, 76, 60, 0.8));
+}
+
+/* 呼吸效果 */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* 浮动效果 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* 思考效果 */
+@keyframes think {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(5deg);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
+}
+
+/* 警示效果 */
+@keyframes alert {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* 指示灯脉冲 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* 气泡淡入 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateX(50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(50%) translateY(0);
+  }
+}
+
+/* 悬停效果 */
+.desktop-pet:hover .pet-image {
+  transform: scale(1.08);
+}
+
+/* 点击效果 */
+.desktop-pet:active .pet-image {
+  transform: scale(0.95);
+}

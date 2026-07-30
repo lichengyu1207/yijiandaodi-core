@@ -1,0 +1,48 @@
+{
+  "manifest_version": 2,
+  "name": "一鉴到底 - AI创作保护助手",
+  "version": "1.0.0",
+  "description": "记录创作操作、本地存指纹、一键导出证据链报告",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "webNavigation",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "browser_action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "一鉴到底",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "background": {
+    "scripts": ["background/background.js"],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/content.js"],
+      "css": ["content/content.css"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    "icons/*",
+    "popup/*"
+  ],
+  "applications": {
+    "gecko": {
+      "id": "yijiandaodi@example.com",
+      "strict_min_version": "78.0"
+    }
+  }
+}

@@ -1,5 +1,29 @@
 # 一鉴到底核心库 (yijiandaodi-security-core)
 
+> AI Agent 安全检测核心库 - 实时审计、智能检测、区块链存证
+
+## 安装
+
+### 本地安装（推荐）
+
+由于NPM发布权限问题，当前推荐使用本地安装：
+
+```bash
+# 方式1：安装本地tarball
+npm install ./yijiandaodi-security-core-1.0.0.tgz
+
+# 方式2：从源码安装
+cd npm-package && npm install && npm run build && npm link
+```
+
+### NPM安装（稍后支持）
+
+```bash
+npm install yijiandaodi-security-core
+```
+
+详细安装说明请查看 [INSTALL.md](./INSTALL.md)
+
 > 🇨🇳 AI操作行为实时审计和安全监控核心库
 > 🇺🇸 AI Operation Behavior Audit and Security Monitoring Core Library
 

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小鉴 - 一鉴到底桌宠</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+      -webkit-app-region: drag;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .pet-container {
+      width: 140px;
+      height: 170px;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+    }
+
+    .pet-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      animation: breathe 3s ease-in-out infinite, float 4s ease-in-out infinite;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+      background: transparent;
+      max-width: 140px;
+      max-height: 170px;
+      border-radius: 0; /* 移除圆形裁剪 */
+    }
+
+    /* 呼吸动画 */
+    @keyframes breathe {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    /* 浮动动画 */
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+      50% {
+        transform: translateY(-8px);
+      }
+    }
+
+    /* 思考状态动画 */
+    .pet-image.thinking {
+      animation: breathe 2s ease-in-out infinite, think 3s ease-in-out infinite;
+    }
+
+    @keyframes think {
+      0%, 100% {
+        transform: rotate(0deg);
+      }
+      25% {
+        transform: rotate(-5deg);
+      }
+      75% {
+        transform: rotate(5deg);
+      }
+    }
+
+    /* 警示状态动画 */
+    .pet-image.alert {
+      animation: shake 0.5s ease-in-out infinite, pulse-alert 1s ease-in-out infinite;
+    }
+
+    @keyframes shake {
+      0%, 100% {
+        transform: translateX(0);
+      }
+      25% {
+        transform: translateX(-5px);
+      }
+      75% {
+        transform: translateX(5px);
+      }
+    }
+
+    @keyframes pulse-alert {
+      0%, 100% {
+        filter: drop-shadow(0 10px 20px rgba(255, 0, 0, 0.5));
+      }
+      50% {
+        filter: drop-shadow(0 10px 30px rgba(255, 0, 0, 0.8));
+      }
+    }
+
+    /* 成功状态动画 */
+    .pet-image.success {
+      animation: celebrate 1s ease-in-out infinite, breathe 2s ease-in-out infinite;
+    }
+
+    @keyframes celebrate {
+      0%, 100% {
+        transform: translateY(0) rotate(0deg);
+      }
+      25% {
+        transform: translateY(-15px) rotate(-5deg);
+      }
+      50% {
+        transform: translateY(0) rotate(0deg);
+      }
+      75% {
+        transform: translateY(-15px) rotate(5deg);
+      }
+    }
+
+    .pet-container:hover .pet-image {
+      animation-play-state: paused;
+      transform: scale(1.1);
+      transition: transform 0.3s ease;
+    }
+
+    /* 状态指示器 */
+    .status-indicator {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 0 15px currentColor;
+      animation: pulse-indicator 2s infinite;
+      z-index: 10;
+    }
+
+    .status-indicator.green {
+      background: #58D68D;
+      color: #58D68D;
+    }
+
+    .status-indicator.yellow {
+      background: #F7DC6F;
+      color: #F7DC6F;
+      animation: pulse-indicator 1s infinite;
+    }
+
+    .status-indicator.red {
+      background: #E74C3C;
+      color: #E74C3C;
+      animation: pulse-indicator 0.5s infinite;
+    }
+
+    @keyframes pulse-indicator {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 15px currentColor;
+      }
+      50% {
+        opacity: 0.8;
+        transform: scale(1.2);
+        box-shadow: 0 0 25px currentColor;
+      }
+    }
+
+    /* 气泡提示 */
+    .bubble {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 8px 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      font-size: 13px;
+      color: #333;
+      font-weight: 500;
+      z-index: 20;
+      margin-bottom: 10px;
+      transition: opacity 0.3s ease;
+    }
+
+    .bubble.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="pet-container">
+    <!-- 状态指示器 -->
+    <div id="statusIndicator" class="status-indicator green"></div>
+    
+    <!-- 桌宠图片 -->
+    <img id="petImage" class="pet-image" src="/pet-idle.png" alt="小鉴">
+    
+    <!-- 气泡提示 -->
+    <div id="bubble" class="bubble">
+      <div id="bubbleContent"></div>
+    </div>
+  </div>
+
+  <script>
+    console.log('[小鉴] 页面开始加载');
+
+    const petImage = document.getElementById('petImage');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const bubble = document.getElementById('bubble');
+    const bubbleContent = document.getElementById('bubbleContent');
+
+    // 状态配置
+    const STATE_CONFIG = {
+      idle: { 
+        image: '/pet-idle.png', 
+        indicator: 'green',
+        animClass: '',
+        message: '系统安全运行中 ✓' 
+      },
+      thinking: { 
+        image: '/pet-thinking.png', 
+        indicator: 'yellow',
+        animClass: 'thinking',
+        message: '正在检测中...' 
+      },
+      alert: { 
+        image: '/pet-alert.png', 
+        indicator: 'red',
+        animClass: 'alert',
+        message: '⚠ 发现风险！' 
+      },
+      success: { 
+        image: '/pet-success.png', 
+        indicator: 'green',
+        animClass: 'success',
+        message: '检测通过 ✓' 
+      }
+    };
+
+    let currentState = 'idle';
+    let lastInteractionTime = Date.now();
+    let idleTimer = null;
+    let greetingTimer = null;
+
+    // 打招呼消息列表
+    const GREETING_MESSAGES = [
+      '嗨！别忘了定期检查系统安全哦~',
+      '主人，我还在这里守护着呢！',
+      '要不要来看看最近的安全报告？',
+      '系统一切正常，放心使用吧！',
+      '有什么需要帮助的吗？'
+    ];
+
+    /**
+     * 切换状态
+     */
+    function switchState(newState) {
+      if (currentState === newState) return;
+
+      const config = STATE_CONFIG[newState];
+      
+      // 更新图片（添加渐变效果）
+      petImage.style.opacity = '0';
+      
+      setTimeout(() => {
+        petImage.src = config.image;
+        petImage.className = `pet-image ${config.animClass}`;
+        petImage.style.opacity = '1';
+      }, 150);
+      
+      // 更新状态指示器
+      statusIndicator.className = `status-indicator ${config.indicator}`;
+      
+      // 显示气泡
+      showBubble(config.message);
+
+      currentState = newState;
+      lastInteractionTime = Date.now();
+      
+      // 重置定时器
+      resetIdleTimer();
+      
+      console.log(`[小鉴] 状态切换: ${newState}`);
+    }
+
+    /**
+     * 显示气泡
+     */
+    function showBubble(message, duration = 3000) {
+      bubbleContent.textContent = message;
+      bubble.classList.add('visible');
+
+      setTimeout(() => {
+        bubble.classList.remove('visible');
+      }, duration);
+    }
+
+    /**
+     * 打开主窗口
+     */
+    function openMainWindow() {
+      if (window.electronAPI?.openMainWindow) {
+        window.electronAPI.openMainWindow();
+      }
+      lastInteractionTime = Date.now();
+      resetIdleTimer();
+    }
+
+    /**
+     * 重置空闲定时器
+     */
+    function resetIdleTimer() {
+      if (idleTimer) clearTimeout(idleTimer);
+      if (greetingTimer) clearTimeout(greetingTimer);
+      
+      // 30秒后如果没有任何交互，开始打招呼
+      idleTimer = setTimeout(() => {
+        showRandomGreeting();
+      }, 30000);
+    }
+
+    /**
+     * 显示随机打招呼
+     */
+    function showRandomGreeting() {
+      const randomMessage = GREETING_MESSAGES[Math.floor(Math.random() * GREETING_MESSAGES.length)];
+      showBubble(randomMessage, 5000);
+      
+      // 添加跳跃动画
+      petImage.classList.add('greeting');
+      setTimeout(() => {
+        petImage.classList.remove('greeting');
+      }, 2000);
+      
+      // 每30秒再打一次招呼
+      greetingTimer = setTimeout(() => {
+        showRandomGreeting();
+      }, 30000);
+    }
+
+    /**
+     * 初始化
+     */
+    async function init() {
+      console.log('[小鉴] 初始化开始');
+      
+      // 添加渐变效果
+      petImage.style.transition = 'opacity 0.15s ease';
+      
+      // 尝试加载图片
+      console.log('[小鉴] 尝试加载图片:', '/pet-idle.png');
+      
+      try {
+        // 监听状态变化
+        if (window.electronAPI?.onPetStateChange) {
+          window.electronAPI.onPetStateChange((state) => {
+            switchState(state);
+          });
+        }
+
+        // 获取初始状态
+        if (window.electronAPI?.getPetState) {
+          const state = await window.electronAPI.getPetState();
+          if (state) {
+            switchState(state);
+          }
+        }
+
+        // 点击交互 - 打开主窗口
+        document.querySelector('.pet-container').addEventListener('click', () => {
+          openMainWindow();
+          
+          // 同时显示当前状态
+          const config = STATE_CONFIG[currentState];
+          showBubble(config.message, 2000);
+        });
+
+        // 鼠标悬停暂停动画
+        document.querySelector('.pet-container').addEventListener('mouseenter', () => {
+          lastInteractionTime = Date.now();
+          resetIdleTimer();
+        });
+
+        // 显示欢迎气泡
+        setTimeout(() => {
+          showBubble('你好！我是小鉴，点击我可以打开主窗口', 4000);
+        }, 1000);
+
+        // 启动空闲定时器
+        resetIdleTimer();
+
+        console.log('[小鉴] 初始化完成');
+      } catch (error) {
+        console.error('[小鉴] 初始化失败:', error);
+      }
+    }
+
+    // 图片加载成功
+    petImage.onload = function() {
+      console.log('[小鉴] 图片加载成功');
+    };
+
+    // 图片加载失败
+    petImage.onerror = function() {
+      console.error('[小鉴] 图片加载失败，尝试备用路径');
+      // 尝试备用路径
+      const fallbackPaths = [
+        './public/pet-idle.png',
+        '../public/pet-idle.png',
+        'file://' + require('path').join(__dirname, '../public/pet-idle.png')
+      ];
+      
+      for (const path of fallbackPaths) {
+        console.log('[小鉴] 尝试备用路径:', path);
+        petImage.src = path;
+        break;
+      }
+    };
+
+    // 启动
+    document.addEventListener('DOMContentLoaded', init);
+    
+    // 如果DOMContentLoaded已经触发
+    if (document.readyState !== 'loading') {
+      init();
+    }
+  </script>
+</body>
+</html>

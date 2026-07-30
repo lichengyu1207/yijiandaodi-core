@@ -1,0 +1,39 @@
+{
+  "name": "yijiandaodi-extension",
+  "version": "1.0.0",
+  "description": "一鉴到底浏览器插件 - AI创作保护工具",
+  "main": "background/background.js",
+  "scripts": {
+    "build": "echo '无需构建'",
+    "test": "node tests/quick-test.js",
+    "pack": "powershell -Command \"Compress-Archive -Path content,background,popup,icons,manifest.json,manifest-firefox.json,*.md -DestinationPath yijiandaodi-extension.zip -Force\"",
+    "publish-prepare": "npm run test && npm run pack"
+  },
+  "keywords": [
+    "chrome-extension",
+    "ai-protection",
+    "content-creation",
+    "evidence-chain"
+  ],
+  "author": "YijianDaoDi Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/yijiandaodi"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.260"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "content/",
+    "background/",
+    "popup/",
+    "icons/",
+    "manifest.json",
+    "manifest-firefox.json",
+    "*.md"
+  ]
+}

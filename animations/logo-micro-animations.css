@@ -1,0 +1,409 @@
+/* 一鉴到底 Logo 微动效 */
+/* 适用于网站和桌面端 */
+
+/* ==================== Logo 容器 ==================== */
+.yijiandaodi-logo {
+  position: relative;
+  display: inline-block;
+}
+
+/* ==================== Logo 图片 ==================== */
+.yijiandaodi-logo img,
+.yijiandaodi-logo svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+
+  /* 呼吸效果 */
+  animation: logo-breathe 3s ease-in-out infinite;
+
+  /* 阴影效果 */
+  filter: drop-shadow(0 0 10px rgba(22, 93, 255, 0.3));
+}
+
+/* ==================== 呼吸动画 ==================== */
+@keyframes logo-breathe {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px rgba(22, 93, 255, 0.3));
+  }
+  50% {
+    transform: scale(1.02);
+    filter: drop-shadow(0 0 20px rgba(22, 93, 255, 0.5));
+  }
+}
+
+/* ==================== 光晕效果 ==================== */
+.logo-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150%;
+  height: 150%;
+  background: radial-gradient(circle, rgba(22, 93, 255, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: glow-pulse 4s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+/* ==================== 悬停效果 ==================== */
+.yijiandaodi-logo:hover img,
+.yijiandaodi-logo:hover svg {
+  animation: logo-hover 0.5s ease-out forwards;
+  filter: drop-shadow(0 0 25px rgba(22, 93, 255, 0.6));
+}
+
+@keyframes logo-hover {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1.02);
+  }
+}
+
+/* ==================== 点击效果 ==================== */
+.yijiandaodi-logo:active img,
+.yijiandaodi-logo:active svg {
+  animation: logo-click 0.3s ease-out;
+}
+
+@keyframes logo-click {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ==================== 加载动画 ==================== */
+.logo-loading {
+  animation: logo-spin 1s linear infinite;
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================== 淡入动画 ==================== */
+.logo-fade-in {
+  animation: logo-fade-in 1s ease-out;
+}
+
+@keyframes logo-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==================== 从左侧滑入 ==================== */
+.logo-slide-left {
+  animation: logo-slide-left 0.8s ease-out;
+}
+
+@keyframes logo-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ==================== 从右侧滑入 ==================== */
+.logo-slide-right {
+  animation: logo-slide-right 0.8s ease-out;
+}
+
+@keyframes logo-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ==================== 从上方滑入 ==================== */
+.logo-slide-top {
+  animation: logo-slide-top 0.8s ease-out;
+}
+
+@keyframes logo-slide-top {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== 缩放动画 ==================== */
+.logo-zoom-in {
+  animation: logo-zoom-in 0.6s ease-out;
+}
+
+@keyframes logo-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==================== 旋转进入 ==================== */
+.logo-rotate-in {
+  animation: logo-rotate-in 0.8s ease-out;
+}
+
+@keyframes logo-rotate-in {
+  from {
+    opacity: 0;
+    transform: rotate(-180deg) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+/* ==================== 弹跳效果 ==================== */
+.logo-bounce {
+  animation: logo-bounce 0.8s ease-out;
+}
+
+@keyframes logo-bounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ==================== 闪烁效果 ==================== */
+.logo-flash {
+  animation: logo-flash 0.5s ease-out;
+}
+
+@keyframes logo-flash {
+  0%, 50%, 100% {
+    opacity: 1;
+  }
+  25%, 75% {
+    opacity: 0.5;
+  }
+}
+
+/* ==================== 脉冲效果 ==================== */
+.logo-pulse {
+  animation: logo-pulse 1s ease-in-out;
+}
+
+@keyframes logo-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ==================== 摇晃效果 ==================== */
+.logo-shake {
+  animation: logo-shake 0.5s ease-in-out;
+}
+
+@keyframes logo-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+/* ==================== 心跳效果 ==================== */
+.logo-heartbeat {
+  animation: logo-heartbeat 1s ease-in-out infinite;
+}
+
+@keyframes logo-heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.1);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(1);
+  }
+}
+
+/* ==================== 渐变边框 ==================== */
+.logo-gradient-border {
+  position: relative;
+  padding: 3px;
+  background: linear-gradient(90deg, #165DFF, #00D4FF, #165DFF);
+  background-size: 200% 100%;
+  animation: gradient-move 2s linear infinite;
+  border-radius: 12px;
+}
+
+.logo-gradient-border::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  background: #0A0E1A;
+  border-radius: 9px;
+  z-index: 0;
+}
+
+.logo-gradient-border > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes gradient-move {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/* ==================== 浮动效果 ==================== */
+.logo-float {
+  animation: logo-float 3s ease-in-out infinite;
+}
+
+@keyframes logo-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* ==================== 3D翻转 ==================== */
+.logo-flip-3d {
+  animation: logo-flip-3d 0.8s ease-out;
+  transform-style: preserve-3d;
+}
+
+@keyframes logo-flip-3d {
+  from {
+    transform: rotateY(90deg);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0deg);
+    opacity: 1;
+  }
+}
+
+/* ==================== 响应式调整 ==================== */
+@media (max-width: 768px) {
+  .yijiandaodi-logo img,
+  .yijiandaodi-logo svg {
+    animation: logo-breathe 4s ease-in-out infinite;
+  }
+
+  @keyframes logo-breathe {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.01);
+    }
+  }
+}
+
+/* ==================== 无障碍：尊重用户动画偏好 ==================== */
+@media (prefers-reduced-motion: reduce) {
+  .yijiandaodi-logo img,
+  .yijiandaodi-logo svg,
+  .logo-glow,
+  .logo-loading,
+  .logo-fade-in,
+  .logo-slide-left,
+  .logo-slide-right,
+  .logo-slide-top,
+  .logo-zoom-in,
+  .logo-rotate-in,
+  .logo-bounce,
+  .logo-flash,
+  .logo-pulse,
+  .logo-shake,
+  .logo-heartbeat,
+  .logo-gradient-border,
+  .logo-float,
+  .logo-flip-3d {
+    animation: none !important;
+    transition: none !important;
+  }
+}

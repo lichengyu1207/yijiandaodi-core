@@ -1,0 +1,84 @@
+.audit-logs-page {
+  padding: 0;
+}
+
+.filter-card {
+  margin-bottom: 20px;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  border-color: #E8E4DE !important;
+}
+
+.filter-card .ant-card-body {
+  padding: 16px 20px;
+}
+
+.filter-card .ant-select-selector {
+  border-radius: 6px !important;
+  border-color: #E8E4DE !important;
+}
+
+.filter-card .ant-select-focused .ant-select-selector {
+  border-color: #1A6BA8 !important;
+}
+
+.filter-card .ant-picker {
+  border-radius: 6px !important;
+  border-color: #E8E4DE !important;
+}
+
+.filter-card .ant-picker-focused {
+  border-color: #1A6BA8 !important;
+  box-shadow: 0 0 0 2px rgba(26, 107, 168, 0.1) !important;
+}
+
+.filter-card .ant-input {
+  border-radius: 6px !important;
+  border-color: #E8E4DE !important;
+}
+
+.filter-card .ant-input:focus {
+  border-color: #1A6BA8 !important;
+  box-shadow: 0 0 0 2px rgba(26, 107, 168, 0.1) !important;
+}
+
+.audit-table .ant-table-thead > tr > th {
+  background: #FBF9F6 !important;
+  font-weight: 600;
+  color: #2D2A26;
+  border-bottom: 1px solid #E8E4DE;
+}
+
+.audit-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #F0EDE7;
+}
+
+.audit-table .ant-table-tbody > tr:hover > td {
+  background: #FAF8F5 !important;
+}
+
+.audit-table .ant-collapse-ghost > .ant-collapse-item > .ant-collapse-header {
+  padding: 0 !important;
+}
+
+.audit-table .ant-pagination-item-active {
+  border-color: #1A6BA8 !important;
+}
+
+.audit-table .ant-pagination-item-active a {
+  color: #1A6BA8 !important;
+}
+
+.audit-table pre::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.audit-table pre::-webkit-scrollbar-thumb {
+  background: #D9D5CE;
+  border-radius: 3px;
+}
+
+.audit-table pre::-webkit-scrollbar-track {
+  background: transparent;
+}

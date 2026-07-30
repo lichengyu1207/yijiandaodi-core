@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一鉴到底 - 简化版Logo动画</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #0A0E1A 0%, #1a1f35 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Logo容器 */
+        .logo-container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        /* SVG Logo */
+        .logo-svg {
+            width: 200px;
+            height: 200px;
+            animation: logoFadeIn 2s ease-out, breathe 3s ease-in-out infinite 2s;
+            filter: drop-shadow(0 0 30px rgba(22, 93, 255, 0.5));
+        }
+
+        /* Logo淡入动画 */
+        @keyframes logoFadeIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotateY(180deg);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.1) rotateY(90deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateY(0deg);
+            }
+        }
+
+        /* Logo呼吸效果 */
+        @keyframes breathe {
+            0%, 100% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 30px rgba(22, 93, 255, 0.5));
+            }
+            50% {
+                transform: scale(1.05);
+                filter: drop-shadow(0 0 50px rgba(22, 93, 255, 0.8));
+            }
+        }
+
+        /* 光晕效果 */
+        .logo-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(22, 93, 255, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: glowPulse 4s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes glowPulse {
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 0.8;
+            }
+        }
+
+        /* 标题 */
+        .title {
+            color: #ffffff;
+            font-size: 48px;
+            font-weight: 700;
+            margin-top: 30px;
+            letter-spacing: 8px;
+            animation: titleSlideIn 1s ease-out 1s both;
+        }
+
+        @keyframes titleSlideIn {
+            0% {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 副标题 */
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 18px;
+            margin-top: 15px;
+            letter-spacing: 4px;
+            animation: subtitleFadeIn 1s ease-out 1.5s both;
+        }
+
+        @keyframes subtitleFadeIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* 特性列表 */
+        .features {
+            display: flex;
+            gap: 40px;
+            margin-top: 60px;
+            animation: featuresSlideUp 1s ease-out 2s both;
+        }
+
+        @keyframes featuresSlideUp {
+            0% {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feature-item {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover {
+            background: rgba(22, 93, 255, 0.1);
+            border-color: rgba(22, 93, 255, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .feature-text {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            animation: progressFadeIn 1s ease-out 2.5s both;
+        }
+
+        @keyframes progressFadeIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #165DFF 0%, #00D4FF 100%);
+            animation: progressFill 4s ease-in-out 2.5s forwards;
+        }
+
+        @keyframes progressFill {
+            0% {
+                width: 0%;
+            }
+            100% {
+                width: 100%;
+            }
+        }
+
+        /* 控制按钮 */
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .control-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(22, 93, 255, 0.2);
+            border-color: rgba(22, 93, 255, 0.4);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .logo-svg {
+                width: 150px;
+                height: 150px;
+            }
+
+            .title {
+                font-size: 32px;
+                letter-spacing: 4px;
+            }
+
+            .subtitle {
+                font-size: 14px;
+            }
+
+            .features {
+                flex-direction: column;
+                gap: 20px;
+                padding: 0 20px;
+            }
+
+            .feature-item {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 控制按钮 -->
+    <div class="controls">
+        <button class="control-btn" onclick="replay()">重新播放</button>
+    </div>
+
+    <!-- Logo容器 -->
+    <div class="logo-container">
+        <div class="logo-glow"></div>
+        
+        <!-- SVG Logo - 不依赖外部图片 -->
+        <svg class="logo-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <!-- 背景圆 -->
+            <circle cx="100" cy="100" r="90" fill="none" stroke="url(#gradient1)" stroke-width="4" opacity="0.3"/>
+            
+            <!-- 外圈动画 -->
+            <circle cx="100" cy="100" r="85" fill="none" stroke="url(#gradient2)" stroke-width="2" stroke-dasharray="535" stroke-dashoffset="535">
+                <animate attributeName="stroke-dashoffset" from="535" to="0" dur="2s" fill="freeze"/>
+            </circle>
+            
+            <!-- 中心图标 - 盾牌 -->
+            <path d="M100 30 L150 50 L150 100 C150 130 125 155 100 170 C75 155 50 130 50 100 L50 50 Z" 
+                  fill="url(#gradient1)" opacity="0.9">
+                <animate attributeName="opacity" values="0;0.9" dur="1.5s" fill="freeze"/>
+            </path>
+            
+            <!-- 盾牌边框 -->
+            <path d="M100 30 L150 50 L150 100 C150 130 125 155 100 170 C75 155 50 130 50 100 L50 50 Z" 
+                  fill="none" stroke="url(#gradient2)" stroke-width="2"/>
+            
+            <!-- 中心文字 "一" -->
+            <text x="100" y="95" text-anchor="middle" fill="#ffffff" font-size="32" font-weight="bold" opacity="0">
+                一
+                <animate attributeName="opacity" values="0;1" dur="0.5s" begin="1s" fill="freeze"/>
+            </text>
+            
+            <!-- 中心文字 "鉴" -->
+            <text x="100" y="115" text-anchor="middle" fill="#ffffff" font-size="16" opacity="0">
+                鉴
+                <animate attributeName="opacity" values="0;1" dur="0.5s" begin="1.2s" fill="freeze"/>
+            </text>
+            
+            <!-- 装饰点 - 上 -->
+            <circle cx="100" cy="25" r="3" fill="#00D4FF" opacity="0">
+                <animate attributeName="opacity" values="0;1" dur="0.5s" begin="1.5s" fill="freeze"/>
+            </circle>
+            
+            <!-- 装饰点 - 左下 -->
+            <circle cx="60" cy="160" r="2" fill="#165DFF" opacity="0">
+                <animate attributeName="opacity" values="0;1" dur="0.5s" begin="1.6s" fill="freeze"/>
+            </circle>
+            
+            <!-- 装饰点 - 右下 -->
+            <circle cx="140" cy="160" r="2" fill="#165DFF" opacity="0">
+                <animate attributeName="opacity" values="0;1" dur="0.5s" begin="1.7s" fill="freeze"/>
+            </circle>
+            
+            <!-- 渐变定义 -->
+            <defs>
+                <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#165DFF;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#00D4FF;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#00D4FF;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#165DFF;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+        </svg>
+        
+        <h1 class="title">一鉴到底</h1>
+        <p class="subtitle">AI创作保护平台</p>
+    </div>
+
+    <!-- 特性列表 -->
+    <div class="features">
+        <div class="feature-item">
+            <div class="feature-icon">🔒</div>
+            <div class="feature-text">数据不出境</div>
+        </div>
+        <div class="feature-item">
+            <div class="feature-icon">📜</div>
+            <div class="feature-text">司法级存证</div>
+        </div>
+        <div class="feature-item">
+            <div class="feature-icon">🔍</div>
+            <div class="feature-text">AI智能检测</div>
+        </div>
+        <div class="feature-item">
+            <div class="feature-icon">🔄</div>
+            <div class="feature-text">多端同步</div>
+        </div>
+    </div>
+
+    <!-- 进度条 -->
+    <div class="progress-bar">
+        <div class="progress-fill"></div>
+    </div>
+
+    <script>
+        // 重新播放动画
+        function replay() {
+            const logoSvg = document.querySelector('.logo-svg');
+            logoSvg.style.animation = 'none';
+            
+            // 重置SVG内部动画
+            const animations = logoSvg.querySelectorAll('animate');
+            animations.forEach(anim => {
+                anim.beginElement();
+            });
+            
+            setTimeout(() => {
+                logoSvg.style.animation = 'logoFadeIn 2s ease-out, breathe 3s ease-in-out infinite 2s';
+            }, 10);
+        }
+    </script>
+</body>
+</html>

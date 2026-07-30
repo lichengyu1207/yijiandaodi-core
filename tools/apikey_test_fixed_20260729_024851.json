@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-07-29T02:48:51.957701",
+  "user_id": 29,
+  "api_key": "yijia_sk_live_wwAI94hheC72aLGOMKhze90i2yrPsS-B",
+  "tests": [
+    {
+      "name": "用户认证",
+      "status": "PASS"
+    },
+    {
+      "name": "API Key生成",
+      "status": "PASS"
+    },
+    {
+      "name": "API Key认证",
+      "status": "PASS"
+    },
+    {
+      "name": "完整集成",
+      "status": "PASS"
+    }
+  ]
+}

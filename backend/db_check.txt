@@ -1,0 +1,32 @@
+Categories: 9
+  [1] 安全审计 (security-audit)
+  [2] 合规检测 (compliance)
+  [3] 身份验证 (identity)
+  [4] 数据存证 (data-proof)
+  [5] 漏洞扫描 (vuln-scan)
+  [6] 风险评估 (risk-assess)
+  [7] 应急响应 (incident)
+  [8] 行业动态 (industry)
+  [9] Agent 执行 (agent-exec)
+
+Articles: 1000
+  [3656] "Agent编排引擎DAG权限传递问题" | xinfa=pitfall_records | zone=dev | pinned=False
+  [3563] "持续改进 Continual Improvement PDCA" | xinfa=agent_pitfall | zone=enterprise | pinned=False
+  [3491] "密钥加密硬件HSM Thales Luna" | xinfa=pitfall_records | zone=multi_agent | pinned=False
+  [3129] "URL白名单实现方案" | xinfa=agent_pitfall | zone=pitfall_records | pinned=False
+  [3880] "资产盘点CMDB准确性" | xinfa=agent_pitfall | zone=pitfall_records | pinned=False
+  [3642] "供应链投毒：npm包感染Agent的案例" | xinfa=dev_survival | zone=pitfall_records | pinned=False
+  [3544] "违规罚款 Penalty Calculation" | xinfa=agent_pitfall | zone=multi_agent | pinned=False
+  [3454] "自动化安全扫描CI集成" | xinfa=dev_survival | zone=dev | pinned=False
+  [3137] "路径遍历../防护方案" | xinfa=pitfall_records | zone=dev | pinned=False
+  [3935] "API Security网关方案" | xinfa=agent_pitfall | zone=enterprise | pinned=False
+
+Xinfa Tag Distribution:
+  agent_pitfall: 397
+  pitfall_records: 208
+  dev_survival: 199
+  corp_compliance: 196
+
+Pinned: 30
+Published: 1000
+Tags: 25

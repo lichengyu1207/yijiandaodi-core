@@ -1,0 +1,60 @@
+{
+  "timestamp": "2026-07-29T02:12:15.241269",
+  "summary": {
+    "total": 8,
+    "passed": 6,
+    "failed": 2,
+    "errors": 0,
+    "pass_rate": "75.0%"
+  },
+  "results": [
+    {
+      "name": "健康检查",
+      "status": "PASS",
+      "duration": 2.09,
+      "error": null
+    },
+    {
+      "name": "空用户名",
+      "status": "PASS",
+      "duration": 2.11,
+      "error": null
+    },
+    {
+      "name": "短密码",
+      "status": "PASS",
+      "duration": 2.05,
+      "error": null
+    },
+    {
+      "name": "密码不匹配",
+      "status": "PASS",
+      "duration": 2.08,
+      "error": null
+    },
+    {
+      "name": "未同意隐私政策",
+      "status": "PASS",
+      "duration": 2.07,
+      "error": null
+    },
+    {
+      "name": "错误密码",
+      "status": "FAIL",
+      "duration": 3.81,
+      "error": null
+    },
+    {
+      "name": "不存在用户",
+      "status": "FAIL",
+      "duration": 3.66,
+      "error": null
+    },
+    {
+      "name": "空请求体",
+      "status": "PASS",
+      "duration": 2.07,
+      "error": null
+    }
+  ]
+}

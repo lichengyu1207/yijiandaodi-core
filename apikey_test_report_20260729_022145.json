@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-07-29T02:21:45.226348",
+  "user_id": null,
+  "api_key": null,
+  "tests": [
+    {
+      "name": "用户认证",
+      "status": "PASS"
+    },
+    {
+      "name": "API Key生成",
+      "status": "PASS"
+    },
+    {
+      "name": "API Key认证",
+      "status": "PASS"
+    },
+    {
+      "name": "权限测试",
+      "status": "PASS"
+    },
+    {
+      "name": "限流测试",
+      "status": "PASS"
+    },
+    {
+      "name": "监控日志",
+      "status": "PASS"
+    },
+    {
+      "name": "完整集成",
+      "status": "PASS"
+    }
+  ]
+}

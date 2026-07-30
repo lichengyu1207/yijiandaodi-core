@@ -1,0 +1,5 @@
+// 测试文件：包含敏感关键词
+password=admin123
+api_key=sk-test123456789
+secret=my-secret-key
+token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9

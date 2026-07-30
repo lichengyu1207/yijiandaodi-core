@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一鉴到底 - Logo动画演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #0A0E1A 0%, #1a1f35 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 粒子背景 */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(22, 93, 255, 0.6);
+            border-radius: 50%;
+            animation: float 15s infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Logo容器 */
+        .logo-container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        /* Logo图片 */
+        .logo-image {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+            animation: logoFadeIn 2s ease-out, breathe 3s ease-in-out infinite 2s;
+            filter: drop-shadow(0 0 30px rgba(22, 93, 255, 0.5));
+        }
+
+        /* Logo淡入动画 */
+        @keyframes logoFadeIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotateY(180deg);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.1) rotateY(90deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateY(0deg);
+            }
+        }
+
+        /* Logo呼吸效果 */
+        @keyframes breathe {
+            0%, 100% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 30px rgba(22, 93, 255, 0.5));
+            }
+            50% {
+                transform: scale(1.05);
+                filter: drop-shadow(0 0 50px rgba(22, 93, 255, 0.8));
+            }
+        }
+
+        /* 光晕效果 */
+        .logo-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(22, 93, 255, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: glowPulse 4s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes glowPulse {
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 0.8;
+            }
+        }
+
+        /* 标题 */
+        .title {
+            color: #ffffff;
+            font-size: 48px;
+            font-weight: 700;
+            margin-top: 30px;
+            letter-spacing: 8px;
+            animation: titleSlideIn 1s ease-out 1s both;
+        }
+
+        @keyframes titleSlideIn {
+            0% {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 副标题 */
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 18px;
+            margin-top: 15px;
+            letter-spacing: 4px;
+            animation: subtitleFadeIn 1s ease-out 1.5s both;
+        }
+
+        @keyframes subtitleFadeIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* 特性列表 */
+        .features {
+            display: flex;
+            gap: 40px;
+            margin-top: 60px;
+            animation: featuresSlideUp 1s ease-out 2s both;
+        }
+
+        @keyframes featuresSlideUp {
+            0% {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feature-item {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover {
+            background: rgba(22, 93, 255, 0.1);
+            border-color: rgba(22, 93, 255, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .feature-text {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            animation: progressFadeIn 1s ease-out 2.5s both;
+        }
+
+        @keyframes progressFadeIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #165DFF 0%, #00D4FF 100%);
+            animation: progressFill 4s ease-in-out 2.5s forwards;
+        }
+
+        @keyframes progressFill {
+            0% {
+                width: 0%;
+            }
+            100% {
+                width: 100%;
+            }
+        }
+
+        /* 装饰线条 */
+        .decoration-line {
+            position: absolute;
+            width: 2px;
+            height: 100px;
+            background: linear-gradient(to bottom, transparent, rgba(22, 93, 255, 0.5), transparent);
+            animation: lineFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes lineFloat {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        .line-1 {
+            top: 10%;
+            left: 10%;
+        }
+
+        .line-2 {
+            top: 20%;
+            right: 15%;
+            animation-delay: 0.5s;
+        }
+
+        .line-3 {
+            bottom: 15%;
+            left: 20%;
+            animation-delay: 1s;
+        }
+
+        .line-4 {
+            bottom: 25%;
+            right: 10%;
+            animation-delay: 1.5s;
+        }
+
+        /* 控制按钮 */
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .control-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(22, 93, 255, 0.2);
+            border-color: rgba(22, 93, 255, 0.4);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .logo-image {
+                width: 150px;
+                height: 150px;
+            }
+
+            .title {
+                font-size: 32px;
+                letter-spacing: 4px;
+            }
+
+            .subtitle {
+                font-size: 14px;
+            }
+
+            .features {
+                flex-direction: column;
+                gap: 20px;
+                padding: 0 20px;
+            }
+
+            .feature-item {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 粒子背景 -->
+    <div class="particles" id="particles"></div>
+
+    <!-- 装饰线条 -->
+    <div class="decoration-line line-1"></div>
+    <div class="decoration-line line-2"></div>
+    <div class="decoration-line line-3"></div>
+    <div class="decoration-line line-4"></div>
+
+    <!-- 控制按钮 -->
+    <div class="controls">
+        <button class="control-btn" onclick="replay()">重新播放</button>
+        <button class="control-btn" onclick="toggleParticles()">切换粒子</button>
+    </div>
+
+    <!-- Logo容器 -->
+    <div class="logo-container">
+        <div class="logo-glow"></div>
+        <!-- 使用相对路径指向项目根目录的logo -->
+        <img src="../yi.jpg" alt="一鉴到底" class="logo-image" id="logo" onerror="this.src='https://via.placeholder.com/200?text=Yijiandaodi'">
+        <h1 class="title">一鉴到底</h1>
+        <p class="subtitle">AI创作保护平台</p>
+    </div>
+
+    <!-- 特性列表 -->
+    <div class="features">
+        <div class="feature-item">
+            <div class="feature-icon">🔒</div>
+            <div class="feature-text">数据不出境</div>
+        </div>
+        <div class="feature-item">
+            <div class="feature-icon">📜</div>
+            <div class="feature-text">司法级存证</div>
+        </div>
+        <div class="feature-item">
+            <div class="feature-icon">🔍</div>
+            <div class="feature-text">AI智能检测</div>
+        </div>
+        <div class="feature-item">
+            <div class="feature-icon">🔄</div>
+            <div class="feature-text">多端同步</div>
+        </div>
+    </div>
+
+    <!-- 进度条 -->
+    <div class="progress-bar">
+        <div class="progress-fill"></div>
+    </div>
+
+    <script>
+        // 创建粒子
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 30;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // 重新播放动画
+        function replay() {
+            const logo = document.getElementById('logo');
+            logo.style.animation = 'none';
+            setTimeout(() => {
+                logo.style.animation = 'logoFadeIn 2s ease-out, breathe 3s ease-in-out infinite 2s';
+            }, 10);
+        }
+
+        // 切换粒子显示
+        let particlesVisible = true;
+        function toggleParticles() {
+            const particlesContainer = document.getElementById('particles');
+            particlesVisible = !particlesVisible;
+            particlesContainer.style.opacity = particlesVisible ? '1' : '0';
+        }
+
+        // 初始化
+        createParticles();
+    </script>
+</body>
+</html>

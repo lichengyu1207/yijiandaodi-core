@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "deveco-mcp": {
+      "command": "npx",
+      "args": ["-y", "@deveco-codegenie/mcp@beta"],
+      "env": {
+        "PROJECT_PATH": "c:\\MsSafeData\\Desktop\\yijiandaodi",
+        "DEVECO_PATH": "C:\\Program Files\\Huawei\\DevEco Studio"
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "一鉴到底 - AI创作保护助手",
+  "version": "1.0.0",
+  "description": "记录创作操作、本地存指纹、一键导出证据链报告",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs",
+    "webNavigation",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "一鉴到底"
+  },
+  "background": {
+    "service_worker": "background/background.js",
+    "type": "module"
+  },
+  "externally_connectable": {
+    "matches": ["http://localhost:3001/*", "http://localhost:8000/*", "https://yijiandaodi.com/*"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/content.js"],
+      "css": ["content/content.css"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*", "popup/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

@@ -1,0 +1,417 @@
+/* 认证页面样式 */
+
+.auth-page {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.auth-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth-logo {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+}
+
+.auth-header h1 {
+  font-size: 24px;
+  color: #1a1a2e;
+  margin: 0 0 8px 0;
+}
+
+.auth-header p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* 登录方式切换 */
+.login-type-tabs {
+  display: flex;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+
+.login-type-tabs .tab {
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.login-type-tabs .tab.active {
+  background: #fff;
+  color: #1a1a2e;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* 表单 */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.form-group input {
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #165DFF;
+}
+
+.code-input {
+  display: flex;
+  gap: 8px;
+}
+
+.code-input input {
+  flex: 1;
+}
+
+.send-btn {
+  padding: 0 16px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.send-btn:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* 人脸登录 */
+.face-login-area {
+  text-align: center;
+}
+
+.face-capture {
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 16px;
+  background: #f3f4f6;
+  border: 2px dashed #d1d5db;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.face-capture:hover {
+  border-color: #165DFF;
+  background: #eff6ff;
+}
+
+.face-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.face-text {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.face-hint {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* 错误消息 */
+.error-message {
+  padding: 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 14px;
+}
+
+/* 提交按钮 */
+.submit-btn {
+  height: 48px;
+  background: linear-gradient(135deg, #165DFF 0%, #0d47a1 100%);
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.submit-btn:hover {
+  transform: translateY(-1px);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.link-btn {
+  background: transparent;
+  border: none;
+  color: #165DFF;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.skip-btn {
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  height: 44px;
+  font-size: 14px;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.auth-footer {
+  text-align: center;
+}
+
+.privacy-hint {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 16px;
+}
+
+.privacy-hint a {
+  color: #165DFF;
+  text-decoration: none;
+}
+
+/* 安全提示 */
+.security-notice {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #f0f9ff;
+  border-radius: 12px;
+}
+
+.notice-icon {
+  font-size: 24px;
+}
+
+.notice-content strong {
+  color: #0369a1;
+  font-size: 14px;
+}
+
+.notice-content p {
+  font-size: 12px;
+  color: #0369a1;
+  margin: 8px 0 0;
+}
+
+.notice-content ul {
+  margin: 8px 0 0;
+  padding-left: 16px;
+}
+
+.notice-content li {
+  font-size: 12px;
+  color: #0369a1;
+  margin: 4px 0;
+}
+
+/* 步骤指示器 */
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.step {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+.step.active {
+  background: #eff6ff;
+  color: #165DFF;
+}
+
+.step.completed {
+  background: #d1fae5;
+  color: #059669;
+}
+
+/* 成功页 */
+.success-card {
+  text-align: center;
+}
+
+.success-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  background: #d1fae5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: #059669;
+}
+
+.user-info {
+  text-align: left;
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 24px 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.info-row .value {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.info-row .verified {
+  color: #059669;
+}
+
+.benefits {
+  text-align: left;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 24px 0;
+}
+
+.benefits h3 {
+  font-size: 14px;
+  color: #92400e;
+  margin: 0 0 12px 0;
+}
+
+.benefits ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.benefits li {
+  font-size: 13px;
+  color: #92400e;
+  margin: 4px 0;
+}
+
+/* 品牌区域 */
+.auth-brand {
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.auth-brand h2 {
+  font-size: 32px;
+  color: #fff;
+  margin: 0 0 8px 0;
+}
+
+.auth-brand p {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 40px 0;
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feature {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feature .icon {
+  font-size: 20px;
+}
