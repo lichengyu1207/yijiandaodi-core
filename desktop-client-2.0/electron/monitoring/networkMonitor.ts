@@ -7,7 +7,7 @@ import { app } from 'electron';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
-const execAsync = promisify(exec);
+// 在类中创建，以便于测试 mock
 
 // AI API 域名列表
 const AI_API_DOMAINS = [
@@ -34,6 +34,11 @@ export class NetworkMonitor {
   private monitoringInterval: NodeJS.Timeout | null = null;
   private detectedConnections: Map<string, NetworkRequest> = new Map();
   private onAIAPIRequestDetected?: (request: NetworkRequest) => void;
+  private execAsync: (command: string) => Promise<{ stdout: string; stderr: string }>;
+
+  constructor() {
+    this.execAsync = promisify(exec);
+  }
 
   setAIAPIRequestDetectedCallback(callback: (request: NetworkRequest) => void) {
     this.onAIAPIRequestDetected = callback;
@@ -76,7 +81,7 @@ export class NetworkMonitor {
   private async checkNetworkConnections() {
     try {
       // Windows 命令：获取网络连接
-      const { stdout } = await execAsync('netstat -ano');
+      const { stdout } = await this.execAsync('netstat -ano');
       const connections = this.parseNetworkConnections(stdout);
 
       // 检查 AI API 连接
@@ -134,20 +139,15 @@ export class NetworkMonitor {
    * 检测是否是 AI API 连接
    */
   private detectAIAPI(address: string): string | null {
+    // 移除端口号
+    const addressWithoutPort = address.split(':')[0]
+
     for (const domain of AI_API_DOMAINS) {
-      if (address.includes(domain) || address.includes(this.getIPPattern(domain))) {
-        return domain;
+      if (addressWithoutPort === domain || addressWithoutPort.endsWith('.' + domain)) {
+        return domain
       }
     }
-    return null;
-  }
-
-  /**
-   * 获取域名的 IP 模式（简化版）
-   */
-  private getIPPattern(domain: string): string {
-    // 实际应该通过 DNS 查询，这里简化处理
-    return domain.split('.')[0];
+    return null
   }
 
   /**

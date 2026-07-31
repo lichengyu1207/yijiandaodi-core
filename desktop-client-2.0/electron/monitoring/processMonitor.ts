@@ -7,7 +7,7 @@ import { app } from 'electron';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
-const execAsync = promisify(exec);
+// 在类中创建，以便于测试 mock
 
 // AI Agent 应用列表
 const AI_AGENTS = [
@@ -42,6 +42,11 @@ export class ProcessMonitor {
   private monitoringInterval: NodeJS.Timeout | null = null;
   private detectedProcesses: Map<string, ProcessInfo> = new Map();
   private onAIAgentDetected?: (process: ProcessInfo) => void;
+  private execAsync: (command: string) => Promise<{ stdout: string; stderr: string }>;
+
+  constructor() {
+    this.execAsync = promisify(exec);
+  }
 
   setAIAgentDetectedCallback(callback: (process: ProcessInfo) => void) {
     this.onAIAgentDetected = callback;
@@ -84,7 +89,7 @@ export class ProcessMonitor {
   private async checkProcesses() {
     try {
       // Windows 命令：获取进程列表
-      const { stdout } = await execAsync('tasklist /fo csv /nh');
+      const { stdout } = await this.execAsync('tasklist /fo csv /nh');
       const processes = this.parseProcessList(stdout);
 
       // 检查 AI Agent 进程
