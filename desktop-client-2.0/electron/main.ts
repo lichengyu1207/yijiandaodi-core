@@ -4,10 +4,11 @@
  * 行数目标：<100行
  */
 
-import { app, dialog } from 'electron'
+import { app, Notification } from 'electron'
 import { MainWindow, PetWindow, PetState } from './windows'
 import { FileMonitor, ClipboardMonitor, RiskResult, ProcessMonitor, NetworkMonitor } from './monitoring'
-import { TrayService, ApiService, StorageService } from './services'
+import { SmartAlerter, smartAlerter } from './monitoring/smartAlerter'
+import { TrayService, ApiService, StorageService, syncService } from './services'
 import { IPCHandlers } from './ipc'
 import { DIContainer } from './di'
 import { initSecurityKnowledgeBase, SecurityKnowledgeBase } from './securityKnowledgeBase'
@@ -33,32 +34,41 @@ if (!gotTheLock) {
 }
 
 /**
- * 显示风险警报
+ * 显示风险提示（优化版 - 不弹窗）
  */
 function showRiskAlert(riskData: { risk_level: string; description: string; content?: string }) {
   const mainWindow = container.resolve<MainWindow>('mainWindow')
   const petWindow = container.resolve<PetWindow>('petWindow')
 
-  const result = dialog.showMessageBoxSync(mainWindow.getWindow()!, {
-    type: 'warning',
-    title: '风险警告',
-    message: `发现${riskData.risk_level}风险！`,
-    detail: riskData.description || '检测到潜在的安全风险',
-    buttons: ['允许', '拒绝', '查看详情'],
-    defaultId: 1,
-    cancelId: 1
+  // 使用智能提示器判断是否需要通知
+  const alertResult = smartAlerter.handleAlert({
+    riskLevel: riskData.risk_level as any,
+    riskType: 'security_risk',
+    message: riskData.description
   })
 
-  if (result === 0) {
-    console.log('[风险] 用户允许操作')
-    updatePetState('green')
-  } else if (result === 1) {
-    console.log('[风险] 用户拒绝操作')
-    updatePetState('green')
-  } else if (result === 2) {
-    console.log('[风险] 查看详情:', riskData)
-    updatePetState('green')
+  console.log('[风险] 检测结果:', alertResult)
+
+  // 发送系统通知（仅高风险）
+  if (alertResult.shouldNotify) {
+    const notification = new Notification({
+      title: '⚠️ 安全警告',
+      body: `发现${riskData.risk_level}风险: ${riskData.description.slice(0, 50)}...`,
+      silent: false
+    })
+    notification.show()
+
+    console.log('[风险] 已发送系统通知')
   }
+
+  // 更新桌宠状态（所有风险都更新）
+  if (alertResult.shouldUpdatePet) {
+    updatePetState(riskData.risk_level === 'critical' || riskData.risk_level === 'high' ? 'red' : 'yellow', riskData.description)
+  }
+
+  // 通知主窗口和桌宠窗口
+  mainWindow.send('risk-detected', riskData)
+  petWindow.send('risk-detected', riskData)
 }
 
 /**
@@ -141,6 +151,7 @@ function initializeServices() {
       }
     })
 
+    // 使用新的智能提示方式（不弹窗）
     showRiskAlert({
       risk_level: highRisks.length > 0 ? 'high' : 'medium',
       description: `${source}中发现${risks.length}个安全风险:\n${riskDescriptions.join('\n')}`
@@ -206,6 +217,19 @@ function startApplication() {
   // 启动后台服务
   apiService.start()
 
+  // 启动同步服务
+  try {
+    const config = syncService.getConfig()
+    if (config.enabled && config.autoSync) {
+      syncService.startAutoSync()
+      console.log('[系统] ✅ 同步服务已启动')
+    } else {
+      console.log('[系统] ℹ️ 同步服务未启用')
+    }
+  } catch (error) {
+    console.error('[系统] ❌ 同步服务启动失败:', error)
+  }
+
   // 创建主窗口和托盘
   mainWindow.create()
   trayService.create()
@@ -244,6 +268,14 @@ function cleanup() {
   clipboardMonitor.stop()
   processMonitor.stop()
   networkMonitor.stop()
+
+  // 停止同步服务
+  try {
+    syncService.stopAutoSync()
+    console.log('[系统] ✅ 同步服务已停止')
+  } catch (error) {
+    console.error('[系统] ❌ 同步服务停止失败:', error)
+  }
 }
 
 // 应用生命周期

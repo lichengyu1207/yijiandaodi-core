@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import electron from 'vite-plugin-electron'
@@ -44,6 +45,23 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         xiaojian: resolve(__dirname, 'xiaojian.html'),
       },
+    },
+  },
+  // Vitest 配置
+  test: {
+    globals: true,
+    environment: 'node',
+    include: ['electron/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'dist/',
+        'dist-electron/',
+        '**/*.test.ts',
+        '**/*.spec.ts',
+      ],
     },
   },
 })

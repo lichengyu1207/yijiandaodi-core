@@ -1,0 +1,9 @@
+database_password=MySecretPassword123
+
+api_key=sk-test-1234567890
+
+secret_key=sk_live_abcdefghijklmnop
+
+private_key=-----BEGIN RSA PRIVATE KEY-----
+
+access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9

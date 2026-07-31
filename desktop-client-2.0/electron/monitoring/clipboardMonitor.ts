@@ -3,7 +3,8 @@
  */
 
 import { clipboard } from 'electron'
-import { SecurityKnowledgeBase, detectSecurityRisks } from '../securityKnowledgeBase'
+import { SecurityKnowledgeBase } from '../securityKnowledgeBase'
+import { AutoDetector } from './autoDetector'
 import { PetState } from '../windows/petWindow'
 import { RiskResult, OperationRecord } from './fileMonitor'
 
@@ -11,12 +12,18 @@ export class ClipboardMonitor {
   private clipboardWatcher: NodeJS.Timeout | null = null
   private lastClipboardContent: string = ''
   private securityKB: SecurityKnowledgeBase | null = null
+  private autoDetector: AutoDetector
   private onRiskDetected?: (risks: RiskResult[], content: string) => void
   private onPetStateChange?: (state: PetState, message?: string) => void
   private onSaveRecord?: (record: OperationRecord) => Promise<void>
 
+  constructor() {
+    this.autoDetector = new AutoDetector()
+  }
+
   setSecurityKnowledgeBase(kb: SecurityKnowledgeBase) {
     this.securityKB = kb
+    this.autoDetector.setSecurityKnowledgeBase(kb)
   }
 
   setRiskDetectedCallback(callback: (risks: RiskResult[], content: string) => void) {
@@ -68,24 +75,31 @@ export class ClipboardMonitor {
 
   private async triggerDetection(content: string) {
     try {
-      if (!this.securityKB) {
-        console.warn('[剪贴板检测] 安全知识库未初始化')
-        return
-      }
+      console.log('[剪贴板监控] 开始自动检测')
 
-      // 使用安全知识库检测
-      const risks = detectSecurityRisks(content, this.securityKB)
+      // 使用自动化检测器进行综合检测
+      const detectionResult = this.autoDetector.detect(content)
 
-      if (risks.length > 0) {
+      console.log('[剪贴板监控] 检测结果:', {
+        safe: detectionResult.safe,
+        risk_level: detectionResult.risk_level,
+        content_type: detectionResult.content_type,
+        language: detectionResult.detected_language,
+        risks_count: detectionResult.risks.length,
+        sensitivity: detectionResult.sensitivity_level
+      })
+
+      if (!detectionResult.safe || detectionResult.risks.length > 0) {
         // 统计风险等级
-        const highRisks = risks.filter(r => r.risk === 'high')
-        const mediumRisks = risks.filter(r => r.risk === 'medium')
+        const highRisks = detectionResult.risks.filter(r => r.risk === 'high')
+        const mediumRisks = detectionResult.risks.filter(r => r.risk === 'medium')
 
         console.log('[剪贴板] 发现安全风险:', {
-          total: risks.length,
+          total: detectionResult.risks.length,
           high: highRisks.length,
           medium: mediumRisks.length,
-          types: [...new Set(risks.map(r => r.type))]
+          types: [...new Set(detectionResult.risks.map(r => r.type))],
+          warnings: detectionResult.warnings
         })
 
         // 保存操作记录
@@ -95,16 +109,16 @@ export class ClipboardMonitor {
             id: `clipboard-${Date.now()}`,
             type: 'ai_dialog',
             title: '剪贴板安全检测',
-            content: `剪贴板中发现${risks.length}个安全风险`,
+            content: `剪贴板中发现${detectionResult.risks.length}个安全风险`,
             source: '剪贴板监控',
             status: 'flagged',
-            risk_level: highRisks.length > 0 ? 'high' : 'medium',
-            risk_score: highRisks.length > 0 ? 80 : 50,
-            should_block: highRisks.length > 0,
-            context: `风险类型: ${[...new Set(risks.map(r => r.type))].join(', ')}\n风险详情:\n${risks.slice(0, 5).map(r => `- ${r.type}: ${r.matched}`).join('\n')}`,
-            explanation: `检测到${highRisks.length}个高风险, ${mediumRisks.length}个中风险`
+            risk_level: detectionResult.risk_level,
+            risk_score: detectionResult.risk_level === 'critical' ? 100 : detectionResult.risk_level === 'high' ? 80 : 50,
+            should_block: ['high', 'critical'].includes(detectionResult.risk_level),
+            context: `内容类型: ${detectionResult.content_type}\n检测语言: ${detectionResult.detected_language || 'unknown'}\n敏感等级: ${detectionResult.sensitivity_level}\n风险类型: ${[...new Set(detectionResult.risks.map(r => r.type))].join(', ')}\n风险详情:\n${detectionResult.risks.slice(0, 5).map(r => `- ${r.type}: ${r.matched}`).join('\n')}\n警告:\n${detectionResult.warnings.slice(0, 5).join('\n')}`,
+            explanation: `检测到${highRisks.length}个高风险, ${mediumRisks.length}个中风险。${detectionResult.warnings.length}个警告。`
           }
-          
+
           try {
             await this.onSaveRecord(record)
             console.log('[剪贴板监控] ✅ 记录保存成功:', record.id)
@@ -122,7 +136,7 @@ export class ClipboardMonitor {
 
         // 触发风险检测回调
         if (this.onRiskDetected) {
-          this.onRiskDetected(risks, content)
+          this.onRiskDetected(detectionResult.risks as RiskResult[], content)
         }
       } else {
         // 未发现风险

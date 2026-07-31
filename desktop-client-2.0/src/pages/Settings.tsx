@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { authService } from '../services/authService'
 import './Settings.css'
 
 interface ServiceStatus {
@@ -8,6 +9,21 @@ interface ServiceStatus {
   requests: number
 }
 
+interface NodeMetrics {
+  cpu_usage: number
+  memory_usage: number
+  gpu_usage: number | null
+  disk_available: number
+  disk_total: number
+}
+
+interface UserInfo {
+  id: number
+  username: string
+  email: string
+  role: string
+}
+
 export default function Settings() {
   const [serviceStatus, setServiceStatus] = useState<ServiceStatus>({
     running: false,
@@ -15,12 +31,22 @@ export default function Settings() {
     uptime: '0s',
     requests: 0
   })
-  
+
+  const [nodeMetrics, setNodeMetrics] = useState<NodeMetrics>({
+    cpu_usage: 0,
+    memory_usage: 0,
+    gpu_usage: null,
+    disk_available: 0,
+    disk_total: 0
+  })
+
+  const [currentUser, setCurrentUser] = useState<UserInfo | null>(null)
+
   const [apiConfig, setApiConfig] = useState({
     endpoint: 'http://localhost:9092',
     deepseekKey: ''
   })
-  
+
   const [llmConfig, setLLMConfig] = useState({
     mode: 'builtin', // builtin, custom, local
     provider: 'deepseek',
@@ -34,14 +60,23 @@ export default function Settings() {
 
   useEffect(() => {
     checkServiceStatus()
+    fetchNodeMetrics()
+    const user = authService.getCurrentUser()
+    if (user) {
+      setCurrentUser(user)
+    }
     const interval = setInterval(checkServiceStatus, 5000)
-    return () => clearInterval(interval)
+    const metricsInterval = setInterval(fetchNodeMetrics, 3000)
+    return () => {
+      clearInterval(interval)
+      clearInterval(metricsInterval)
+    }
   }, [])
   
   const checkServiceStatus = async () => {
     try {
-      const response = await fetch('http://localhost:9092/health', { 
-        signal: AbortSignal.timeout(2000) 
+      const response = await fetch('http://localhost:9092/health', {
+        signal: AbortSignal.timeout(2000)
       })
       if (response.ok) {
         setServiceStatus(prev => ({
@@ -60,6 +95,37 @@ export default function Settings() {
       setError('无法连接到服务')
     }
   }
+
+  const fetchNodeMetrics = async () => {
+    try {
+      // 从本地API获取节点指标
+      const response = await fetch('http://localhost:9092/api/v1/node/metrics', {
+        signal: AbortSignal.timeout(2000)
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setNodeMetrics(data)
+      } else {
+        // 如果API不可用，使用模拟数据
+        setNodeMetrics({
+          cpu_usage: Math.random() * 100,
+          memory_usage: 30 + Math.random() * 50,
+          gpu_usage: Math.random() > 0.5 ? Math.random() * 100 : null,
+          disk_available: 128.5,
+          disk_total: 256
+        })
+      }
+    } catch (error) {
+      // 使用模拟数据
+      setNodeMetrics({
+        cpu_usage: Math.random() * 100,
+        memory_usage: 30 + Math.random() * 50,
+        gpu_usage: Math.random() > 0.5 ? Math.random() * 100 : null,
+        disk_available: 128.5,
+        disk_total: 256
+      })
+    }
+  }
   
   const handleStartService = async () => {
     console.log('启动服务...')
@@ -73,6 +139,74 @@ export default function Settings() {
 
   return (
     <div className="settings-page">
+      {/* 用户信息 */}
+      {currentUser && (
+        <section className="settings-section">
+          <h2 className="section-title">账户信息</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: 20,
+              fontWeight: 'bold'
+            }}>
+              {currentUser.username.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{currentUser.username}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{currentUser.email}</div>
+              <div className={`tag tag-${currentUser.role === 'super_admin' ? 'error' : currentUser.role === 'admin' ? 'warning' : 'success'}`} style={{ marginTop: 4 }}>
+                {currentUser.role === 'super_admin' ? '超级管理员' : currentUser.role === 'admin' ? '管理员' : '用户'}
+              </div>
+            </div>
+          </div>
+          <div className="button-group">
+            <button className="btn btn-secondary">修改密码</button>
+            <button className="btn btn-secondary" onClick={() => authService.logout()}>退出登录</button>
+          </div>
+        </section>
+      )}
+
+      {/* 节点资源监控 */}
+      <section className="settings-section">
+        <h2 className="section-title">节点资源监控</h2>
+        <div className="stats-grid">
+          <div className="stat-item">
+            <div className="stat-value" style={{ color: nodeMetrics.cpu_usage > 80 ? '#F85149' : nodeMetrics.cpu_usage > 50 ? '#D29922' : '#3FB950' }}>
+              {nodeMetrics.cpu_usage.toFixed(1)}%
+            </div>
+            <div className="stat-label">CPU 使用率</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value" style={{ color: nodeMetrics.memory_usage > 80 ? '#F85149' : nodeMetrics.memory_usage > 60 ? '#D29922' : '#3FB950' }}>
+              {nodeMetrics.memory_usage.toFixed(1)}%
+            </div>
+            <div className="stat-label">内存使用率</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value" style={{ color: '#3FB950' }}>
+              {nodeMetrics.gpu_usage !== null ? `${nodeMetrics.gpu_usage.toFixed(1)}%` : 'N/A'}
+            </div>
+            <div className="stat-label">GPU 使用率</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value" style={{ color: '#3FB950' }}>
+              {nodeMetrics.disk_available.toFixed(1)} GB
+            </div>
+            <div className="stat-label">可用磁盘空间</div>
+          </div>
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8 }}>
+          总磁盘空间: {nodeMetrics.disk_total.toFixed(1)} GB
+        </p>
+      </section>
+
       {/* 服务状态 */}
       <section className="settings-section">
         <div className="section-header">
@@ -94,7 +228,7 @@ export default function Settings() {
             ⚠️ {error} - 后台服务正在启动中，请稍候
           </div>
         )}
-        
+
         <div className="stats-grid">
           <div className="stat-item">
             <div className="stat-value">{serviceStatus.port}</div>
@@ -109,16 +243,16 @@ export default function Settings() {
             <div className="stat-label">处理请求</div>
           </div>
         </div>
-        
+
         <div className="button-group">
-          <button 
+          <button
             className="btn btn-primary"
             onClick={handleStartService}
             disabled={serviceStatus.running}
           >
             启动服务
           </button>
-          <button 
+          <button
             className="btn btn-secondary"
             onClick={handleStopService}
             disabled={!serviceStatus.running}

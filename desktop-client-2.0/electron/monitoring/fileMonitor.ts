@@ -5,7 +5,8 @@
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
-import { SecurityKnowledgeBase, detectSecurityRisks } from '../securityKnowledgeBase'
+import { SecurityKnowledgeBase } from '../securityKnowledgeBase'
+import { AutoDetector, autoDetector } from './autoDetector'
 import { PetState } from '../windows/petWindow'
 
 export interface FileMonitorConfig {
@@ -37,6 +38,7 @@ export interface OperationRecord {
 export class FileMonitor {
   private fileWatcher: fs.FSWatcher | null = null
   private securityKB: SecurityKnowledgeBase | null = null
+  private autoDetector: AutoDetector
   private config: FileMonitorConfig
   private onRiskDetected?: (risks: RiskResult[], filePath: string) => void
   private onPetStateChange?: (state: PetState, message?: string) => void
@@ -49,10 +51,12 @@ export class FileMonitor {
         path.join(app.getPath('home'), 'Desktop'),
       ]
     }
+    this.autoDetector = new AutoDetector()
   }
 
   setSecurityKnowledgeBase(kb: SecurityKnowledgeBase) {
     this.securityKB = kb
+    this.autoDetector.setSecurityKnowledgeBase(kb)
   }
 
   setRiskDetectedCallback(callback: (risks: RiskResult[], filePath: string) => void) {
@@ -101,28 +105,35 @@ export class FileMonitor {
 
   private async triggerDetection(filePath: string) {
     try {
-      if (!this.securityKB) {
-        console.warn('[文件检测] 安全知识库未初始化')
-        return
-      }
-
       // 读取文件内容
       const content = fs.readFileSync(filePath, 'utf-8')
 
-      // 使用安全知识库检测
-      const risks = detectSecurityRisks(content, this.securityKB)
+      console.log('[文件监控] 开始自动检测:', path.basename(filePath))
 
-      if (risks.length > 0) {
+      // 使用自动化检测器进行综合检测
+      const detectionResult = this.autoDetector.detect(content)
+
+      console.log('[文件监控] 检测结果:', {
+        safe: detectionResult.safe,
+        risk_level: detectionResult.risk_level,
+        content_type: detectionResult.content_type,
+        language: detectionResult.detected_language,
+        risks_count: detectionResult.risks.length,
+        sensitivity: detectionResult.sensitivity_level
+      })
+
+      if (!detectionResult.safe || detectionResult.risks.length > 0) {
         // 统计风险等级
-        const highRisks = risks.filter(r => r.risk === 'high')
-        const mediumRisks = risks.filter(r => r.risk === 'medium')
+        const highRisks = detectionResult.risks.filter(r => r.risk === 'high')
+        const mediumRisks = detectionResult.risks.filter(r => r.risk === 'medium')
 
         console.log('[文件] 发现安全风险:', {
           file: filePath,
-          total: risks.length,
+          total: detectionResult.risks.length,
           high: highRisks.length,
           medium: mediumRisks.length,
-          types: [...new Set(risks.map(r => r.type))]
+          types: [...new Set(detectionResult.risks.map(r => r.type))],
+          warnings: detectionResult.warnings
         })
 
         // 保存操作记录
@@ -132,16 +143,16 @@ export class FileMonitor {
             id: `file-${Date.now()}`,
             type: 'file_op',
             title: `文件安全检测: ${path.basename(filePath)}`,
-            content: `文件 ${path.basename(filePath)} 中发现${risks.length}个安全风险`,
+            content: `文件 ${path.basename(filePath)} 中发现${detectionResult.risks.length}个安全风险`,
             source: '文件监控',
             status: 'flagged',
-            risk_level: highRisks.length > 0 ? 'high' : 'medium',
-            risk_score: highRisks.length > 0 ? 80 : 50,
-            should_block: highRisks.length > 0,
-            context: `文件路径: ${filePath}\n风险类型: ${[...new Set(risks.map(r => r.type))].join(', ')}\n风险详情:\n${risks.slice(0, 5).map(r => `- ${r.type}: ${r.matched}`).join('\n')}`,
-            explanation: `检测到${highRisks.length}个高风险, ${mediumRisks.length}个中风险`
+            risk_level: detectionResult.risk_level,
+            risk_score: detectionResult.risk_level === 'critical' ? 100 : detectionResult.risk_level === 'high' ? 80 : 50,
+            should_block: ['high', 'critical'].includes(detectionResult.risk_level),
+            context: `文件路径: ${filePath}\n内容类型: ${detectionResult.content_type}\n检测语言: ${detectionResult.detected_language || 'unknown'}\n敏感等级: ${detectionResult.sensitivity_level}\n风险类型: ${[...new Set(detectionResult.risks.map(r => r.type))].join(', ')}\n风险详情:\n${detectionResult.risks.slice(0, 5).map(r => `- ${r.type}: ${r.matched}`).join('\n')}\n警告:\n${detectionResult.warnings.slice(0, 5).join('\n')}`,
+            explanation: `检测到${highRisks.length}个高风险, ${mediumRisks.length}个中风险。${detectionResult.warnings.length}个警告。`
           }
-          
+
           try {
             await this.onSaveRecord(record)
             console.log('[文件监控] ✅ 记录保存成功:', record.id)
@@ -159,12 +170,12 @@ export class FileMonitor {
 
         // 触发风险检测回调
         if (this.onRiskDetected) {
-          this.onRiskDetected(risks, filePath)
+          this.onRiskDetected(detectionResult.risks as RiskResult[], filePath)
         }
       } else {
         // 未发现风险，不保存安全记录（避免记录过多）
         console.log('[文件监控] 文件检测通过:', path.basename(filePath))
-        
+
         // 短暂显示黄灯后恢复
         if (this.onPetStateChange) {
           this.onPetStateChange('yellow', '文件检测中')

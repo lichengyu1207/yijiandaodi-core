@@ -6,6 +6,7 @@ import { ipcMain } from 'electron'
 import { StorageService } from '../services/storageService'
 import { FileMonitor, ClipboardMonitor } from '../monitoring'
 import { PetState } from '../windows/petWindow'
+import { syncService } from '../services/syncService'
 
 export class IPCHandlers {
   private storageService: StorageService
@@ -29,6 +30,7 @@ export class IPCHandlers {
     this.registerStorageHandlers()
     this.registerMonitoringHandlers()
     this.registerPetHandlers()
+    this.registerSyncHandlers()
   }
 
   private registerStorageHandlers() {
@@ -93,6 +95,92 @@ export class IPCHandlers {
       console.log(`[风险] 用户确认: ${action}`)
       // 这里需要通过回调更新状态
       return { success: true }
+    })
+  }
+
+  private registerSyncHandlers() {
+    // 获取同步配置
+    ipcMain.handle('get-sync-config', async () => {
+      try {
+        const config = syncService.getConfig()
+        return { success: true, data: config }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 保存同步配置
+    ipcMain.handle('save-sync-config', async (event, config) => {
+      try {
+        syncService.saveConfig(config)
+        return { success: true }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 立即同步
+    ipcMain.handle('sync-now', async () => {
+      try {
+        // 从 StorageService 获取本地数据
+        const operations = await this.storageService.getOperations()
+        // 这里需要将 operations 转换为 SyncSession 格式
+        // 实际使用时需要根据业务逻辑处理
+        const sessions: any[] = []
+
+        const result = await syncService.syncAll(sessions)
+        return result
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 仅上传
+    ipcMain.handle('upload-data', async () => {
+      try {
+        const operations = await this.storageService.getOperations()
+        const sessions: any[] = []
+
+        const result = await syncService.uploadSessions(sessions)
+        return result
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 仅下载
+    ipcMain.handle('download-data', async () => {
+      try {
+        const result = await syncService.downloadSessions()
+        if (result.success && result.data) {
+          // 保存到本地
+          // 这里需要根据实际业务逻辑处理
+          return { success: true, downloaded: result.data.length }
+        }
+        return { success: false, error: result.error }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 清除同步数据
+    ipcMain.handle('clear-sync-data', async () => {
+      try {
+        syncService.clearSyncData()
+        return { success: true }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 设置认证Token
+    ipcMain.handle('set-sync-token', async (event, token: string) => {
+      try {
+        syncService.setAuthToken(token)
+        return { success: true }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
     })
   }
 }

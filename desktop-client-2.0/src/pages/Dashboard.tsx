@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { authService } from '../services/authService'
 
 interface AuditRecord {
   id: number
@@ -11,6 +12,13 @@ interface AuditRecord {
   should_block: boolean
   explanation: string
   audit_hash: string
+}
+
+interface UserInfo {
+  id: number
+  username: string
+  email: string
+  role: string
 }
 
 const RISK_STATUS = {
@@ -32,6 +40,15 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ total: 0, success: 0, warning: 0, error: 0 })
   const [filter, setFilter] = useState<'all' | 'success' | 'warning' | 'error'>('all')
   const [selectedRecord, setSelectedRecord] = useState<AuditRecord | null>(null)
+  const [currentUser, setCurrentUser] = useState<UserInfo | null>(null)
+
+  // 获取当前用户信息
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (user) {
+      setCurrentUser(user)
+    }
+  }, [])
   
   // 从本地IPC或沙箱API获取记录
   useEffect(() => {
@@ -152,6 +169,42 @@ export default function Dashboard() {
   
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 24 }}>
+      {/* 用户信息卡片 */}
+      {currentUser && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: 20,
+                fontWeight: 'bold'
+              }}>
+                {currentUser.username.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{currentUser.username}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{currentUser.email}</div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div className={`tag tag-${currentUser.role === 'super_admin' ? 'error' : currentUser.role === 'admin' ? 'warning' : 'success'}`}>
+                {currentUser.role === 'super_admin' ? '超级管理员' : currentUser.role === 'admin' ? '管理员' : currentUser.role === 'editor' ? '编辑者' : '用户'}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 6 }}>
+                数据与网站实时同步
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 统计卡片 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
         <div className="stat-card">

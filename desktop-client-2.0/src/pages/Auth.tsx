@@ -56,6 +56,17 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
           localStorage.setItem('remember_username', username)
         }
 
+        // 设置同步Token
+        try {
+          const token = authService.getToken()
+          if (token) {
+            await window.electronAPI.setSyncToken(token)
+            console.log('[Auth] 同步Token已设置')
+          }
+        } catch (error) {
+          console.error('[Auth] 设置同步Token失败:', error)
+        }
+
         // 登录成功回调
         if (onLoginSuccess) {
           onLoginSuccess()

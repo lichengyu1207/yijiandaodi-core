@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import Evidence from './pages/Evidence'
 import Auth from './pages/Auth'
 import Settings from './pages/Settings'
+import SyncSettings from './pages/SyncSettings'
 import DesktopPet from './components/DesktopPet'
 import { authService } from './services/authService'
 import './index.css'
@@ -13,6 +14,7 @@ const NAV_ITEMS = [
   { path: '/evidence', label: '存证中心', icon: 'evidence' },
   { path: '/auth', label: '实名认证', icon: 'auth' },
   { path: '/settings', label: '系统设置', icon: 'settings' },
+  { path: '/sync', label: '云端同步', icon: 'sync' },
 ]
 
 function Sidebar() {
@@ -100,6 +102,14 @@ function Sidebar() {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="3" />
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                )}
+                {item.icon === 'sync' && (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                    <path d="M21 3v5h-5" />
+                    <path d="M3 12a9 9 0 1 1 9 9c-2.52 0-4.93-1-6.74-2.74L3 16" />
+                    <path d="M3 21v-5h5" />
                   </svg>
                 )}
               </span>
@@ -239,6 +249,7 @@ export default function App() {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/evidence" element={<Evidence />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/sync" element={<SyncSettings />} />
                   <Route path="/auth" element={<Navigate to="/" replace />} />
                 </>
               ) : (

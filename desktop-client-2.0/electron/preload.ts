@@ -22,6 +22,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stopMonitoring: () => ipcRenderer.invoke('stop-monitoring'),
   confirmRisk: (action: 'allow' | 'deny') => ipcRenderer.invoke('confirm-risk', action),
 
+  // 同步相关
+  getSyncConfig: () => ipcRenderer.invoke('get-sync-config'),
+  saveSyncConfig: (config: any) => ipcRenderer.invoke('save-sync-config', config),
+  syncNow: () => ipcRenderer.invoke('sync-now'),
+  uploadData: () => ipcRenderer.invoke('upload-data'),
+  downloadData: () => ipcRenderer.invoke('download-data'),
+  clearSyncData: () => ipcRenderer.invoke('clear-sync-data'),
+  setSyncToken: (token: string) => ipcRenderer.invoke('set-sync-token', token),
+
   // 事件监听
   onStartRecord: (callback: () => void) => {
     ipcRenderer.on('start-record', callback)

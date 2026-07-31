@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { authService } from '../services/authService'
 import './Evidence.css'
 
 interface EvidenceRecord {
@@ -33,6 +34,13 @@ export default function Evidence() {
   })
   const [selectedRecord, setSelectedRecord] = useState<EvidenceRecord | null>(null)
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'critical'>('all')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  useEffect(() => {
+    fetchRecords()
+    verifyChain()
+  }, [])
 
   useEffect(() => {
     fetchRecords()
@@ -117,6 +125,25 @@ export default function Evidence() {
     }
   }
 
+  const filteredRecords = records.filter(record => {
+    // 风险等级筛选
+    if (filter !== 'all' && record.risk_level !== filter) {
+      return false
+    }
+
+    // 搜索筛选
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase()
+      return (
+        record.agent_name.toLowerCase().includes(search) ||
+        record.operation_content.toLowerCase().includes(search) ||
+        record.operation_type.toLowerCase().includes(search)
+      )
+    }
+
+    return true
+  })
+
   return (
     <div className="evidence-page">
       {/* 哈希链状态 */}
@@ -169,15 +196,49 @@ export default function Evidence() {
 
       {/* 存证记录列表 */}
       <section className="records-section">
-        <h3 className="section-title">存证记录 ({records.length})</h3>
+        <h3 className="section-title">存证记录 ({filteredRecords.length})</h3>
+
+        {/* 搜索和筛选 */}
+        <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
+          <input
+            type="text"
+            placeholder="搜索 Agent、操作内容..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              border: '1px solid var(--border-primary)',
+              borderRadius: 6,
+              fontSize: 13
+            }}
+          />
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as any)}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid var(--border-primary)',
+              borderRadius: 6,
+              fontSize: 13,
+              background: 'var(--bg-secondary)'
+            }}
+          >
+            <option value="all">全部风险</option>
+            <option value="low">低风险</option>
+            <option value="medium">中风险</option>
+            <option value="high">高风险</option>
+            <option value="critical">严重</option>
+          </select>
+        </div>
 
         {loading ? (
           <div className="loading">加载中...</div>
-        ) : records.length === 0 ? (
+        ) : filteredRecords.length === 0 ? (
           <div className="empty">暂无存证记录</div>
         ) : (
           <div className="records-list">
-            {records.map((record) => (
+            {filteredRecords.map((record) => (
               <div 
                 key={record.id} 
                 className={`record-card ${selectedRecord?.id === record.id ? 'selected' : ''}`}
