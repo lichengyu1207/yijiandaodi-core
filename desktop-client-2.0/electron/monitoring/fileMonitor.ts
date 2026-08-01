@@ -8,6 +8,7 @@ import path from 'path'
 import { SecurityKnowledgeBase } from '../securityKnowledgeBase'
 import { AutoDetector, autoDetector } from './autoDetector'
 import { PetState } from '../windows/petWindow'
+import { logger } from '../services/loggerService'
 
 export interface FileMonitorConfig {
   watchPaths: string[]
@@ -73,17 +74,17 @@ export class FileMonitor {
 
   start() {
     if (this.fileWatcher) {
-      console.log('[文件监控] 已在运行')
+      logger.info('[文件监控] 已在运行', { module: 'FileMonitor' })
       return
     }
 
-    console.log('[文件监控] 启动...')
+    logger.info('[文件监控] 启动...', { module: 'FileMonitor' })
 
     this.config.watchPaths.forEach(watchPath => {
       if (fs.existsSync(watchPath)) {
         this.fileWatcher = fs.watch(watchPath, { recursive: true }, (eventType, filename) => {
           if (filename) {
-            console.log(`[文件监控] ${eventType}: ${filename}`)
+            logger.info(`[文件监控] ${eventType}: ${filename}`, { module: 'FileMonitor' })
 
             // 触发检测
             const filePath = path.join(watchPath, filename)
@@ -108,12 +109,12 @@ export class FileMonitor {
       // 读取文件内容
       const content = fs.readFileSync(filePath, 'utf-8')
 
-      console.log('[文件监控] 开始自动检测:', path.basename(filePath))
+      logger.info('[文件监控] 开始自动检测:', { module: 'FileMonitor' }, { file: path.basename(filePath) })
 
       // 使用自动化检测器进行综合检测
       const detectionResult = this.autoDetector.detect(content)
 
-      console.log('[文件监控] 检测结果:', {
+      logger.info('[文件监控] 检测结果:', { module: 'FileMonitor' }, {
         safe: detectionResult.safe,
         risk_level: detectionResult.risk_level,
         content_type: detectionResult.content_type,
@@ -127,7 +128,7 @@ export class FileMonitor {
         const highRisks = detectionResult.risks.filter(r => r.risk === 'high')
         const mediumRisks = detectionResult.risks.filter(r => r.risk === 'medium')
 
-        console.log('[文件] 发现安全风险:', {
+        logger.warn('[文件] 发现安全风险:', { module: 'FileMonitor' }, {
           file: filePath,
           total: detectionResult.risks.length,
           high: highRisks.length,
@@ -138,7 +139,7 @@ export class FileMonitor {
 
         // 保存操作记录
         if (this.onSaveRecord) {
-          console.log('[文件监控] 准备保存记录...')
+          logger.debug('[文件监控] 准备保存记录...', { module: 'FileMonitor' })
           const record = {
             id: `file-${Date.now()}`,
             type: 'file_op',
@@ -155,12 +156,12 @@ export class FileMonitor {
 
           try {
             await this.onSaveRecord(record)
-            console.log('[文件监控] ✅ 记录保存成功:', record.id)
+            logger.info('[文件监控] ✅ 记录保存成功:', { module: 'FileMonitor' }, { recordId: record.id })
           } catch (error) {
-            console.error('[文件监控] ❌ 记录保存失败:', error)
+            logger.error('[文件监控] ❌ 记录保存失败:', { module: 'FileMonitor' }, { error })
           }
         } else {
-          console.warn('[文件监控] ⚠️ onSaveRecord 回调未设置')
+          logger.warn('[文件监控] ⚠️ onSaveRecord 回调未设置', { module: 'FileMonitor' })
         }
 
         // 更新桌宠状态
@@ -174,7 +175,7 @@ export class FileMonitor {
         }
       } else {
         // 未发现风险，不保存安全记录（避免记录过多）
-        console.log('[文件监控] 文件检测通过:', path.basename(filePath))
+        logger.info('[文件监控] 文件检测通过:', { module: 'FileMonitor' }, { file: path.basename(filePath) })
 
         // 短暂显示黄灯后恢复
         if (this.onPetStateChange) {
@@ -187,7 +188,7 @@ export class FileMonitor {
         }
       }
     } catch (error: any) {
-      console.error('[文件检测] 失败:', error.message)
+      logger.error('[文件检测] 失败:', { module: 'FileMonitor' }, { error: error.message })
     }
   }
 }

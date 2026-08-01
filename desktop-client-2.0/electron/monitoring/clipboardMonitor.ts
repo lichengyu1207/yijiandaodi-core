@@ -7,6 +7,7 @@ import { SecurityKnowledgeBase } from '../securityKnowledgeBase'
 import { AutoDetector } from './autoDetector'
 import { PetState } from '../windows/petWindow'
 import { RiskResult, OperationRecord } from './fileMonitor'
+import { logger } from '../services/loggerService'
 
 export class ClipboardMonitor {
   private clipboardWatcher: NodeJS.Timeout | null = null
@@ -69,18 +70,18 @@ export class ClipboardMonitor {
     if (this.clipboardWatcher) {
       clearInterval(this.clipboardWatcher)
       this.clipboardWatcher = null
-      console.log('[剪贴板监控] 已停止')
+      logger.info('[剪贴板监控] 已停止', { module: 'ClipboardMonitor' })
     }
   }
 
   private async triggerDetection(content: string) {
     try {
-      console.log('[剪贴板监控] 开始自动检测')
+      logger.info('[剪贴板监控] 开始自动检测', { module: 'ClipboardMonitor' })
 
       // 使用自动化检测器进行综合检测
       const detectionResult = this.autoDetector.detect(content)
 
-      console.log('[剪贴板监控] 检测结果:', {
+      logger.info('[剪贴板监控] 检测结果:', { module: 'ClipboardMonitor' }, {
         safe: detectionResult.safe,
         risk_level: detectionResult.risk_level,
         content_type: detectionResult.content_type,
@@ -94,7 +95,7 @@ export class ClipboardMonitor {
         const highRisks = detectionResult.risks.filter(r => r.risk === 'high')
         const mediumRisks = detectionResult.risks.filter(r => r.risk === 'medium')
 
-        console.log('[剪贴板] 发现安全风险:', {
+        logger.warn('[剪贴板] 发现安全风险:', { module: 'ClipboardMonitor' }, {
           total: detectionResult.risks.length,
           high: highRisks.length,
           medium: mediumRisks.length,
@@ -104,7 +105,7 @@ export class ClipboardMonitor {
 
         // 保存操作记录
         if (this.onSaveRecord) {
-          console.log('[剪贴板监控] 准备保存记录...')
+          logger.debug('[剪贴板监控] 准备保存记录...', { module: 'ClipboardMonitor' })
           const record = {
             id: `clipboard-${Date.now()}`,
             type: 'ai_dialog',
@@ -121,12 +122,12 @@ export class ClipboardMonitor {
 
           try {
             await this.onSaveRecord(record)
-            console.log('[剪贴板监控] ✅ 记录保存成功:', record.id)
+            logger.info('[剪贴板监控] ✅ 记录保存成功:', { module: 'ClipboardMonitor' }, { recordId: record.id })
           } catch (error) {
-            console.error('[剪贴板监控] ❌ 记录保存失败:', error)
+            logger.error('[剪贴板监控] ❌ 记录保存失败:', { module: 'ClipboardMonitor' }, { error })
           }
         } else {
-          console.warn('[剪贴板监控] ⚠️ onSaveRecord 回调未设置')
+          logger.warn('[剪贴板监控] ⚠️ onSaveRecord 回调未设置', { module: 'ClipboardMonitor' })
         }
 
         // 更新桌宠状态
@@ -140,10 +141,10 @@ export class ClipboardMonitor {
         }
       } else {
         // 未发现风险
-        console.log('[剪贴板监控] 内容检测通过')
+        logger.info('[剪贴板监控] 内容检测通过', { module: 'ClipboardMonitor' })
       }
     } catch (error: any) {
-      console.error('[剪贴板检测] 失败:', error.message)
+      logger.error('[剪贴板检测] 失败:', { module: 'ClipboardMonitor' }, { error: error.message })
     }
   }
 }

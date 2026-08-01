@@ -8,7 +8,7 @@ import { app, Notification } from 'electron'
 import { MainWindow, PetWindow, PetState } from './windows'
 import { FileMonitor, ClipboardMonitor, RiskResult, ProcessMonitor, NetworkMonitor } from './monitoring'
 import { SmartAlerter, smartAlerter } from './monitoring/smartAlerter'
-import { TrayService, ApiService, StorageService, syncService } from './services'
+import { TrayService, ApiService, StorageService, syncService, logger } from './services'
 import { IPCHandlers } from './ipc'
 import { DIContainer } from './di'
 import { initSecurityKnowledgeBase, SecurityKnowledgeBase } from './securityKnowledgeBase'
@@ -47,7 +47,7 @@ function showRiskAlert(riskData: { risk_level: string; description: string; cont
     message: riskData.description
   })
 
-  console.log('[风险] 检测结果:', alertResult)
+  logger.info('[风险] 检测结果:', { module: 'RiskAlert' }, alertResult)
 
   // 发送系统通知（仅高风险）
   if (alertResult.shouldNotify) {
@@ -58,7 +58,7 @@ function showRiskAlert(riskData: { risk_level: string; description: string; cont
     })
     notification.show()
 
-    console.log('[风险] 已发送系统通知')
+    logger.info('[风险] 已发送系统通知', { module: 'RiskAlert' })
   }
 
   // 更新桌宠状态（所有风险都更新）
@@ -80,7 +80,7 @@ function updatePetState(state: PetState, message?: string) {
   const trayService = container.resolve<TrayService>('trayService')
 
   petWindow.setState(state)
-  console.log(`[小鉴] 状态更新: ${state}${message ? ` - ${message}` : ''}`)
+  logger.info(`[小鉴] 状态更新: ${state}${message ? ` - ${message}` : ''}`, { module: 'PetWindow' })
 
   // 通知主窗口渲染进程
   mainWindow.send('pet-state-change', state)
@@ -101,9 +101,9 @@ async function syncToESP32(state: PetState) {
       params: { state },
       timeout: 2000
     })
-    console.log(`[ESP32] 状态同步: ${state}`)
+    logger.info(`[ESP32] 状态同步: ${state}`, { module: 'ESP32' })
   } catch (error: any) {
-    console.error('[ESP32] 同步失败:', error.message)
+    logger.error('[ESP32] 同步失败:', { module: 'ESP32' }, { error: error.message })
   }
 }
 
@@ -111,7 +111,7 @@ async function syncToESP32(state: PetState) {
  * 初始化所有服务
  */
 function initializeServices() {
-  console.log('[系统] 初始化安全知识库...')
+  logger.info('[系统] 初始化安全知识库...', { module: 'System' })
   const securityKB = initSecurityKnowledgeBase()
   container.register('securityKB', securityKB)
 
@@ -170,7 +170,7 @@ function initializeServices() {
   // 新增：进程监控
   const processMonitor = new ProcessMonitor()
   processMonitor.setAIAgentDetectedCallback((process) => {
-    console.log('[AI Agent] 检测到:', process.name)
+    logger.info('[AI Agent] 检测到:', { module: 'ProcessMonitor' }, { processName: process.name })
     updatePetState('yellow', `检测到 ${process.name}`)
   })
   container.register('processMonitor', processMonitor)
@@ -178,7 +178,7 @@ function initializeServices() {
   // 新增：网络监控
   const networkMonitor = new NetworkMonitor()
   networkMonitor.setAIAPIRequestDetectedCallback((request) => {
-    console.log('[AI API] 调用:', request.domain)
+    logger.info('[AI API] 调用:', { module: 'NetworkMonitor' }, { domain: request.domain })
     updatePetState('yellow', `API 调用: ${request.domain}`)
   })
   container.register('networkMonitor', networkMonitor)
@@ -222,12 +222,12 @@ function startApplication() {
     const config = syncService.getConfig()
     if (config.enabled && config.autoSync) {
       syncService.startAutoSync()
-      console.log('[系统] ✅ 同步服务已启动')
+      logger.info('[系统] ✅ 同步服务已启动', { module: 'SyncService' })
     } else {
-      console.log('[系统] ℹ️ 同步服务未启用')
+      logger.info('[系统] ℹ️ 同步服务未启用', { module: 'SyncService' })
     }
   } catch (error) {
-    console.error('[系统] ❌ 同步服务启动失败:', error)
+    logger.error('[系统] ❌ 同步服务启动失败:', { module: 'SyncService' }, { error })
   }
 
   // 创建主窗口和托盘
@@ -237,9 +237,9 @@ function startApplication() {
   // 创建桌宠窗口
   try {
     petWindow.create()
-    console.log('[系统] ✅ 桌宠窗口创建成功')
+    logger.info('[系统] ✅ 桌宠窗口创建成功', { module: 'PetWindow' })
   } catch (error) {
-    console.error('[系统] ❌ 桌宠窗口创建失败:', error)
+    logger.error('[系统] ❌ 桌宠窗口创建失败:', { module: 'PetWindow' }, { error })
   }
 
   // 启动监控
@@ -248,9 +248,9 @@ function startApplication() {
   processMonitor.start()
   networkMonitor.start()
 
-  console.log('[一鉴到底] 所有监控服务已启动')
-  console.log('一鉴到底已启动')
-  console.log('关闭窗口后应用会继续在后台运行')
+  logger.info('[一鉴到底] 所有监控服务已启动', { module: 'System' })
+  logger.info('一鉴到底已启动', { module: 'System' })
+  logger.info('关闭窗口后应用会继续在后台运行', { module: 'System' })
 }
 
 /**
@@ -272,9 +272,9 @@ function cleanup() {
   // 停止同步服务
   try {
     syncService.stopAutoSync()
-    console.log('[系统] ✅ 同步服务已停止')
+    logger.info('[系统] ✅ 同步服务已停止', { module: 'SyncService' })
   } catch (error) {
-    console.error('[系统] ❌ 同步服务停止失败:', error)
+    logger.error('[系统] ❌ 同步服务停止失败:', { module: 'SyncService' }, { error })
   }
 }
 

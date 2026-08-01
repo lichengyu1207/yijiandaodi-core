@@ -6,6 +6,7 @@
 import { app } from 'electron';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { logger } from '../services/loggerService';
 
 // 在类中创建，以便于测试 mock
 
@@ -57,11 +58,11 @@ export class ProcessMonitor {
    */
   start() {
     if (this.monitoringInterval) {
-      console.log('[进程监控] 已在运行');
+      logger.info('[进程监控] 已在运行', { module: 'ProcessMonitor' });
       return;
     }
 
-    console.log('[进程监控] 启动...');
+    logger.info('[进程监控] 启动...', { module: 'ProcessMonitor' });
 
     // 每5秒检查一次进程
     this.monitoringInterval = setInterval(() => {
@@ -79,7 +80,7 @@ export class ProcessMonitor {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
-      console.log('[进程监控] 已停止');
+      logger.info('[进程监控] 已停止', { module: 'ProcessMonitor' });
     }
   }
 
@@ -98,7 +99,7 @@ export class ProcessMonitor {
           process.isAIAgent = true;
           this.detectedProcesses.set(process.name, process);
 
-          console.log(`[进程监控] 检测到 AI Agent: ${process.name} (PID: ${process.pid})`);
+          logger.info(`[进程监控] 检测到 AI Agent: ${process.name}`, { module: 'ProcessMonitor' }, { pid: process.pid });
 
           // 触发回调
           if (this.onAIAgentDetected) {
@@ -107,7 +108,7 @@ export class ProcessMonitor {
         }
       });
     } catch (error: any) {
-      console.error('[进程监控] 检查进程失败:', error.message);
+      logger.error('[进程监控] 检查进程失败:', { module: 'ProcessMonitor' }, { error: error.message });
     }
   }
 

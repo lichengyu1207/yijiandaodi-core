@@ -5,6 +5,7 @@
 import { spawn, ChildProcess } from 'child_process'
 import path from 'path'
 import { app } from 'electron'
+import { logger } from './loggerService'
 
 export class ApiService {
   private apiProcess: ChildProcess | null = null
@@ -16,7 +17,7 @@ export class ApiService {
       // 开发环境：直接启动 Python 服务
       const backendPath = 'C:\\MsSafeData\\Desktop\\yijiandaodi\\sandbox_api.py'
 
-      console.log('启动后台服务:', backendPath)
+      logger.info('启动后台服务:', { module: 'ApiService' }, { path: backendPath })
 
       this.apiProcess = spawn('python', [backendPath], {
         cwd: 'C:\\MsSafeData\\Desktop\\yijiandaodi',
@@ -24,15 +25,15 @@ export class ApiService {
       })
 
       this.apiProcess.stdout?.on('data', (data) => {
-        console.log(`[API] ${data}`)
+        logger.info(`[API] ${data}`, { module: 'ApiService' })
       })
 
       this.apiProcess.stderr?.on('data', (data) => {
-        console.error(`[API Error] ${data}`)
+        logger.error(`[API Error] ${data}`, { module: 'ApiService' })
       })
 
       this.apiProcess.on('close', (code) => {
-        console.log(`API 服务退出: ${code}`)
+        logger.info(`API 服务退出: ${code}`, { module: 'ApiService' })
       })
     } else {
       // 生产环境：启动打包后的服务
@@ -51,7 +52,7 @@ export class ApiService {
 
   stop() {
     if (this.apiProcess) {
-      console.log('停止后台服务...')
+      logger.info('停止后台服务...', { module: 'ApiService' })
       this.apiProcess.kill()
       this.apiProcess = null
     }

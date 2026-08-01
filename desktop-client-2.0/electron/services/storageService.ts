@@ -6,6 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import { app } from 'electron'
 import { OperationRecord } from '../monitoring/fileMonitor'
+import { logger } from './loggerService'
 
 export class StorageService {
   private dataPath: string
@@ -23,17 +24,17 @@ export class StorageService {
 
   async saveOperation(operation: OperationRecord): Promise<{ success: boolean; count?: number; error?: string }> {
     try {
-      console.log('[StorageService] 开始保存记录:', operation.id)
-      console.log('[StorageService] 存储路径:', this.operationsFile)
-      
+      logger.info('[StorageService] 开始保存记录', { module: 'StorageService' }, { operationId: operation.id })
+      logger.debug('[StorageService] 存储路径:', { module: 'StorageService' }, { path: this.operationsFile })
+
       let operations: OperationRecord[] = []
 
       if (fs.existsSync(this.operationsFile)) {
         const data = fs.readFileSync(this.operationsFile, 'utf-8')
         operations = JSON.parse(data)
-        console.log('[StorageService] 当前记录数:', operations.length)
+        logger.debug('[StorageService] 当前记录数:', { module: 'StorageService' }, { count: operations.length })
       } else {
-        console.log('[StorageService] 文件不存在，将创建新文件')
+        logger.debug('[StorageService] 文件不存在，将创建新文件', { module: 'StorageService' })
       }
 
       // 添加时间戳和审计哈希
@@ -42,22 +43,22 @@ export class StorageService {
         timestamp: operation.timestamp || new Date().toISOString(),
         audit_hash: operation.audit_hash || `hash-${Date.now()}-${Math.random().toString(36).substring(7)}`
       }
-      
+
       operations.push(newOperation)
-      console.log('[StorageService] 新增记录:', newOperation.id)
+      logger.info('[StorageService] 新增记录', { module: 'StorageService' }, { newOperationId: newOperation.id })
 
       // 只保留最近100条记录
       if (operations.length > 100) {
         operations = operations.slice(-100)
-        console.log('[StorageService] 保留最近100条记录')
+        logger.info('[StorageService] 保留最近100条记录', { module: 'StorageService' })
       }
 
       fs.writeFileSync(this.operationsFile, JSON.stringify(operations, null, 2))
-      console.log('[StorageService] ✅ 保存成功:', operation.title)
-      console.log('[StorageService] 总记录数:', operations.length)
+      logger.info('[StorageService] ✅ 保存成功', { module: 'StorageService' }, { title: operation.title })
+      logger.debug('[StorageService] 总记录数:', { module: 'StorageService' }, { count: operations.length })
       return { success: true, count: operations.length }
     } catch (error) {
-      console.error('[StorageService] ❌ 保存失败:', error)
+      logger.error('[StorageService] ❌ 保存失败:', { module: 'StorageService' }, { error })
       return { success: false, error: String(error) }
     }
   }
@@ -70,7 +71,7 @@ export class StorageService {
       }
       return []
     } catch (error) {
-      console.error('读取操作记录失败:', error)
+      logger.error('读取操作记录失败:', { module: 'StorageService' }, { error })
       return []
     }
   }

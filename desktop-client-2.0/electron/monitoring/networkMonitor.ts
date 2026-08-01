@@ -6,6 +6,7 @@
 import { app } from 'electron';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { logger } from '../services/loggerService';
 
 // 在类中创建，以便于测试 mock
 
@@ -49,11 +50,11 @@ export class NetworkMonitor {
    */
   start() {
     if (this.monitoringInterval) {
-      console.log('[网络监控] 已在运行');
+      logger.info('[网络监控] 已在运行', { module: 'NetworkMonitor' });
       return;
     }
 
-    console.log('[网络监控] 启动...');
+    logger.info('[网络监控] 启动...', { module: 'NetworkMonitor' });
 
     // 每10秒检查一次网络连接
     this.monitoringInterval = setInterval(() => {
@@ -71,7 +72,7 @@ export class NetworkMonitor {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
-      console.log('[网络监控] 已停止');
+      logger.info('[网络监控] 已停止', { module: 'NetworkMonitor' });
     }
   }
 
@@ -92,7 +93,7 @@ export class NetworkMonitor {
           connection.domain = aiDomain;
           this.detectedConnections.set(connection.foreignAddress, connection);
 
-          console.log(`[网络监控] 检测到 AI API 连接: ${aiDomain} (${connection.foreignAddress})`);
+          logger.info(`[网络监控] 检测到 AI API 连接: ${aiDomain}`, { module: 'NetworkMonitor' }, { address: connection.foreignAddress });
 
           // 触发回调
           if (this.onAIAPIRequestDetected) {
@@ -101,7 +102,7 @@ export class NetworkMonitor {
         }
       });
     } catch (error: any) {
-      console.error('[网络监控] 检查网络连接失败:', error.message);
+      logger.error('[网络监控] 检查网络连接失败:', { module: 'NetworkMonitor' }, { error: error.message });
     }
   }
 

@@ -7,6 +7,7 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import axios from 'axios'
+import { logger } from './loggerService'
 
 export interface SyncConfig {
   enabled: boolean           // 是否启用同步
@@ -69,7 +70,7 @@ export class SyncService {
         return { ...defaultConfig, ...JSON.parse(data) }
       }
     } catch (error) {
-      console.error('[SyncService] 加载配置失败:', error)
+      logger.error('[SyncService] 加载配置失败:', { module: 'SyncService' }, { error })
     }
 
     return defaultConfig
@@ -83,7 +84,7 @@ export class SyncService {
 
     try {
       fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2))
-      console.log('[SyncService] 配置已保存')
+      logger.info('[SyncService] 配置已保存', { module: 'SyncService' })
 
       // 重新启动自动同步
       if (this.config.autoSync && this.config.enabled) {
@@ -92,7 +93,7 @@ export class SyncService {
         this.stopAutoSync()
       }
     } catch (error) {
-      console.error('[SyncService] 保存配置失败:', error)
+      logger.error('[SyncService] 保存配置失败:', { module: 'SyncService' }, { error })
     }
   }
 
@@ -123,7 +124,7 @@ export class SyncService {
     }
 
     try {
-      console.log('[SyncService] 开始上传会话，数量:', sessions.length)
+      logger.info('[SyncService] 开始上传会话', { module: 'SyncService' }, { count: sessions.length })
 
       const response = await axios.post(
         `${this.config.apiUrl}/sessions/upload/`,
@@ -149,7 +150,7 @@ export class SyncService {
 
       return { success: false, error: response.data.message }
     } catch (error: any) {
-      console.error('[SyncService] 上传失败:', error)
+      logger.error('[SyncService] 上传失败:', { module: 'SyncService' }, { error })
       return {
         success: false,
         error: error.response?.data?.message || error.message
@@ -170,7 +171,7 @@ export class SyncService {
     }
 
     try {
-      console.log('[SyncService] 开始下载会话')
+      logger.info('[SyncService] 开始下载会话', { module: 'SyncService' })
 
       const params: any = {}
       if (since || this.config.lastSyncTime) {
@@ -200,7 +201,7 @@ export class SyncService {
 
       return { success: false, error: response.data.message }
     } catch (error: any) {
-      console.error('[SyncService] 下载失败:', error)
+      logger.error('[SyncService] 下载失败:', { module: 'SyncService' }, { error })
       return {
         success: false,
         error: error.response?.data?.message || error.message
@@ -212,7 +213,7 @@ export class SyncService {
    * 执行完整同步（上传 + 下载）
    */
   async syncAll(localSessions: SyncSession[]): Promise<SyncResult> {
-    console.log('[SyncService] 开始完整同步')
+    logger.info('[SyncService] 开始完整同步', { module: 'SyncService' })
 
     // 1. 上传本地数据
     const uploadResult = await this.uploadSessions(localSessions)
@@ -247,12 +248,12 @@ export class SyncService {
     // 启动新的定时器
     const intervalMs = this.config.syncInterval * 60 * 1000
     this.syncTimer = setInterval(() => {
-      console.log('[SyncService] 自动同步触发')
+      logger.info('[SyncService] 自动同步触发', { module: 'SyncService' })
       // 这里需要传入本地会话数据
       // 实际使用时需要从 StorageService 获取
     }, intervalMs)
 
-    console.log(`[SyncService] 自动同步已启动，间隔: ${this.config.syncInterval} 分钟`)
+    logger.info(`[SyncService] 自动同步已启动`, { module: 'SyncService' }, { interval: this.config.syncInterval })
   }
 
   /**
@@ -262,7 +263,7 @@ export class SyncService {
     if (this.syncTimer) {
       clearInterval(this.syncTimer)
       this.syncTimer = undefined
-      console.log('[SyncService] 自动同步已停止')
+      logger.info('[SyncService] 自动同步已停止', { module: 'SyncService' })
     }
   }
 
@@ -270,7 +271,7 @@ export class SyncService {
    * 应用启动时执行同步
    */
   async syncOnStartup(localSessions: SyncSession[]): Promise<SyncResult> {
-    console.log('[SyncService] 应用启动，执行同步')
+    logger.info('[SyncService] 应用启动，执行同步', { module: 'SyncService' })
 
     if (!this.config.enabled) {
       return { success: false, error: '同步已禁用' }
@@ -304,7 +305,7 @@ export class SyncService {
   clearSyncData(): void {
     this.config.lastSyncTime = undefined
     this.saveConfig(this.config)
-    console.log('[SyncService] 同步数据已清除')
+    logger.info('[SyncService] 同步数据已清除', { module: 'SyncService' })
   }
 }
 
