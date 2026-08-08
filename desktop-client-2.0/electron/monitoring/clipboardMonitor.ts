@@ -1,5 +1,5 @@
 /**
- * 剪贴板监控模块
+ * 剪贴板监控模块 - 集成污点追踪
  */
 
 import { clipboard } from 'electron'
@@ -8,6 +8,7 @@ import { AutoDetector } from './autoDetector'
 import { PetState } from '../windows/petWindow'
 import { RiskResult, OperationRecord } from './fileMonitor'
 import { logger } from '../services/loggerService'
+import { TaintTracker, taintTracker, TaintType } from './taintTracking'
 
 export class ClipboardMonitor {
   private clipboardWatcher: NodeJS.Timeout | null = null
@@ -91,6 +92,81 @@ export class ClipboardMonitor {
       })
 
       if (!detectionResult.safe || detectionResult.risks.length > 0) {
+        // ===== 污点追踪集成开始 =====
+        logger.info('[污点追踪] 开始处理剪贴板污点', { module: 'TaintTracking' }, {
+          contentLength: content.length,
+          riskLevel: detectionResult.risk_level
+        })
+
+        // 检查剪贴板内容是否来自已知的污点
+        const existingTaint = taintTracker.checkTainted(content)
+
+        if (existingTaint) {
+          // 记录污点传播（从文件到剪贴板）
+          logger.info('[污点追踪] ✅ 检测到已知污点数据', { module: 'TaintTracking' }, {
+            taintId: existingTaint.id,
+            source: existingTaint.source,
+            type: existingTaint.type
+          })
+
+          taintTracker.trackPropagation(
+            existingTaint.id,
+            existingTaint.location,
+            'clipboard',
+            'clipboard_copy',
+            {
+              processName: 'ClipboardMonitor'
+            }
+          )
+
+          logger.warn('[污点追踪] ⚠️ 敏感数据已被复制到剪贴板', { module: 'TaintTracking' }, {
+            originalSource: existingTaint.source,
+            taintType: existingTaint.type
+          })
+        } else {
+          // 创建新的污点标记（剪贴板为源头）
+          logger.info('[污点追踪] 创建新污点标记', { module: 'TaintTracking' })
+
+          // 根据检测结果确定污点类型
+          let taintType: TaintType = 'sensitive'
+          if (detectionResult.risks.some(r => r.type.includes('api') || r.type.includes('key'))) {
+            taintType = 'api_key'
+          } else if (detectionResult.risks.some(r => r.type.includes('password') || r.type.includes('credential'))) {
+            taintType = 'credential'
+          } else if (detectionResult.risks.some(r => r.type.includes('secret'))) {
+            taintType = 'secret'
+          } else if (detectionResult.risks.some(r => r.type.includes('pii'))) {
+            taintType = 'pii'
+          }
+
+          const taint = taintTracker.createTaint(
+            content.substring(0, 1000),  // 只使用前1000字符作为指纹
+            'clipboard',
+            taintType,
+            {
+              size: content.length,
+              tags: [...new Set(detectionResult.risks.map(r => r.type))]
+            }
+          )
+
+          logger.info('[污点追踪] ✅ 剪贴板污点已标记', { module: 'TaintTracking' }, {
+            taintId: taint.id,
+            type: taint.type
+          })
+
+          // 记录剪贴板作为污点源
+          taintTracker.trackPropagation(
+            taint.id,
+            'clipboard',
+            `memory:process:${process.pid}`,
+            'clipboard_created',
+            {
+              processName: 'ClipboardMonitor'
+            }
+          )
+        }
+        // ===== 污点追踪集成结束 =====
+
         // 统计风险等级
         const highRisks = detectionResult.risks.filter(r => r.risk === 'high')
         const mediumRisks = detectionResult.risks.filter(r => r.risk === 'medium')

@@ -26,3 +26,7 @@ export type { RiskAssessment } from './behaviorRiskScorer'
 
 // 导出主动告警器
 export { ProactiveAlerter, proactiveAlerter } from './proactiveAlerter'
+
+// 导出污点追踪系统
+export { TaintTracker, taintTracker } from './taintTracking'
+export type { TaintMark, TaintPropagation, TaintFlowGraph, TaintType } from './taintTracking'

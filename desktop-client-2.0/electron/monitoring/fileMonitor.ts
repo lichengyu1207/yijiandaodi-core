@@ -1,5 +1,5 @@
 /**
- * 文件监控模块
+ * 文件监控模块 - 集成污点追踪
  */
 
 import { app } from 'electron'
@@ -9,6 +9,7 @@ import { SecurityKnowledgeBase } from '../securityKnowledgeBase'
 import { AutoDetector, autoDetector } from './autoDetector'
 import { PetState } from '../windows/petWindow'
 import { logger } from '../services/loggerService'
+import { TaintTracker, taintTracker, TaintType } from './taintTracking'
 
 export interface FileMonitorConfig {
   watchPaths: string[]
@@ -124,6 +125,55 @@ export class FileMonitor {
       })
 
       if (!detectionResult.safe || detectionResult.risks.length > 0) {
+        // ===== 污点追踪集成开始 =====
+        logger.info('[污点追踪] 开始处理文件污点', { module: 'TaintTracking' }, {
+          filePath,
+          riskLevel: detectionResult.risk_level
+        })
+
+        // 根据检测结果确定污点类型
+        let taintType: TaintType = 'sensitive'
+        if (detectionResult.risks.some(r => r.type.includes('api') || r.type.includes('key'))) {
+          taintType = 'api_key'
+        } else if (detectionResult.risks.some(r => r.type.includes('password') || r.type.includes('credential'))) {
+          taintType = 'credential'
+        } else if (detectionResult.risks.some(r => r.type.includes('secret'))) {
+          taintType = 'secret'
+        } else if (detectionResult.risks.some(r => r.type.includes('pii'))) {
+          taintType = 'pii'
+        }
+
+        // 创建污点标记
+        const taint = taintTracker.createTaint(
+          content.substring(0, 1000),  // 只使用前1000字符作为指纹
+          filePath,
+          taintType,
+          {
+            fileName: path.basename(filePath),
+            fileType: path.extname(filePath),
+            size: content.length,
+            tags: [...new Set(detectionResult.risks.map(r => r.type))]
+          }
+        )
+
+        logger.info('[污点追踪] ✅ 文件污点已标记', { module: 'TaintTracking' }, {
+          taintId: taint.id,
+          type: taint.type,
+          source: taint.source
+        })
+
+        // 记录文件读取操作（污点传播）
+        taintTracker.trackPropagation(
+          taint.id,
+          filePath,
+          `memory:process:${process.pid}`,
+          'file_read',
+          {
+            processName: 'FileMonitor'
+          }
+        )
+        // ===== 污点追踪集成结束 =====
+
         // 统计风险等级
         const highRisks = detectionResult.risks.filter(r => r.risk === 'high')
         const mediumRisks = detectionResult.risks.filter(r => r.risk === 'medium')
