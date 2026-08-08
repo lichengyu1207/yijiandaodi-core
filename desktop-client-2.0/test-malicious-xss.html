@@ -1,0 +1,41 @@
+<!-- 测试文件2：XSS攻击模拟 -->
+<!-- 用途：测试日志系统能否检测到XSS攻击 -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>XSS测试页面</title>
+</head>
+<body>
+    <h1>XSS攻击测试</h1>
+    
+    <!-- 反射型XSS -->
+    <script>
+        // 模拟用户输入（恶意）
+        const userInput = "<script>alert('XSS Attack!')</script>";
+        const maliciousLink = "javascript:alert('XSS')";
+        const imageTag = "<img src='x' onerror='alert(\"XSS\")'>";
+        
+        // 危险的innerHTML操作
+        document.getElementById('content').innerHTML = userInput;
+        
+        // 事件处理器注入
+        const buttonCode = "<button onclick='alert(\"XSS\")'>点击我</button>";
+        
+        // SVG XSS
+        const svgXSS = "<svg onload='alert(\"XSS\")'>";
+        
+        // 更复杂的XSS payload
+        const advancedXSS = `
+            <img src=x onerror="javascript:alert('XSS')">
+            <svg/onload=alert('XSS')>
+            <body onload=alert('XSS')>
+        `;
+        
+        console.log('XSS测试文件已加载');
+    </script>
+    
+    <div id="content"></div>
+    <div id="button-container"></div>
+</body>
+</html>

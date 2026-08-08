@@ -1,0 +1,42 @@
+# 测试文件3：API Key和敏感信息泄露模拟
+# 用途：测试日志系统能否检测到API Key和敏感信息
+
+# API Keys（模拟）
+## OpenAI API Key
+OPENAI_API_KEY=sk-proj-AbCdEfGhIjKlMnOpQrStUvWxYz1234567890
+
+## GitHub Token
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+## AWS Access Key
+AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+
+## Google API Key
+GOOGLE_API_KEY=AIzaSyDaGmCWe4xMpHMCsMi1fA6qOpC8F6x1Y2z
+
+## Anthropic API Key
+ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# 敏感配置
+## 数据库密码
+DATABASE_URL=postgresql://admin:password123@localhost:5432/mydb
+DB_PASSWORD=MySuperSecretPassword123!
+
+## JWT Secret
+JWT_SECRET=my-secret-jwt-key-do-not-share
+
+## Stripe Secret Key
+STRIPE_SECRET_KEY=sk_live_xxxxxxxxxxxxxxxxxxxxx
+
+# 其他敏感信息
+## 用户密码（示例）
+admin_password=Admin@2026!
+user_password=User1234!
+
+## 私钥（模拟）
+PRIVATE_KEY=-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8PbnGy0AHB7MvxZrq3TpPxK3F9v
+-----END RSA PRIVATE KEY-----
+
+# 注意：以上所有Key和密码都是模拟的，仅供测试使用
