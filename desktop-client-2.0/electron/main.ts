@@ -8,10 +8,16 @@ import { app, Notification } from 'electron'
 import { MainWindow, PetWindow, PetState } from './windows'
 import { FileMonitor, ClipboardMonitor, RiskResult, ProcessMonitor, NetworkMonitor } from './monitoring'
 import { SmartAlerter, smartAlerter } from './monitoring/smartAlerter'
+import { AgentBehaviorParser } from './monitoring/agentBehaviorParser'
+import { BehaviorRiskScorer } from './monitoring/behaviorRiskScorer'
+import { proactiveAlerter } from './monitoring/proactiveAlerter'
 import { TrayService, ApiService, StorageService, syncService, logger } from './services'
+import { GovernanceHealthMonitor } from './services/governanceHealthMonitor'
 import { IPCHandlers } from './ipc'
 import { DIContainer } from './di'
 import { initSecurityKnowledgeBase, SecurityKnowledgeBase } from './securityKnowledgeBase'
+import { MemoryMonitorService } from './services/memoryMonitor'
+import { CPUMonitor } from './services/cpuMonitor'
 import axios from 'axios'
 
 // 依赖注入容器
@@ -137,8 +143,32 @@ function initializeServices() {
   container.register('trayService', trayService)
   container.register('apiService', apiService)
 
-  // 设置监控回调
-  const riskDetectedCallback = (risks: RiskResult[], source: string) => {
+  // 新增：创建性能监控服务（Sprint 2）
+  const memoryMonitor = new MemoryMonitorService({
+    checkInterval: 10000,
+    alertThresholds: {
+      heapUsed: 500 * 1024 * 1024,  // 500MB
+      heapTotal: 1024 * 1024 * 1024, // 1GB
+      external: 200 * 1024 * 1024     // 200MB
+    }
+  })
+  const cpuMonitor = new CPUMonitor({
+    checkInterval: 5000,
+    historyLength: 60
+  })
+  container.register('memoryMonitor', memoryMonitor)
+  container.register('cpuMonitor', cpuMonitor)
+
+  // 新增：创建治理健康度监控器（MVP）
+  const healthMonitor = new GovernanceHealthMonitor(memoryMonitor, cpuMonitor)
+  container.register('healthMonitor', healthMonitor)
+
+  // 新增：创建行为风险评分器（MVP）
+  const behaviorRiskScorer = new BehaviorRiskScorer()
+  container.register('behaviorRiskScorer', behaviorRiskScorer)
+
+  // 设置监控回调（集成主动监控）
+  const riskDetectedCallback = (risks: RiskResult[], source: string, detectionResult?: any) => {
     const highRisks = risks.filter(r => r.risk === 'high')
     const riskDescriptions = risks.slice(0, 10).map(r => {
       switch (r.type) {
@@ -151,15 +181,46 @@ function initializeServices() {
       }
     })
 
-    // 使用新的智能提示方式（不弹窗）
+    // 新增：使用 Agent 行为解析器和风险评分器（主动监控）
+    if (detectionResult) {
+      try {
+        // 解析为 Agent 行为日志
+        const behavior = source.includes('文件') 
+          ? AgentBehaviorParser.parseFileEvent(
+              source.replace('文件 ', ''),
+              detectionResult.content || '',
+              detectionResult
+            )
+          : AgentBehaviorParser.parseClipboardEvent(
+              detectionResult.content || '',
+              detectionResult
+            )
+
+        // 评估风险
+        const assessment = behaviorRiskScorer.assessBehavior(behavior)
+
+        // 主动告警
+        proactiveAlerter.handleAssessment(behavior, assessment)
+
+        logger.info('[主动监控] 行为评估完成', { module: 'ProactiveMonitor' }, {
+          riskScore: assessment.overallScore,
+          riskLevel: assessment.riskLevel,
+          shouldAlert: assessment.shouldAlert
+        })
+      } catch (error) {
+        logger.error('[主动监控] 行为评估失败', { module: 'ProactiveMonitor' }, { error })
+      }
+    }
+
+    // 原有逻辑：使用新的智能提示方式（不弹窗）
     showRiskAlert({
       risk_level: highRisks.length > 0 ? 'high' : 'medium',
       description: `${source}中发现${risks.length}个安全风险:\n${riskDescriptions.join('\n')}`
     })
   }
 
-  fileMonitor.setRiskDetectedCallback((risks, filePath) => riskDetectedCallback(risks, `文件 ${filePath}`))
-  clipboardMonitor.setRiskDetectedCallback((risks) => riskDetectedCallback(risks, '剪贴板'))
+  fileMonitor.setRiskDetectedCallback((risks, filePath, result) => riskDetectedCallback(risks, `文件 ${filePath}`, result))
+  clipboardMonitor.setRiskDetectedCallback((risks, result) => riskDetectedCallback(risks, '剪贴板', result))
 
   fileMonitor.setPetStateChangeCallback(updatePetState)
   clipboardMonitor.setPetStateChangeCallback(updatePetState)
@@ -172,6 +233,15 @@ function initializeServices() {
   processMonitor.setAIAgentDetectedCallback((process) => {
     logger.info('[AI Agent] 检测到:', { module: 'ProcessMonitor' }, { processName: process.name })
     updatePetState('yellow', `检测到 ${process.name}`)
+
+    // 新增：解析进程行为
+    try {
+      const behavior = AgentBehaviorParser.parseProcessEvent(process.name, process.pid, true)
+      const assessment = behaviorRiskScorer.assessBehavior(behavior)
+      proactiveAlerter.handleAssessment(behavior, assessment)
+    } catch (error) {
+      logger.error('[主动监控] 进程行为评估失败', { module: 'ProactiveMonitor' }, { error })
+    }
   })
   container.register('processMonitor', processMonitor)
 
@@ -180,6 +250,19 @@ function initializeServices() {
   networkMonitor.setAIAPIRequestDetectedCallback((request) => {
     logger.info('[AI API] 调用:', { module: 'NetworkMonitor' }, { domain: request.domain })
     updatePetState('yellow', `API 调用: ${request.domain}`)
+
+    // 新增：解析网络行为
+    try {
+      const behavior = AgentBehaviorParser.parseNetworkEvent(
+        request.domain,
+        request.port || 443,
+        request.isAIProvider || false
+      )
+      const assessment = behaviorRiskScorer.assessBehavior(behavior)
+      proactiveAlerter.handleAssessment(behavior, assessment)
+    } catch (error) {
+      logger.error('[主动监控] 网络行为评估失败', { module: 'ProactiveMonitor' }, { error })
+    }
   })
   container.register('networkMonitor', networkMonitor)
 
@@ -191,12 +274,13 @@ function initializeServices() {
     app.quit()
   })
 
-  // 注册IPC处理器
+  // 注册IPC处理器（新增 healthMonitor 参数）
   const ipcHandlers = new IPCHandlers(
     storageService,
     fileMonitor,
     clipboardMonitor,
-    () => petWindow.getState()
+    () => petWindow.getState(),
+    healthMonitor
   )
   ipcHandlers.registerAll()
 }
@@ -213,9 +297,16 @@ function startApplication() {
   const clipboardMonitor = container.resolve<ClipboardMonitor>('clipboardMonitor')
   const processMonitor = container.resolve<ProcessMonitor>('processMonitor')
   const networkMonitor = container.resolve<NetworkMonitor>('networkMonitor')
+  const memoryMonitor = container.resolve<MemoryMonitorService>('memoryMonitor')
+  const cpuMonitor = container.resolve<CPUMonitor>('cpuMonitor')
 
   // 启动后台服务
   apiService.start()
+
+  // 新增：启动性能监控（Sprint 2）
+  memoryMonitor.start()
+  cpuMonitor.start()
+  logger.info('[系统] ✅ 性能监控已启动', { module: 'PerformanceMonitor' })
 
   // 启动同步服务
   try {
@@ -249,6 +340,7 @@ function startApplication() {
   networkMonitor.start()
 
   logger.info('[一鉴到底] 所有监控服务已启动', { module: 'System' })
+  logger.info('[一鉴到底] 主动监控和健康度监控已启用（MVP）', { module: 'System' })
   logger.info('一鉴到底已启动', { module: 'System' })
   logger.info('关闭窗口后应用会继续在后台运行', { module: 'System' })
 }
@@ -262,12 +354,19 @@ function cleanup() {
   const clipboardMonitor = container.resolve<ClipboardMonitor>('clipboardMonitor')
   const processMonitor = container.resolve<ProcessMonitor>('processMonitor')
   const networkMonitor = container.resolve<NetworkMonitor>('networkMonitor')
+  const memoryMonitor = container.resolve<MemoryMonitorService>('memoryMonitor')
+  const cpuMonitor = container.resolve<CPUMonitor>('cpuMonitor')
 
   apiService.stop()
   fileMonitor.stop()
   clipboardMonitor.stop()
   processMonitor.stop()
   networkMonitor.stop()
+
+  // 新增：停止性能监控
+  memoryMonitor.stop()
+  cpuMonitor.stop()
+  logger.info('[系统] ✅ 性能监控已停止', { module: 'PerformanceMonitor' })
 
   // 停止同步服务
   try {

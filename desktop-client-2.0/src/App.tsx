@@ -5,6 +5,7 @@ import Evidence from './pages/Evidence'
 import Auth from './pages/Auth'
 import Settings from './pages/Settings'
 import SyncSettings from './pages/SyncSettings'
+import { HealthDashboard } from './components/HealthDashboard'
 import DesktopPet from './components/DesktopPet'
 import { authService } from './services/authService'
 import './index.css'
@@ -12,9 +13,10 @@ import './index.css'
 const NAV_ITEMS = [
   { path: '/', label: '实时审计', icon: 'audit' },
   { path: '/evidence', label: '存证中心', icon: 'evidence' },
+  { path: '/health', label: '健康度', icon: 'health' },
+  { path: '/sync', label: '云端同步', icon: 'sync' },
   { path: '/auth', label: '实名认证', icon: 'auth' },
   { path: '/settings', label: '系统设置', icon: 'settings' },
-  { path: '/sync', label: '云端同步', icon: 'sync' },
 ]
 
 function Sidebar() {
@@ -110,6 +112,11 @@ function Sidebar() {
                     <path d="M21 3v5h-5" />
                     <path d="M3 12a9 9 0 1 1 9 9c-2.52 0-4.93-1-6.74-2.74L3 16" />
                     <path d="M3 21v-5h5" />
+                  </svg>
+                )}
+                {item.icon === 'health' && (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                   </svg>
                 )}
               </span>
@@ -248,6 +255,7 @@ export default function App() {
                 <>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/evidence" element={<Evidence />} />
+                  <Route path="/health" element={<HealthDashboard />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/sync" element={<SyncSettings />} />
                   <Route path="/auth" element={<Navigate to="/" replace />} />
