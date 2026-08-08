@@ -7,23 +7,27 @@ import { StorageService } from '../services/storageService'
 import { FileMonitor, ClipboardMonitor } from '../monitoring'
 import { PetState } from '../windows/petWindow'
 import { syncService } from '../services/syncService'
+import type { GovernanceHealthMonitor } from '../services/governanceHealthMonitor'
 
 export class IPCHandlers {
   private storageService: StorageService
   private fileMonitor: FileMonitor
   private clipboardMonitor: ClipboardMonitor
   private getPetState: () => PetState
+  private healthMonitor?: GovernanceHealthMonitor
 
   constructor(
     storageService: StorageService,
     fileMonitor: FileMonitor,
     clipboardMonitor: ClipboardMonitor,
-    getPetState: () => PetState
+    getPetState: () => PetState,
+    healthMonitor?: GovernanceHealthMonitor
   ) {
     this.storageService = storageService
     this.fileMonitor = fileMonitor
     this.clipboardMonitor = clipboardMonitor
     this.getPetState = getPetState
+    this.healthMonitor = healthMonitor
   }
 
   registerAll() {
@@ -31,6 +35,7 @@ export class IPCHandlers {
     this.registerMonitoringHandlers()
     this.registerPetHandlers()
     this.registerSyncHandlers()
+    this.registerHealthHandlers()
   }
 
   private registerStorageHandlers() {
@@ -178,6 +183,59 @@ export class IPCHandlers {
       try {
         syncService.setAuthToken(token)
         return { success: true }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+  }
+
+  private registerHealthHandlers() {
+    // 获取健康度指标
+    ipcMain.handle('get-health-metrics', async () => {
+      try {
+        if (!this.healthMonitor) {
+          return { 
+            success: false, 
+            error: '健康度监控器未初始化' 
+          }
+        }
+        
+        const metrics = this.healthMonitor.collectMetrics()
+        return { success: true, data: metrics }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 获取健康度历史
+    ipcMain.handle('get-health-history', async (event, limit: number = 10) => {
+      try {
+        if (!this.healthMonitor) {
+          return { 
+            success: false, 
+            error: '健康度监控器未初始化' 
+          }
+        }
+        
+        const history = this.healthMonitor.getMetricsHistory(limit)
+        return { success: true, data: history }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 获取健康度报告
+    ipcMain.handle('get-health-report', async () => {
+      try {
+        if (!this.healthMonitor) {
+          return { 
+            success: false, 
+            error: '健康度监控器未初始化' 
+          }
+        }
+        
+        const report = this.healthMonitor.exportReport()
+        return { success: true, data: report }
       } catch (error: any) {
         return { success: false, error: error.message }
       }

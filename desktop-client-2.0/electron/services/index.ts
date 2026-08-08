@@ -44,3 +44,7 @@ export type {
   CPUPerformanceReport,
   CPUMonitorEvents
 } from './cpuMonitor'
+
+// 导出治理健康度监控器
+export { GovernanceHealthMonitor } from './governanceHealthMonitor'
+export type { HealthMetrics } from './governanceHealthMonitor'

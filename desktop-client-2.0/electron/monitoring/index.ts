@@ -15,3 +15,14 @@ export type { AutoDetectionResult, CodeAnalysisResult, RiskLevel, ContentType, L
 // 导出智能提示器
 export { SmartAlerter, smartAlerter } from './smartAlerter'
 export type { AlertPolicy, AlertOptions } from './smartAlerter'
+
+// 导出 Agent 行为解析器
+export { AgentBehaviorParser } from './agentBehaviorParser'
+export type { AgentBehaviorLog } from './agentBehaviorParser'
+
+// 导出行为风险评分器
+export { BehaviorRiskScorer } from './behaviorRiskScorer'
+export type { RiskAssessment } from './behaviorRiskScorer'
+
+// 导出主动告警器
+export { ProactiveAlerter, proactiveAlerter } from './proactiveAlerter'
