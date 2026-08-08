@@ -43,6 +43,13 @@ if (!gotTheLock) {
  * 显示风险提示（优化版 - 不弹窗）
  */
 function showRiskAlert(riskData: { risk_level: string; description: string; content?: string }) {
+  // ===== 详细日志开始 =====
+  logger.info('[风险提示] 触发', { module: 'RiskAlert' }, {
+    riskLevel: riskData.risk_level,
+    descriptionLength: riskData.description.length,
+    hasContent: !!riskData.content
+  })
+
   const mainWindow = container.resolve<MainWindow>('mainWindow')
   const petWindow = container.resolve<PetWindow>('petWindow')
 
@@ -53,49 +60,94 @@ function showRiskAlert(riskData: { risk_level: string; description: string; cont
     message: riskData.description
   })
 
-  logger.info('[风险] 检测结果:', { module: 'RiskAlert' }, alertResult)
+  logger.info('[风险提示] 智能提示器结果', { module: 'RiskAlert' }, {
+    shouldNotify: alertResult.shouldNotify,
+    shouldUpdatePet: alertResult.shouldUpdatePet,
+    riskLevel: riskData.risk_level
+  })
 
   // 发送系统通知（仅高风险）
   if (alertResult.shouldNotify) {
-    const notification = new Notification({
-      title: '⚠️ 安全警告',
-      body: `发现${riskData.risk_level}风险: ${riskData.description.slice(0, 50)}...`,
-      silent: false
-    })
-    notification.show()
+    try {
+      const notification = new Notification({
+        title: '⚠️ 安全警告',
+        body: `发现${riskData.risk_level}风险: ${riskData.description.slice(0, 50)}...`,
+        silent: false
+      })
+      notification.show()
 
-    logger.info('[风险] 已发送系统通知', { module: 'RiskAlert' })
+      logger.info('[风险提示] 系统通知已发送', { module: 'RiskAlert' }, {
+        title: '⚠️ 安全警告',
+        riskLevel: riskData.risk_level
+      })
+    } catch (error) {
+      logger.error('[风险提示] 系统通知发送失败', { module: 'RiskAlert' }, {
+        error: error instanceof Error ? error.message : error
+      })
+    }
   }
 
   // 更新桌宠状态（所有风险都更新）
   if (alertResult.shouldUpdatePet) {
-    updatePetState(riskData.risk_level === 'critical' || riskData.risk_level === 'high' ? 'red' : 'yellow', riskData.description)
+    const newState = riskData.risk_level === 'critical' || riskData.risk_level === 'high' ? 'red' : 'yellow'
+    logger.info('[风险提示] 更新桌宠状态', { module: 'RiskAlert' }, {
+      newState,
+      riskLevel: riskData.risk_level
+    })
+    updatePetState(newState, riskData.description)
   }
 
   // 通知主窗口和桌宠窗口
-  mainWindow.send('risk-detected', riskData)
-  petWindow.send('risk-detected', riskData)
+  try {
+    mainWindow.send('risk-detected', riskData)
+    petWindow.send('risk-detected', riskData)
+    logger.info('[风险提示] 已通知渲染进程', { module: 'RiskAlert' })
+  } catch (error) {
+    logger.error('[风险提示] 通知渲染进程失败', { module: 'RiskAlert' }, {
+      error: error instanceof Error ? error.message : error
+    })
+  }
 }
 
 /**
  * 更新桌宠状态
  */
 function updatePetState(state: PetState, message?: string) {
+  // ===== 详细日志开始 =====
+  logger.info('[桌宠状态] 更新', { module: 'PetWindow' }, {
+    newState: state,
+    message: message?.substring(0, 100)
+  })
+
   const mainWindow = container.resolve<MainWindow>('mainWindow')
   const petWindow = container.resolve<PetWindow>('petWindow')
   const trayService = container.resolve<TrayService>('trayService')
 
-  petWindow.setState(state)
-  logger.info(`[小鉴] 状态更新: ${state}${message ? ` - ${message}` : ''}`, { module: 'PetWindow' })
+  try {
+    petWindow.setState(state)
+    logger.info('[桌宠状态] 窗口状态已更新', { module: 'PetWindow' }, { state })
 
-  // 通知主窗口渲染进程
-  mainWindow.send('pet-state-change', state)
+    // 通知主窗口渲染进程
+    mainWindow.send('pet-state-change', state)
+    logger.info('[桌宠状态] 已通知主窗口', { module: 'PetWindow' })
 
-  // 通知小鉴桌宠窗口
-  petWindow.send('pet-state-change', state)
+    // 通知小鉴桌宠窗口
+    petWindow.send('pet-state-change', state)
+    logger.info('[桌宠状态] 已通知桌宠窗口', { module: 'PetWindow' })
 
-  // 更新托盘图标
-  trayService.updateIcon(state)
+    // 更新托盘图标
+    trayService.updateIcon(state)
+    logger.info('[桌宠状态] 已更新托盘图标', { module: 'PetWindow' })
+  } catch (error) {
+    logger.error('[桌宠状态] 更新失败', { module: 'PetWindow' }, {
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack
+      } : error,
+      state,
+      message
+    })
+  }
 }
 
 /**
@@ -169,6 +221,25 @@ function initializeServices() {
 
   // 设置监控回调（集成主动监控）
   const riskDetectedCallback = (risks: RiskResult[], source: string, detectionResult?: any) => {
+    // ===== 详细日志开始 =====
+    logger.info('[监控回调] 触发检测', { module: 'MonitoringCallback' }, {
+      source,
+      riskCount: risks.length,
+      highRiskCount: risks.filter(r => r.risk === 'high').length,
+      hasDetectionResult: !!detectionResult
+    })
+
+    // 记录所有风险详情
+    if (risks.length > 0) {
+      logger.debug('[监控回调] 风险详情', { module: 'MonitoringCallback' }, {
+        risks: risks.slice(0, 5).map(r => ({
+          type: r.type,
+          risk: r.risk,
+          matched: r.matched?.substring(0, 50)
+        }))
+      })
+    }
+
     const highRisks = risks.filter(r => r.risk === 'high')
     const riskDescriptions = risks.slice(0, 10).map(r => {
       switch (r.type) {
@@ -184,6 +255,12 @@ function initializeServices() {
     // 新增：使用 Agent 行为解析器和风险评分器（主动监控）
     if (detectionResult) {
       try {
+        logger.info('[主动监控] 开始解析行为', { module: 'ProactiveMonitor' }, {
+          source,
+          contentType: detectionResult.content_type,
+          riskLevel: detectionResult.risk_level
+        })
+
         // 解析为 Agent 行为日志
         const behavior = source.includes('文件') 
           ? AgentBehaviorParser.parseFileEvent(
@@ -196,20 +273,46 @@ function initializeServices() {
               detectionResult
             )
 
+        logger.info('[主动监控] 行为解析完成', { module: 'ProactiveMonitor' }, {
+          agentType: behavior.agentType,
+          action: behavior.action,
+          riskScore: behavior.riskScore,
+          riskLevel: behavior.riskLevel
+        })
+
         // 评估风险
         const assessment = behaviorRiskScorer.assessBehavior(behavior)
 
-        // 主动告警
-        proactiveAlerter.handleAssessment(behavior, assessment)
-
-        logger.info('[主动监控] 行为评估完成', { module: 'ProactiveMonitor' }, {
-          riskScore: assessment.overallScore,
+        logger.info('[主动监控] 风险评估完成', { module: 'ProactiveMonitor' }, {
+          overallScore: assessment.overallScore,
           riskLevel: assessment.riskLevel,
-          shouldAlert: assessment.shouldAlert
+          shouldAlert: assessment.shouldAlert,
+          recommendationCount: assessment.recommendations.length,
+          recommendations: assessment.recommendations.slice(0, 3)
+        })
+
+        // 主动告警
+        const alerted = proactiveAlerter.handleAssessment(behavior, assessment)
+
+        logger.info('[主动监控] 告警处理完成', { module: 'ProactiveMonitor' }, {
+          alerted,
+          behaviorId: behavior.timestamp
         })
       } catch (error) {
-        logger.error('[主动监控] 行为评估失败', { module: 'ProactiveMonitor' }, { error })
+        logger.error('[主动监控] 行为评估失败', { module: 'ProactiveMonitor' }, {
+          error: error instanceof Error ? {
+            message: error.message,
+            stack: error.stack
+          } : error,
+          source,
+          detectionResultType: typeof detectionResult
+        })
       }
+    } else {
+      logger.warn('[主动监控] 缺少检测结果，跳过行为评估', { module: 'ProactiveMonitor' }, {
+        source,
+        riskCount: risks.length
+      })
     }
 
     // 原有逻辑：使用新的智能提示方式（不弹窗）
@@ -231,16 +334,53 @@ function initializeServices() {
   // 新增：进程监控
   const processMonitor = new ProcessMonitor()
   processMonitor.setAIAgentDetectedCallback((process) => {
-    logger.info('[AI Agent] 检测到:', { module: 'ProcessMonitor' }, { processName: process.name })
+    // ===== 详细日志开始 =====
+    logger.info('[进程监控] 检测到进程', { module: 'ProcessMonitor' }, {
+      processName: process.name,
+      pid: process.pid,
+      command: process.command?.substring(0, 100)
+    })
+
     updatePetState('yellow', `检测到 ${process.name}`)
 
     // 新增：解析进程行为
     try {
+      logger.info('[主动监控] 开始解析进程行为', { module: 'ProactiveMonitor' }, {
+        processName: process.name,
+        isAgent: true
+      })
+
       const behavior = AgentBehaviorParser.parseProcessEvent(process.name, process.pid, true)
+
+      logger.info('[主动监控] 进程行为解析完成', { module: 'ProactiveMonitor' }, {
+        agentType: behavior.agentType,
+        action: behavior.action,
+        target: behavior.target
+      })
+
       const assessment = behaviorRiskScorer.assessBehavior(behavior)
-      proactiveAlerter.handleAssessment(behavior, assessment)
+
+      logger.info('[主动监控] 进程风险评估完成', { module: 'ProactiveMonitor' }, {
+        overallScore: assessment.overallScore,
+        riskLevel: assessment.riskLevel,
+        shouldAlert: assessment.shouldAlert
+      })
+
+      const alerted = proactiveAlerter.handleAssessment(behavior, assessment)
+
+      logger.info('[主动监控] 进程告警处理完成', { module: 'ProactiveMonitor' }, {
+        alerted,
+        processId: process.pid
+      })
     } catch (error) {
-      logger.error('[主动监控] 进程行为评估失败', { module: 'ProactiveMonitor' }, { error })
+      logger.error('[主动监控] 进程行为评估失败', { module: 'ProactiveMonitor' }, {
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack
+        } : error,
+        processName: process.name,
+        processId: process.pid
+      })
     }
   })
   container.register('processMonitor', processMonitor)
@@ -248,20 +388,59 @@ function initializeServices() {
   // 新增：网络监控
   const networkMonitor = new NetworkMonitor()
   networkMonitor.setAIAPIRequestDetectedCallback((request) => {
-    logger.info('[AI API] 调用:', { module: 'NetworkMonitor' }, { domain: request.domain })
+    // ===== 详细日志开始 =====
+    logger.info('[网络监控] 检测到请求', { module: 'NetworkMonitor' }, {
+      domain: request.domain,
+      port: request.port,
+      method: request.method,
+      isAIProvider: request.isAIProvider
+    })
+
     updatePetState('yellow', `API 调用: ${request.domain}`)
 
     // 新增：解析网络行为
     try {
+      logger.info('[主动监控] 开始解析网络行为', { module: 'ProactiveMonitor' }, {
+        domain: request.domain,
+        port: request.port,
+        isAIProvider: request.isAIProvider
+      })
+
       const behavior = AgentBehaviorParser.parseNetworkEvent(
         request.domain,
         request.port || 443,
         request.isAIProvider || false
       )
+
+      logger.info('[主动监控] 网络行为解析完成', { module: 'ProactiveMonitor' }, {
+        agentType: behavior.agentType,
+        action: behavior.action,
+        target: behavior.target
+      })
+
       const assessment = behaviorRiskScorer.assessBehavior(behavior)
-      proactiveAlerter.handleAssessment(behavior, assessment)
+
+      logger.info('[主动监控] 网络风险评估完成', { module: 'ProactiveMonitor' }, {
+        overallScore: assessment.overallScore,
+        riskLevel: assessment.riskLevel,
+        shouldAlert: assessment.shouldAlert
+      })
+
+      const alerted = proactiveAlerter.handleAssessment(behavior, assessment)
+
+      logger.info('[主动监控] 网络告警处理完成', { module: 'ProactiveMonitor' }, {
+        alerted,
+        domain: request.domain
+      })
     } catch (error) {
-      logger.error('[主动监控] 网络行为评估失败', { module: 'ProactiveMonitor' }, { error })
+      logger.error('[主动监控] 网络行为评估失败', { module: 'ProactiveMonitor' }, {
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack
+        } : error,
+        domain: request.domain,
+        port: request.port
+      })
     }
   })
   container.register('networkMonitor', networkMonitor)
