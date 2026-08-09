@@ -426,11 +426,56 @@ def check_disk_space_task() -> dict:
     """
     from .data_cleanup_service import DataCleanupService
 
-    db_path = '/data'  # Django数据库路径
+    task_start = time.time()
 
-    disk_info = DataCleanupService.check_disk_space(db_path)
+    logger.info("异步磁盘检查任务开始")
 
-    return disk_info
+    try:
+        db_path = '/data'  # Django数据库路径
+        disk_info = DataCleanupService.check_disk_space(db_path)
+
+        task_duration = (time.time() - task_start) * 1000
+
+        logger.info(
+            "异步磁盘检查任务完成",
+            **{
+                'free_gb': disk_info.get('free_gb'),
+                'used_percent': disk_info.get('used_percent'),
+                'duration_ms': round(task_duration, 2),
+            }
+        )
+
+        return {
+            'success': True,
+            **disk_info,
+        }
+
+    except Exception as e:
+        task_duration = (time.time() - task_start) * 1000
+
+        # 获取详细的堆栈追踪
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback_str = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+
+        logger.error(
+            "异步磁盘检查任务失败",
+            **{
+                'error': str(e),
+                'error_type': type(e).__name__,
+                'duration_ms': round(task_duration, 2),
+                'traceback': traceback_str,
+            }
+        )
+
+        # 记录详细的错误堆栈（单独一行，方便查看）
+        logger.error(f"详细堆栈追踪:\n{traceback_str}")
+
+        return {
+            'success': False,
+            'error': str(e),
+            'error_type': type(e).__name__,
+            'traceback': traceback_str,
+        }
 
 
 @shared_task
@@ -443,6 +488,51 @@ def get_table_sizes_task() -> dict:
     """
     from .data_cleanup_service import DataCleanupService
 
-    table_sizes = DataCleanupService.get_table_sizes()
+    task_start = time.time()
 
-    return table_sizes
+    logger.info("异步表大小统计任务开始")
+
+    try:
+        table_sizes = DataCleanupService.get_table_sizes()
+
+        task_duration = (time.time() - task_start) * 1000
+
+        logger.info(
+            "异步表大小统计任务完成",
+            **{
+                'total_tables': len(table_sizes) if table_sizes else 0,
+                'duration_ms': round(task_duration, 2),
+            }
+        )
+
+        return {
+            'success': True,
+            'table_sizes': table_sizes,
+        }
+
+    except Exception as e:
+        task_duration = (time.time() - task_start) * 1000
+
+        # 获取详细的堆栈追踪
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback_str = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+
+        logger.error(
+            "异步表大小统计任务失败",
+            **{
+                'error': str(e),
+                'error_type': type(e).__name__,
+                'duration_ms': round(task_duration, 2),
+                'traceback': traceback_str,
+            }
+        )
+
+        # 记录详细的错误堆栈（单独一行，方便查看）
+        logger.error(f"详细堆栈追踪:\n{traceback_str}")
+
+        return {
+            'success': False,
+            'error': str(e),
+            'error_type': type(e).__name__,
+            'traceback': traceback_str,
+        }
