@@ -1,0 +1,118 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install coverage pytest pytest-cov
+
+    - name: Run migrations
+      run: |
+        cd backend
+        python manage.py migrate --noinput
+
+    - name: Run tests with coverage
+      run: |
+        cd backend
+        pytest --cov=. --cov-report=xml --cov-report=html
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./backend/coverage.xml
+        flags: backend
+        name: backend-coverage
+
+    - name: Check log files status
+      run: |
+        cd backend
+        python cleanup_logs.py
+
+    - name: Upload log check report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: log-check-report
+        path: backend/logs/
+
+  security-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install bandit safety
+
+    - name: Run Bandit security check
+      run: |
+        cd backend
+        bandit -r . -f json -o security-report.json || true
+
+    - name: Check dependencies for vulnerabilities
+      run: |
+        cd backend
+        safety check --json || true
+
+    - name: Upload security reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-reports
+        path: backend/security-report.json
+
+  deploy:
+    needs: [build-and-test, security-check]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to production
+      run: |
+        echo "Deploying to production..."
+        # 这里添加部署脚本
+        # 例如：ssh user@server 'cd /path/to/project && git pull && docker-compose restart'
+
+    - name: Health check after deployment
+      run: |
+        echo "Running health checks..."
+        # 例如：curl -f https://api.yijiandaodi.com/health/ || exit 1
