@@ -22,7 +22,7 @@ extraResources:
 
 # Windows 配置
 win:
-  icon: public/logo.png
+  icon: build/icon.ico
   target:
     - target: portable
       arch:

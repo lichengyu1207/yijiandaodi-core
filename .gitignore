@@ -19,6 +19,13 @@ coverage/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
+
+# 桌面端运行日志 / 测试产物 / 构建缓存
+desktop-client-2.0/logs/
+desktop-client-2.0/agent-tests.json
+desktop-client-2.0/*.tsbuildinfo
 
 # IDE
 .vscode/
