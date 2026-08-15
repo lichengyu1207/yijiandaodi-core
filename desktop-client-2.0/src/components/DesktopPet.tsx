@@ -12,11 +12,13 @@ import './DesktopPet.css';
  */
 
 interface DesktopPetProps {
-  onStateChange?: (state: 'green' | 'yellow' | 'red') => void;
+  onStateChange?: (state: 'green' | 'yellow' | 'red' | 'thinking') => void;
 }
 
+type PetState = 'green' | 'yellow' | 'red' | 'thinking';
+
 const DesktopPet: React.FC<DesktopPetProps> = ({ onStateChange }) => {
-  const [state, setState] = useState<'green' | 'yellow' | 'red'>('green');
+  const [state, setState] = useState<PetState>('green');
   const [showBubble, setShowBubble] = useState(false);
   const [bubbleMessage, setBubbleMessage] = useState('');
   const [lastInteractionTime, setLastInteractionTime] = useState(Date.now());
@@ -40,6 +42,12 @@ const DesktopPet: React.FC<DesktopPetProps> = ({ onStateChange }) => {
       message: '⚠ 发现风险！',
       color: '#E74C3C',
       animClass: 'alert'
+    },
+    thinking: {
+      image: '/pet-thinking.png',
+      message: 'AI 正在治理分析中...',
+      color: '#F7DC6F',
+      animClass: 'thinking'
     }
   };
 
@@ -82,7 +90,7 @@ const DesktopPet: React.FC<DesktopPetProps> = ({ onStateChange }) => {
   // 监听来自主进程的状态更新
   useEffect(() => {
     if (window.electronAPI?.onPetStateChange) {
-      window.electronAPI.onPetStateChange((newState: 'green' | 'yellow' | 'red') => {
+      window.electronAPI.onPetStateChange((newState: 'green' | 'yellow' | 'red' | 'thinking') => {
         setState(newState);
         showBubbleMessage(stateConfig[newState].message);
         onStateChange?.(newState);
@@ -94,7 +102,7 @@ const DesktopPet: React.FC<DesktopPetProps> = ({ onStateChange }) => {
     if (window.electronAPI?.getPetState) {
       window.electronAPI.getPetState().then((initialState) => {
         if (initialState) {
-          setState(initialState as 'green' | 'yellow' | 'red');
+          setState(initialState as 'green' | 'yellow' | 'red' | 'thinking');
         }
       });
     }
