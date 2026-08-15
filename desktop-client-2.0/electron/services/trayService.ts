@@ -92,7 +92,8 @@ export class TrayService {
     const iconMap = {
       green: 'logo-green.png',
       yellow: 'logo-yellow.png',
-      red: 'logo-red.png'
+      red: 'logo-red.png',
+      thinking: 'logo-green.png'
     }
 
     const iconPath = path.join(__dirname, `../../public/${iconMap[state]}`)

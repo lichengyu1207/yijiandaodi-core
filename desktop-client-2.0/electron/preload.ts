@@ -15,8 +15,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // 桌宠相关
   getPetState: () => ipcRenderer.invoke('get-pet-state'),
-  onPetStateChange: (callback: (state: 'green' | 'yellow' | 'red') => void) => {
+  onPetStateChange: (callback: (state: 'green' | 'yellow' | 'red' | 'thinking') => void) => {
     ipcRenderer.on('pet-state-change', (event, state) => callback(state))
+  },
+  // 桌宠气泡播报（P1 治理播报通道）
+  onPetBubble: (callback: (text: string) => void) => {
+    ipcRenderer.on('pet-bubble', (event, text) => callback(text))
+  },
+  // 桌宠角色信息（P2 程序化角色）
+  onPetCharacter: (callback: (character: any) => void) => {
+    ipcRenderer.on('pet-character', (event, character) => callback(character))
   },
   startMonitoring: () => ipcRenderer.invoke('start-monitoring'),
   stopMonitoring: () => ipcRenderer.invoke('stop-monitoring'),

@@ -6,6 +6,7 @@
 
 import { app, Notification, dialog, BrowserWindow } from 'electron'
 import { MainWindow, PetWindow, PetState } from './windows'
+import type { PetCharacterInfo } from './windows'
 import { FileMonitor, ClipboardMonitor, RiskResult, ProcessMonitor, ProcessInfo, NetworkMonitor, NetworkRequest, HighRiskConfirmation, ApiCallMonitor, ApiCallInfo } from './monitoring'
 import { SmartAlerter, smartAlerter } from './monitoring/smartAlerter'
 import { AgentBehaviorParser } from './monitoring/agentBehaviorParser'
@@ -38,6 +39,7 @@ import {
   GovernanceEngine,
   PluginRegistry,
   createRiskSummaryPlugin,
+  createPetPlugin,
   createFileTools,
   createVerifyTools,
   createEvidenceTools,
@@ -48,6 +50,7 @@ import {
   createBackendTools,
   setBackendClientConfig,
 } from './agent'
+import { getCompanion, emptyProfile, RARITY_STARS } from './agent/pet/companion'
 import { analyzeLogs, renderReport, setPerfAnalyzerLogger } from './agent/perfLogAnalyzer'
 import {
   PermissionConfig,
@@ -107,6 +110,9 @@ let perfAnalyzerUnsub: (() => void) | undefined
 
 /** Skill 插件安装退订函数（cleanup 时解除订阅 + 卸载插件） */
 let pluginRegistryUnsub: (() => void) | undefined
+
+/** 桌宠角色：治理画像统计订阅退订函数（cleanup 时解除） */
+let petProfileUnsub: (() => void) | undefined
 
 // 单例锁，确保只运行一个实例
 const gotTheLock = app.requestSingleInstanceLock()
@@ -811,6 +817,76 @@ function initializeServices() {
     agentEventBusInstance,
     toolRegistry,
   )
+
+  // 6.5.1) 治理桌宠（P1+P2）：把 Agent 执行、安全告警、AI 治理定级实时呈现为桌宠
+  //  - P1：安装 petPlugin，挂载 onRunStart/onRiskAssessed/beforeAlert/onRunEnd 钩子，
+  //    driver 适配 PetWindow（setState/showBubble）
+  //  - P2：订阅事件总线累计治理画像（真实数据），确定性 roll 生成角色并推送到桌宠窗口
+  const petWindow = container.resolve<PetWindow>('petWindow')
+  const petProfile = emptyProfile()
+  // 桌宠角色种子：userData 目录路径保证跨重启确定性（同一用户同一角色）
+  const petSeed = app.getPath('userData')
+
+  // 治理画像统计：订阅 tool 流（工具请求/结果）+ verify.flow 终态
+  const applyPetCharacter = () => {
+    try {
+      const companion = getCompanion(petSeed, petProfile)
+      const character: PetCharacterInfo = {
+        name: companion.name,
+        species: companion.species,
+        rarity: companion.rarity,
+        rarityStars: RARITY_STARS[companion.rarity],
+        shiny: companion.shiny,
+        stats: companion.stats,
+      }
+      petWindow.setCharacter(character)
+    } catch (error) {
+      logger.warn('[桌宠] 角色生成失败', { module: 'PetWindow' }, { error: error instanceof Error ? error.message : String(error) })
+    }
+  }
+  // 初次推送：空画像 → 基础角色
+  applyPetCharacter()
+
+  // 订阅感知流累计治理画像（真实数据驱动角色成长）
+  petProfileUnsub = agentEventBusInstance.subscribe('tool', (envelope) => {
+    const data = envelope.data as ToolCallResultData | undefined
+    if (!data || data.type !== 'tool_result') return
+    petProfile.tools++
+    if (data.is_error) petProfile.failed++
+    else petProfile.succeeded++
+    if (data.effective_tool_name === 'verify.flow') petProfile.verifyFlows++
+  })
+  // 订阅感知风险流累计告警数（warning/critical）
+  for (const stream of ['file', 'process', 'network', 'clipboard', 'api_call'] as const) {
+    const unsub = agentEventBusInstance.subscribe(stream, (envelope) => {
+      const data = (envelope.data ?? {}) as { severity?: string }
+      if (data.severity === 'warning' || data.severity === 'critical') petProfile.alerts++
+    })
+    // 合并退订：用闭包包装，cleanup 时统一解除
+    const prev = petProfileUnsub
+    petProfileUnsub = () => {
+      prev?.()
+      unsub()
+    }
+  }
+
+  // P1：桌宠插件 driver 适配（复用既有 updatePetState 通道以兼容托盘/主窗口联动）
+  pluginRegistry.install(
+    createPetPlugin(
+      {
+        setState: (mood, message) => {
+          petWindow.setState(mood)
+          petWindow.send('pet-state-change', mood)
+          if (message) petWindow.showBubble(message)
+        },
+        showBubble: (text) => petWindow.showBubble(text),
+      },
+      { logger: governanceLoggerInstance },
+    ),
+    agentEventBusInstance,
+    toolRegistry,
+  )
+
   container.register('pluginRegistry', pluginRegistry)
   governanceLoggerInstance.info('[治理Agent] Skill 插件已安装', { module: 'PluginRegistry' }, {
     pluginCount: pluginRegistry.size,

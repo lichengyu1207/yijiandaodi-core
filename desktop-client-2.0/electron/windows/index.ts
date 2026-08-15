@@ -4,3 +4,4 @@
 
 export { MainWindow } from './mainWindow'
 export { PetWindow, PetState } from './petWindow'
+export type { PetCharacterInfo } from './petWindow'

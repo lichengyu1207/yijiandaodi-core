@@ -84,6 +84,8 @@ export type { HooksHostOptions, PluginHookHealth } from './hooks/runtime'
 // 内置 Skill 插件
 export { createRiskSummaryPlugin } from './plugins/riskSummaryPlugin'
 export type { RiskSummaryPluginConfig, RiskSummaryEntry } from './plugins/riskSummaryPlugin'
+export { createPetPlugin } from './plugins/petPlugin'
+export type { PetDriver, PetMood } from './plugins/petPlugin'
 
 // M4 内置治理工具
 export { createFileTools } from './tools/file'
