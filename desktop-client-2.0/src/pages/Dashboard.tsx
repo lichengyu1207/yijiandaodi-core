@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { authService } from '../services/authService'
+import { ShortTermMemoryApi, ShortTermMemory } from '../services/memoryApi'
+import MemoryStatCard from '../components/MemoryStatCard'
+import RiskDistributionChart from '../components/RiskDistributionChart'
 
 interface AuditRecord {
   id: number
@@ -42,6 +45,13 @@ export default function Dashboard() {
   const [selectedRecord, setSelectedRecord] = useState<AuditRecord | null>(null)
   const [currentUser, setCurrentUser] = useState<UserInfo | null>(null)
 
+  // ===== 新增：短期记忆状态 =====
+  const [memories, setMemories] = useState<ShortTermMemory[]>([]);
+  const [memorySyncStatus, setMemorySyncStatus] = useState({
+    isSyncing: false,
+    lastSyncTime: new Date()
+  });
+
   // 获取当前用户信息
   useEffect(() => {
     const user = authService.getCurrentUser()
@@ -49,6 +59,123 @@ export default function Dashboard() {
       setCurrentUser(user)
     }
   }, [])
+
+  // ===== 新增：初始化短期记忆API（5秒轮询同步） =====
+  useEffect(() => {
+    const shortTermApi = ShortTermMemoryApi.getInstance();
+
+    // ===== 阶段0: 初始化准备 =====
+    const phase0Start = performance.now();
+    console.log('\n[Dashboard轮询] ════════════════════════════════════');
+    console.log(`[Dashboard轮询] 初始化短期记忆API: ${new Date().toLocaleTimeString()}`);
+    console.log('[Dashboard轮询] 轮询间隔: 5秒');
+    console.log('[Dashboard轮询] 监控模式: 三阶段耗时分析');
+    const phase0End = performance.now();
+    console.log(`[Dashboard轮询] 初始化耗时: ${(phase0End - phase0Start).toFixed(2)}ms`);
+    console.log('[Dashboard轮询] ════════════════════════════════════\n');
+
+    let syncCount = 0;
+
+    // 开始5秒轮询同步
+    shortTermApi.startSync((syncedMemories) => {
+      syncCount++;
+      const cycleStart = performance.now();
+
+      console.log(`\n[Dashboard轮询] ════════════════════════════════════`);
+      console.log(`[Dashboard轮询] 开始第${syncCount}次轮询: ${new Date().toLocaleTimeString()}`);
+
+      // ===== 阶段1: 数据分析 =====
+      const phase1Start = performance.now();
+      console.log(`[Dashboard轮询] 阶段1(数据分析)开始...`);
+
+      const prevLength = memories.length;
+      const added = syncedMemories.length - prevLength;
+      const isIncreasing = added > 0;
+      const isDecreasing = added < 0;
+
+      const newStats = {
+        total: syncedMemories.length,
+        low: syncedMemories.filter(m => m.risk_level === 'low').length,
+        medium: syncedMemories.filter(m => m.risk_level === 'medium').length,
+        high: syncedMemories.filter(m => m.risk_level === 'high').length,
+        critical: syncedMemories.filter(m => m.risk_level === 'critical').length,
+      };
+
+      const phase1End = performance.now();
+      const phase1Duration = (phase1End - phase1Start).toFixed(2);
+
+      console.log(`[Dashboard轮询] 阶段1(数据分析)耗时: ${phase1Duration}ms`);
+      console.log(`[Dashboard轮询] 数据量变化: 前次${prevLength}条 → 本次${syncedMemories.length}条`);
+
+      if (isIncreasing) {
+        console.log(`[Dashboard轮询] 数据趋势: 新增${added}条记录 ↑`);
+      } else if (isDecreasing) {
+        console.log(`[Dashboard轮询] 数据趋势: 减少${Math.abs(added)}条记录 ↓`);
+      } else {
+        console.log(`[Dashboard轮询] 数据趋势: 无变化 -`);
+      }
+
+      console.log(`[Dashboard轮询] 风险分布: 低${newStats.low} 中${newStats.medium} 高${newStats.high} 严重${newStats.critical}`);
+
+      // ===== 阶段2: 状态更新 =====
+      const phase2Start = performance.now();
+      console.log(`[Dashboard轮询] 阶段2(状态更新)开始...`);
+
+      const updateStart = performance.now();
+      setMemories(syncedMemories);
+      const updateEnd = performance.now();
+      const updateDuration = (updateEnd - updateStart).toFixed(2);
+
+      const statusStart = performance.now();
+      setMemorySyncStatus({
+        isSyncing: false,
+        lastSyncTime: new Date()
+      });
+      const statusEnd = performance.now();
+      const statusDuration = (statusEnd - statusStart).toFixed(2);
+
+      const phase2End = performance.now();
+      const phase2Duration = (phase2End - phase2Start).toFixed(2);
+
+      console.log(`[Dashboard轮询] 阶段2(状态更新)耗时: ${phase2Duration}ms`);
+      console.log(`[Dashboard轮询]   - 数据更新: ${updateDuration}ms`);
+      console.log(`[Dashboard轮询]   - 状态更新: ${statusDuration}ms`);
+
+      // ===== 总耗时统计 =====
+      const cycleEnd = performance.now();
+      const cycleDuration = (cycleEnd - cycleStart).toFixed(2);
+
+      console.log(`[Dashboard轮询] ✓ 轮询回调总耗时: ${cycleDuration}ms`);
+      console.log(`[Dashboard轮询]   - 数据分析: ${phase1Duration}ms (${((parseFloat(phase1Duration) / parseFloat(cycleDuration)) * 100).toFixed(1)}%)`);
+      console.log(`[Dashboard轮询]   - 状态更新: ${phase2Duration}ms (${((parseFloat(phase2Duration) / parseFloat(cycleDuration)) * 100).toFixed(1)}%)`);
+      console.log(`[Dashboard轮询] ════════════════════════════════════\n`);
+    });
+
+    // 清理函数：停止轮询
+    return () => {
+      const cleanupStart = performance.now();
+      console.log('\n[Dashboard轮询] ════════════════════════════════════');
+      console.log('[Dashboard轮询] 停止短期记忆轮询');
+      console.log('[Dashboard轮询] 原因: 组件卸载');
+      console.log(`[Dashboard轮询] 总轮询次数: ${syncCount}`);
+      console.log(`[Dashboard轮询] 时间: ${new Date().toLocaleTimeString()}`);
+      shortTermApi.stopSync();
+      const cleanupEnd = performance.now();
+      console.log(`[Dashboard轮询] 清理耗时: ${(cleanupEnd - cleanupStart).toFixed(2)}ms`);
+      console.log('[Dashboard轮询] ════════════════════════════════════\n');
+    };
+  }, [])
+
+  // ===== 新增：计算短期记忆统计数据 =====
+  const memoryStats = useMemo(() => {
+    return {
+      total: memories.length,
+      low: memories.filter(m => m.risk_level === 'low').length,
+      medium: memories.filter(m => m.risk_level === 'medium').length,
+      high: memories.filter(m => m.risk_level === 'high').length,
+      critical: memories.filter(m => m.risk_level === 'critical').length,
+    };
+  }, [memories]);
   
   // 从本地IPC或沙箱API获取记录
   useEffect(() => {
@@ -224,6 +351,39 @@ export default function Dashboard() {
           <div className="stat-label">已阻断</div>
         </div>
       </div>
+
+      {/* 新增：短期记忆统计卡片 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        <MemoryStatCard
+          value={memoryStats.total}
+          label="短期记忆"
+          syncStatus={memorySyncStatus}
+          onClick={() => console.log('点击短期记忆统计卡片')}
+        />
+        <MemoryStatCard
+          value={memoryStats.low}
+          label="低风险"
+          color="low"
+          onClick={() => console.log('点击低风险统计卡片')}
+        />
+        <MemoryStatCard
+          value={memoryStats.medium}
+          label="中风险"
+          color="medium"
+          onClick={() => console.log('点击中风险统计卡片')}
+        />
+        <MemoryStatCard
+          value={memoryStats.high + memoryStats.critical}
+          label="高风险"
+          color="high"
+          onClick={() => console.log('点击高风险统计卡片')}
+        />
+      </div>
+
+      {/* 新增：风险分布图 */}
+      {memoryStats.total > 0 && (
+        <RiskDistributionChart stats={memoryStats} />
+      )}
       
       {/* 筛选和审计流 */}
       <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

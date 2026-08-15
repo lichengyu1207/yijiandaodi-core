@@ -18,7 +18,8 @@ export enum LogLevel {
   ERROR = 'error',
   WARN = 'warn',
   INFO = 'info',
-  DEBUG = 'debug'
+  DEBUG = 'debug',
+  TRACE = 'trace'
 }
 
 /**
@@ -149,12 +150,8 @@ export class LoggerService {
       transports.push(
         new winston.transports.Console({
           format: winston.format.combine(
-            winston.format.colorize(),
             winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-            winston.format.printf(({ timestamp, level, message, context }) => {
-              const contextStr = context ? ` [${JSON.stringify(context)}]` : ''
-              return `${timestamp} [${level}]: ${message}${contextStr}`
-            })
+            winston.format.printf((info) => formatConsoleLine(info))
           )
         })
       )
@@ -440,6 +437,72 @@ export class LoggerService {
   public close(): void {
     this.logger.close()
   }
+}
+
+// ==================== 控制台可读化格式化 ====================
+
+/** 各级别对应的 ANSI 颜色（error 红 / warn 黄 / info 绿 / debug 灰 / trace 青） */
+const LEVEL_COLORS: Record<string, string> = {
+  error: '\x1b[31m',
+  warn: '\x1b[33m',
+  info: '\x1b[32m',
+  debug: '\x1b[90m',
+  trace: '\x1b[36m',
+}
+const ANSI_RESET = '\x1b[0m'
+
+/** 是否启用 ANSI 颜色：仅当 stdout 为 TTY 时着色，重定向/CI/测试环境不产生转义码噪声 */
+const CONSOLE_COLOR_ENABLED = process.stdout.isTTY === true
+
+/** 格式化日志级别：大写 + 固定宽度 + 可选着色（如 `[INFO ]`） */
+export function formatLogLevel(level: string): string {
+  const padded = level.toUpperCase().padEnd(5)
+  if (!CONSOLE_COLOR_ENABLED) return `[${padded}]`
+  const color = LEVEL_COLORS[level.toLowerCase()] ?? ''
+  return `[${color}${padded}${ANSI_RESET}]`
+}
+
+/** 将单个日志值渲染为可读文本（对象/数组 JSON 紧凑化，其余原样） */
+function formatLogValue(value: unknown): string {
+  if (value === null) return 'null'
+  if (value === undefined) return 'undefined'
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
+/** 将 context/metadata 对象渲染为 `key=value` 键值对列表 */
+function formatKeyValues(record: Record<string, unknown>): string[] {
+  return Object.entries(record).map(([key, value]) => `${key}=${formatLogValue(value)}`)
+}
+
+/**
+ * 统一控制台日志行格式（LoggerService 与 GovernanceLogger 共用）：
+ *   `2026-08-14 20:20:15 [INFO ] 消息 module=xxx function=yyy key=value`
+ * context 与 metadata 均渲染为 key=value，补全了原控制台丢失的 metadata 字段；
+ * 文件日志保持 JSON 格式不变（机器可解析）。
+ */
+export function formatConsoleLine(info: {
+  timestamp?: string
+  level: string
+  message: string
+  context?: LogContext
+  metadata?: any
+}): string {
+  const ts = info.timestamp || new Date().toISOString()
+  const fields: string[] = []
+  if (info.context && typeof info.context === 'object') {
+    fields.push(...formatKeyValues(info.context as Record<string, unknown>))
+  }
+  if (info.metadata && typeof info.metadata === 'object') {
+    fields.push(...formatKeyValues(info.metadata as Record<string, unknown>))
+  }
+  const fieldsStr = fields.length > 0 ? ` ${fields.join(' ')}` : ''
+  return `${ts} ${formatLogLevel(info.level)} ${info.message}${fieldsStr}`
 }
 
 // ==================== 导出默认实例 ====================

@@ -1,21 +1,6 @@
 import { useState, useEffect } from 'react'
-import { authService } from '../services/authService'
+import { LongTermMemoryApi, LongTermMemory } from '../services/memoryApi'
 import './Evidence.css'
-
-interface EvidenceRecord {
-  id: number
-  timestamp: string
-  agent_name: string
-  operation_type: string
-  operation_content: string
-  risk_level: string
-  risk_score: number
-  risk_tags: string[]
-  decision: string
-  record_hash: string
-  prev_hash: string
-  chain_index: number
-}
 
 interface ChainStatus {
   valid: boolean
@@ -25,85 +10,90 @@ interface ChainStatus {
 }
 
 export default function Evidence() {
-  const [records, setRecords] = useState<EvidenceRecord[]>([])
+  const [records, setRecords] = useState<LongTermMemory[]>([])
   const [chainStatus, setChainStatus] = useState<ChainStatus>({
     valid: true,
     total_records: 0,
     last_hash: '',
     errors: []
   })
-  const [selectedRecord, setSelectedRecord] = useState<EvidenceRecord | null>(null)
+  const [selectedRecord, setSelectedRecord] = useState<LongTermMemory | null>(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'critical'>('all')
   const [searchTerm, setSearchTerm] = useState('')
 
-  useEffect(() => {
-    fetchRecords()
-    verifyChain()
-  }, [])
+  const longTermApi = LongTermMemoryApi.getInstance()
 
   useEffect(() => {
-    fetchRecords()
+    // 初始验证链完整性
     verifyChain()
-  }, [])
 
-  const fetchRecords = async () => {
-    try {
-      const response = await fetch('http://localhost:9092/api/v1/evidence/records?limit=50')
-      if (response.ok) {
-        const data = await response.json()
-        setRecords(data.records || [])
-      }
-    } catch (error) {
-      console.error('获取记录失败:', error)
-    } finally {
+    // 启动 5 秒轮询同步
+    console.log('[Evidence] 启动长期记忆轮询同步（间隔5秒）')
+    longTermApi.startSync((memories) => {
+      console.log(`[Evidence] 收到轮询数据: ${memories.length} 条`)
+      setRecords(memories)
       setLoading(false)
+    })
+
+    // 清理函数：停止轮询
+    return () => {
+      console.log('[Evidence] 停止长期记忆轮询同步')
+      longTermApi.stopSync()
     }
-  }
+  }, [])
 
   const verifyChain = async () => {
     try {
-      const response = await fetch('http://localhost:9092/api/v1/evidence/verify')
-      if (response.ok) {
-        const data = await response.json()
-        setChainStatus(data)
+      console.log('[Evidence] 开始验证链完整性')
+      const result = await longTermApi.verifyChain()
+
+      // 转换数据结构
+      const chainStatus: ChainStatus = {
+        valid: result.is_valid || false,
+        total_records: result.total_records || 0,
+        last_hash: result.broken_at?.toString() || '',
+        errors: []
       }
+
+      setChainStatus(chainStatus)
+      console.log(`[Evidence] 链验证结果: ${chainStatus.valid ? '有效' : '无效'}`)
     } catch (error) {
-      console.error('验证链失败:', error)
+      console.error('[Evidence] 验证链失败:', error)
     }
   }
 
   const exportJSON = async () => {
     try {
-      const response = await fetch('http://localhost:9092/api/v1/evidence/export?format=json')
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `审计报告_${new Date().toISOString().split('T')[0]}.json`
-        a.click()
-        URL.revokeObjectURL(url)
-      }
+      console.log('[Evidence] 开始导出JSON报告')
+      const blob = await longTermApi.exportReport({ format: 'json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `审计报告_${new Date().toISOString().split('T')[0]}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      console.log('[Evidence] JSON报告导出成功')
     } catch (error) {
-      console.error('导出失败:', error)
+      console.error('[Evidence] 导出失败:', error)
+      alert('导出失败，请重试')
     }
   }
 
   const exportHTML = async () => {
     try {
-      const response = await fetch('http://localhost:9092/api/v1/evidence/export?format=html')
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `审计报告_${new Date().toISOString().split('T')[0]}.html`
-        a.click()
-        URL.revokeObjectURL(url)
-      }
+      console.log('[Evidence] 开始导出HTML报告')
+      const blob = await longTermApi.exportReport({ format: 'csv' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `审计报告_${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      console.log('[Evidence] CSV报告导出成功')
     } catch (error) {
-      console.error('导出失败:', error)
+      console.error('[Evidence] 导出失败:', error)
+      alert('导出失败，请重试')
     }
   }
 
@@ -119,7 +109,9 @@ export default function Evidence() {
   const getDecisionLabel = (decision: string) => {
     switch (decision) {
       case 'block': return '已拦截'
+      case 'deny': return '已拒绝'
       case 'allow': return '已放行'
+      case 'review': return '待审核'
       case 'ask_user': return '待确认'
       default: return decision
     }
@@ -131,11 +123,11 @@ export default function Evidence() {
       return false
     }
 
-    // 搜索筛选
+    // 搜索筛选（agent_id替代agent_name）
     if (searchTerm) {
       const search = searchTerm.toLowerCase()
       return (
-        record.agent_name.toLowerCase().includes(search) ||
+        record.agent_id.toLowerCase().includes(search) ||
         record.operation_content.toLowerCase().includes(search) ||
         record.operation_type.toLowerCase().includes(search)
       )
@@ -186,11 +178,11 @@ export default function Evidence() {
             📄 导出 JSON
           </button>
           <button className="btn btn-secondary" onClick={exportHTML}>
-            📊 导出 HTML
+            📊 导出 CSV
           </button>
         </div>
         <p className="export-hint">
-          JSON 报告包含完整数据，适合技术分析；HTML 报告适合打印和存档。
+          JSON 报告包含完整数据，适合技术分析；CSV 报告适合Excel查看和数据分析。
         </p>
       </section>
 
@@ -239,15 +231,15 @@ export default function Evidence() {
         ) : (
           <div className="records-list">
             {filteredRecords.map((record) => (
-              <div 
-                key={record.id} 
+              <div
+                key={record.id}
                 className={`record-card ${selectedRecord?.id === record.id ? 'selected' : ''}`}
                 onClick={() => setSelectedRecord(record)}
               >
                 <div className="record-header">
                   <span className="record-index">#{record.chain_index}</span>
-                  <span className="record-time">{new Date(record.timestamp).toLocaleString()}</span>
-                  <span 
+                  <span className="record-time">{new Date(record.created_at).toLocaleString()}</span>
+                  <span
                     className="record-risk"
                     style={{ background: getRiskColor(record.risk_level) + '20', color: getRiskColor(record.risk_level) }}
                   >
@@ -256,7 +248,7 @@ export default function Evidence() {
                 </div>
 
                 <div className="record-body">
-                  <div className="record-agent">{record.agent_name}</div>
+                  <div className="record-agent">{record.agent_id}</div>
                   <div className="record-operation">{record.operation_content}</div>
                 </div>
 
@@ -281,12 +273,12 @@ export default function Evidence() {
           <div className="detail-content">
             <div className="detail-item">
               <label>时间戳</label>
-              <span>{new Date(selectedRecord.timestamp).toLocaleString()}</span>
+              <span>{new Date(selectedRecord.created_at).toLocaleString()}</span>
             </div>
 
             <div className="detail-item">
               <label>AI Agent</label>
-              <span>{selectedRecord.agent_name}</span>
+              <span>{selectedRecord.agent_id}</span>
             </div>
 
             <div className="detail-item">
@@ -301,21 +293,12 @@ export default function Evidence() {
 
             <div className="detail-item">
               <label>风险等级</label>
-              <span 
+              <span
                 className="risk-badge"
                 style={{ background: getRiskColor(selectedRecord.risk_level) + '20', color: getRiskColor(selectedRecord.risk_level) }}
               >
-                {selectedRecord.risk_level} ({selectedRecord.risk_score}分)
+                {selectedRecord.risk_level}
               </span>
-            </div>
-
-            <div className="detail-item">
-              <label>风险标签</label>
-              <div className="risk-tags">
-                {selectedRecord.risk_tags.map((tag, i) => (
-                  <span key={i} className="risk-tag">{tag}</span>
-                ))}
-              </div>
             </div>
 
             <div className="detail-item">

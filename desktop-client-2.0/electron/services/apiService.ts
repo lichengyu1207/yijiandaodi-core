@@ -21,7 +21,8 @@ export class ApiService {
 
       this.apiProcess = spawn('python', [backendPath], {
         cwd: 'C:\\MsSafeData\\Desktop\\yijiandaodi',
-        stdio: 'pipe'
+        stdio: 'pipe',
+        detached: true
       })
 
       this.apiProcess.stdout?.on('data', (data) => {
@@ -50,12 +51,48 @@ export class ApiService {
     }
   }
 
-  stop() {
-    if (this.apiProcess) {
-      logger.info('停止后台服务...', { module: 'ApiService' })
-      this.apiProcess.kill()
-      this.apiProcess = null
+  /**
+   * 停止后台服务
+   * 等待子进程真正退出后再返回，避免退出竞态
+   */
+  stop(): Promise<void> {
+    const proc = this.apiProcess
+    if (!proc) {
+      return Promise.resolve()
     }
+
+    this.apiProcess = null
+    logger.info('停止后台服务...', { module: 'ApiService' })
+
+    return new Promise((resolve) => {
+      const forceKillTimer = setTimeout(() => {
+        try {
+          proc.kill('SIGKILL')
+        } catch {
+          // 进程可能已退出，忽略
+        }
+      }, 3000)
+
+      const done = () => {
+        clearTimeout(forceKillTimer)
+        resolve()
+      }
+
+      if (proc.exitCode !== null || proc.signalCode !== null) {
+        // 已退出
+        done()
+        return
+      }
+
+      proc.once('exit', done)
+      proc.once('error', done)
+
+      try {
+        proc.kill()
+      } catch {
+        done()
+      }
+    })
   }
 
   isRunning(): boolean {

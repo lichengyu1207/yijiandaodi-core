@@ -10,7 +10,11 @@ export class TrayService {
   private tray: Tray | null = null
 
   create(): Tray {
-    const icon = nativeImage.createFromPath(path.join(__dirname, '../../public/logo.png'))
+    // 应用图标：dev 用 public/logo.png；打包后从 resources/ 读取（extraResources 已复制）
+    const appIconPath = app.isPackaged
+      ? path.join(process.resourcesPath, 'logo.png')
+      : path.join(__dirname, '../public/logo.png')
+    const icon = nativeImage.createFromPath(appIconPath)
     this.tray = new Tray(icon.resize({ width: 16, height: 16 }))
 
     const contextMenu = Menu.buildFromTemplate([

@@ -18,7 +18,7 @@ const mockElectronAPI = {
 
 // @ts-ignore - 用于测试的 mock
 if (typeof window !== 'undefined') {
-  window.electronAPI = mockElectronAPI
+  (window as any).electronAPI = mockElectronAPI
 }
 
 // 清理函数

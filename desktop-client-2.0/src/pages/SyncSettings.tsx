@@ -11,8 +11,7 @@ import {
   Box,
   Alert,
   Snackbar,
-  LinearProgress,
-  Divider
+  LinearProgress
 } from '@mui/material'
 import {
   Sync as SyncIcon,
@@ -44,7 +43,7 @@ const SyncSettings: React.FC = () => {
 
   const loadConfig = async () => {
     try {
-      const result = await window.electronAPI.getSyncConfig()
+      const result = await (window as any).electronAPI?.getSyncConfig?.()
       if (result.success) {
         setConfig(result.data)
       }
@@ -56,7 +55,7 @@ const SyncSettings: React.FC = () => {
   const saveConfig = async (newConfig: Partial<SyncConfig>) => {
     setLoading(true)
     try {
-      const result = await window.electronAPI.saveSyncConfig(newConfig)
+      const result = await (window as any).electronAPI?.saveSyncConfig?.(newConfig)
       if (result.success) {
         setConfig({ ...config, ...newConfig })
         setSnackbar({ open: true, message: '配置已保存', severity: 'success' })
@@ -73,7 +72,7 @@ const SyncSettings: React.FC = () => {
   const handleSyncNow = async () => {
     setSyncing(true)
     try {
-      const result = await window.electronAPI.syncNow()
+      const result = await (window as any).electronAPI?.syncNow?.()
       if (result.success) {
         setSnackbar({
           open: true,
@@ -94,7 +93,7 @@ const SyncSettings: React.FC = () => {
   const handleUploadOnly = async () => {
     setSyncing(true)
     try {
-      const result = await window.electronAPI.uploadData()
+      const result = await (window as any).electronAPI?.uploadData?.()
       if (result.success) {
         setSnackbar({ open: true, message: `上传成功！共 ${result.uploaded || 0} 条`, severity: 'success' })
       } else {
@@ -110,7 +109,7 @@ const SyncSettings: React.FC = () => {
   const handleDownloadOnly = async () => {
     setSyncing(true)
     try {
-      const result = await window.electronAPI.downloadData()
+      const result = await (window as any).electronAPI?.downloadData?.()
       if (result.success) {
         setSnackbar({ open: true, message: `下载成功！共 ${result.downloaded || 0} 条`, severity: 'success' })
       } else {
@@ -142,7 +141,7 @@ const SyncSettings: React.FC = () => {
               control={
                 <Switch
                   checked={config.enabled}
-                  onChange={(e) => saveConfig({ enabled: e.target.checked })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => saveConfig({ enabled: e.target.checked })}
                   disabled={loading}
                 />
               }
@@ -158,7 +157,7 @@ const SyncSettings: React.FC = () => {
               control={
                 <Switch
                   checked={config.autoSync}
-                  onChange={(e) => saveConfig({ autoSync: e.target.checked })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => saveConfig({ autoSync: e.target.checked })}
                   disabled={loading || !config.enabled}
                 />
               }
@@ -175,7 +174,7 @@ const SyncSettings: React.FC = () => {
             </Typography>
             <Slider
               value={config.syncInterval}
-              onChange={(_, value) => saveConfig({ syncInterval: value as number })}
+              onChange={(_: any, value: number | number[]) => saveConfig({ syncInterval: value as number })}
               min={5}
               max={120}
               step={5}
@@ -241,7 +240,7 @@ const SyncSettings: React.FC = () => {
             数据管理
           </Typography>
 
-          <Typography variant="body2" color="text.secondary" paragraph>
+          <Typography variant="body2" color="text.secondary">
             清除同步数据不会删除本地数据，只会重置同步状态
           </Typography>
 
@@ -249,7 +248,7 @@ const SyncSettings: React.FC = () => {
             variant="outlined"
             color="warning"
             onClick={async () => {
-              const result = await window.electronAPI.clearSyncData()
+              const result = await (window.electronAPI as any).clearSyncData?.()
               if (result.success) {
                 setSnackbar({ open: true, message: '同步数据已清除', severity: 'success' })
                 await loadConfig()

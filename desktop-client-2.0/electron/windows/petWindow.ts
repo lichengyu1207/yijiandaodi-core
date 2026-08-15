@@ -33,7 +33,7 @@ export class PetWindow {
       focusable: true,
       hasShadow: false,
       webPreferences: {
-        preload: path.join(__dirname, '../preload.js'),
+        preload: path.join(__dirname, 'preload.js'),
         contextIsolation: true,
         nodeIntegration: false,
       },

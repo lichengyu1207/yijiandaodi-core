@@ -206,6 +206,14 @@ export class FileMonitor {
   private hashStore = new Map<string, string>()
   private hashStorePath: string
 
+  /**
+   * 内存操作历史（用于与进程会话联动）。
+   * 保存最近的文件操作记录，供查询某时间段内发生过的文件操作。
+   * 仅存于内存，上限防止无限增长。
+   */
+  private operationHistory: OperationRecord[] = []
+  private readonly operationHistoryLimit = 1000
+
   // 回调
   private onRiskDetected?: (risks: RiskResult[], filePath: string, result?: any) => void
   private onPetStateChange?: (state: PetState, message?: string) => void
@@ -270,6 +278,46 @@ export class FileMonitor {
 
   getBackendConfig() {
     return this.config.backend ? { ...this.config.backend } : null
+  }
+
+  /**
+   * 查询指定时间范围内的文件操作记录（用于与进程会话联动）。
+   *
+   * 返回在该时间段内发生过的文件操作，同一文件路径仅保留最近一次，
+   * 便于判断某工具会话期间操作了哪些文件。
+   */
+  getOperationsInTimeRange(startIso: string, endIso: string): OperationRecord[] {
+    const start = new Date(startIso).getTime()
+    const end = new Date(endIso).getTime()
+    if (Number.isNaN(start) || Number.isNaN(end)) return []
+
+    const seen = new Map<string, OperationRecord>()
+    for (const record of this.operationHistory) {
+      if (!record.timestamp) continue
+      const ts = new Date(record.timestamp).getTime()
+      if (ts < start || ts > end) continue
+
+      const filePath = parseFilePath(record.context)
+      if (filePath) seen.set(filePath, record)
+    }
+    return Array.from(seen.values())
+  }
+
+  /**
+   * 查询指定时间范围内操作过的文件路径列表（用于与进程会话联动）。
+   */
+  getRelatedFilePaths(startIso: string, endIso: string): string[] {
+    return this.getOperationsInTimeRange(startIso, endIso)
+      .map(record => parseFilePath(record.context))
+      .filter(Boolean)
+  }
+
+  /** 记录一条操作到内存历史（含上限裁剪） */
+  private recordOperation(record: OperationRecord) {
+    this.operationHistory.push(record)
+    if (this.operationHistory.length > this.operationHistoryLimit) {
+      this.operationHistory.splice(0, this.operationHistory.length - this.operationHistoryLimit)
+    }
   }
 
   setBackendConfig(enabled: boolean, baseUrl: string) {
@@ -452,6 +500,9 @@ export class FileMonitor {
         }
       }
 
+      // 写入内存历史（供进程会话联动查询）
+      this.recordOperation(record)
+
       // 6. 更新桌宠状态
       if (this.onPetStateChange) {
         if (shouldBlock) {
@@ -510,6 +561,7 @@ export class FileMonitor {
     if (this.onSaveRecord) {
       try { await this.onSaveRecord(record) } catch { /* ignore */ }
     }
+    this.recordOperation(record)
     this.saveHashStore()
   }
 

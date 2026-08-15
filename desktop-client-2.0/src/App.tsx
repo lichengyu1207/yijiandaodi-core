@@ -3,17 +3,25 @@ import { useEffect, useState } from 'react'
 import Dashboard from './pages/Dashboard'
 import Evidence from './pages/Evidence'
 import Auth from './pages/Auth'
+import RealNameAuth from './pages/RealNameAuth'
 import Settings from './pages/Settings'
 import SyncSettings from './pages/SyncSettings'
-import { HealthDashboard } from './components/HealthDashboard'
+import ProcessStats from './pages/ProcessStats'
+import Onboarding from './pages/Onboarding'
+import SetupWizard from './pages/SetupWizard'
+// import { HealthDashboard } from './components/HealthDashboard'
+import HealthDashboard from './components/HealthDashboard'
 import DesktopPet from './components/DesktopPet'
 import { authService } from './services/authService'
+import { strategyService } from './services/strategyService'
+import { apiConfig } from './config/apiConfig'
 import './index.css'
 
 const NAV_ITEMS = [
   { path: '/', label: '实时审计', icon: 'audit' },
   { path: '/evidence', label: '存证中心', icon: 'evidence' },
   { path: '/health', label: '健康度', icon: 'health' },
+  { path: '/process', label: '工具统计', icon: 'process' },
   { path: '/sync', label: '云端同步', icon: 'sync' },
   { path: '/auth', label: '实名认证', icon: 'auth' },
   { path: '/settings', label: '系统设置', icon: 'settings' },
@@ -175,32 +183,102 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  // 操作权限引导状态：true=已授权/无需引导，false=未授权需引导，null=加载中
+  const [onboarded, setOnboarded] = useState<boolean | null>(null)
+  // 首次启动引导状态：true=已完成，false=未完成，null=加载中
+  const [setupCompleted, setSetupCompleted] = useState<boolean | null>(null)
+
+  // 登录后检查是否已完成操作权限引导 + 首次启动引导（未完成则跳转引导页）
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const api = (window as any).electronAPI
+    if (!api?.getPermissionConfig) {
+      // 非 Electron 环境（浏览器开发预览）跳过引导
+      setOnboarded(true)
+      setSetupCompleted(true)
+      return
+    }
+    // 首次启动引导状态（本地账号是否已设置）
+    Promise.resolve(api.getLocalAuthStatus?.() ?? { success: true, data: { setupCompleted: true } })
+      .then((res: any) => {
+        const data = res?.data || res
+        setSetupCompleted(data?.setupCompleted === true)
+      })
+      .catch(() => setSetupCompleted(true))
+    // 操作权限引导状态
+    api
+      .getPermissionConfig()
+      .then((res: any) => {
+        const cfg = res?.data || res
+        setOnboarded(cfg?.onboarded === true)
+      })
+      .catch(() => {
+        setOnboarded(true)
+      })
+  }, [isAuthenticated])
+
+  // 联动：登录后配置 Electron 进程监控的后端上报（携带 token）
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const api = (window as any).electronAPI
+    if (!api?.setProcessBackend) return
+    api.setProcessBackend({
+      enabled: true,
+      baseUrl: apiConfig.getBaseURL(),
+      token: authService.getToken() || undefined,
+    }).then((res: any) => {
+      console.log('[App] 已配置进程监控后端上报', res)
+    }).catch((e: any) => {
+      console.warn('[App] 配置进程监控后端上报失败', e)
+    })
+  }, [isAuthenticated])
 
   useEffect(() => {
     const checkAuth = async () => {
+      console.log('[App] checkAuth 开始检查认证状态', {
+        isAuthenticated: authService.isAuthenticated(),
+        hasToken: Boolean(authService.getToken()),
+      })
       try {
         // 检查是否已登录
         if (authService.isAuthenticated()) {
           // 验证Token是否有效
+          console.log('[App] checkAuth 检测到已登录，开始校验 Token')
           const isValid = await authService.validateToken()
-          
+          console.log('[App] checkAuth validateToken 结果:', { isValid })
+
           if (isValid) {
             // Token有效，自动登录成功
+            console.log('[App] checkAuth Token 有效，自动登录成功', { user: authService.getCurrentUser() })
             setIsAuthenticated(true)
             setCurrentUser(authService.getCurrentUser())
+
+            // ✅ 初始化策略服务（海马体记忆系统）
+            console.log('[App] 初始化海马体记忆系统...')
+            await strategyService.initialize()
           } else {
             // Token无效，尝试刷新
+            console.log('[App] checkAuth Token 无效，尝试刷新')
             const refreshed = await authService.refreshToken()
+            console.log('[App] checkAuth refreshToken 结果:', { refreshed })
             if (refreshed) {
+              console.log('[App] checkAuth 刷新成功，自动登录', { user: authService.getCurrentUser() })
               setIsAuthenticated(true)
               setCurrentUser(authService.getCurrentUser())
+
+              // ✅ 初始化策略服务（海马体记忆系统）
+              console.log('[App] 初始化海马体记忆系统...')
+              await strategyService.initialize()
             } else {
+              console.warn('[App] checkAuth 刷新失败，退出登录状态')
               setIsAuthenticated(false)
             }
           }
+        } else {
+          console.log('[App] checkAuth 未登录，保持未认证状态')
         }
       } catch (error) {
-        console.error('认证检查失败:', error)
+        console.error('[App] checkAuth 认证检查失败:', error)
         setIsAuthenticated(false)
       } finally {
         setLoading(false)
@@ -252,14 +330,41 @@ export default function App() {
           <main className="app-content">
             <Routes>
               {isAuthenticated ? (
-                <>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/evidence" element={<Evidence />} />
-                  <Route path="/health" element={<HealthDashboard />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/sync" element={<SyncSettings />} />
-                  <Route path="/auth" element={<Navigate to="/" replace />} />
-                </>
+                setupCompleted !== true ? (
+                  // 未完成首次启动引导（含加载中）：锁定在引导页（账号 → 权限 → 网络）
+                  <>
+                    <Route
+                      path="/setup"
+                      element={
+                        <SetupWizard
+                          onComplete={() => {
+                            // SetupWizard 已完成权限引导并调用 completeOnboarding，
+                            // 需同步置位 onboarded，避免完成后被重定向到旧的 /onboarding 页
+                            setSetupCompleted(true)
+                            setOnboarded(true)
+                          }}
+                        />
+                      }
+                    />
+                    <Route path="*" element={<Navigate to="/setup" replace />} />
+                  </>
+                ) : onboarded === false ? (
+                  // 未完成操作权限引导：锁定在引导页
+                  <>
+                    <Route path="/onboarding" element={<Onboarding onComplete={() => setOnboarded(true)} />} />
+                    <Route path="*" element={<Navigate to="/onboarding" replace />} />
+                  </>
+                ) : (
+                  <>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/evidence" element={<Evidence />} />
+                    <Route path="/health" element={<HealthDashboard />} />
+                    <Route path="/process" element={<ProcessStats />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/sync" element={<SyncSettings />} />
+                    <Route path="/auth" element={<RealNameAuth />} />
+                  </>
+                )
               ) : (
                 <>
                   <Route path="/auth" element={<Auth onLoginSuccess={() => {

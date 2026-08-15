@@ -3,9 +3,12 @@
  */
 
 export { FileMonitor, FileMonitorConfig, RiskResult, OperationRecord } from './fileMonitor'
+export type { FileKind, HighRiskConfirmation, WatchPathStatus } from './fileMonitor'
 export { ClipboardMonitor } from './clipboardMonitor'
-export { ProcessMonitor, ProcessInfo } from './processMonitor'
+export { ProcessMonitor, ProcessInfo, ToolSession, ProcessMonitorConfig } from './processMonitor'
 export { NetworkMonitor, NetworkRequest } from './networkMonitor'
+export { ApiCallMonitor } from './apiCallMonitor'
+export type { ApiCallMonitorConfig, ApiCallInfo, ApiCallRecord, ApiRiskLevel } from './apiCallMonitor'
 export { MonitoringDiagnostic } from './monitoringDiagnostic'
 
 // 导出自动化检测器

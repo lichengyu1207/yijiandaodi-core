@@ -6,7 +6,6 @@
 import { Notification } from 'electron'
 import type { RiskAssessment } from './behaviorRiskScorer'
 import type { AgentBehaviorLog } from './agentBehaviorParser'
-import { smartAlerter } from './smartAlerter'
 
 /**
  * 告警记录
@@ -45,12 +44,6 @@ export class ProactiveAlerter {
     if (this.alertHistory.length > this.maxHistorySize) {
       this.alertHistory.shift()
     }
-
-    // 2. 记录到智能提示器（始终记录）
-    smartAlerter.alert(
-      assessment.overallScore,
-      assessment.recommendations.join('\n')
-    )
 
     // 3. 如果需要告警且间隔足够，发送系统通知
     if (assessment.shouldAlert && this.canAlert()) {

@@ -1,0 +1,194 @@
+/* 实名认证页面样式（深色主题） */
+
+.realname-page {
+  max-width: 520px;
+}
+
+.realname-loading {
+  padding: 40px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.realname-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 28px;
+}
+
+.realname-header {
+  margin-bottom: 24px;
+}
+
+.realname-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.realname-header p {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.realname-error {
+  padding: 12px;
+  margin-bottom: 16px;
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  border-radius: 8px;
+  color: var(--status-error);
+  font-size: 13px;
+}
+
+/* 表单 */
+.realname-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.form-group input {
+  height: 42px;
+  padding: 0 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: border-color 0.2s;
+}
+
+.form-group input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+}
+
+.realname-security {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(88, 166, 255, 0.08);
+  border: 1px solid rgba(88, 166, 255, 0.25);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--status-info);
+}
+
+.realname-security .shield {
+  font-size: 16px;
+}
+
+.submit-btn {
+  height: 46px;
+  background: var(--brand-primary);
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.submit-btn:hover {
+  background: #0d5df5;
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 已认证状态 */
+.realname-verified {
+  text-align: center;
+}
+
+.verified-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  background: rgba(63, 185, 80, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: var(--status-success);
+}
+
+.realname-verified h3 {
+  font-size: 18px;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.verified-hint {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0 0 24px;
+}
+
+.verified-info {
+  text-align: left;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.info-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.verified-text {
+  color: var(--status-success);
+}
+
+.verified-note {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin: 0;
+}

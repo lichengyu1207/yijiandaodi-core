@@ -59,8 +59,8 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
         // 设置同步Token
         try {
           const token = authService.getToken()
-          if (token) {
-            await window.electronAPI.setSyncToken(token)
+          if (token && (window as any).electronAPI?.setSyncToken) {
+            await (window as any).electronAPI.setSyncToken(token)
             console.log('[Auth] 同步Token已设置')
           }
         } catch (error) {
@@ -125,6 +125,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
         username: regUsername,
         email: regEmail,
         password: regPassword,
+        confirm_password: regPasswordConfirm,
         privacy_agreed: privacyAgreed
       })
 
@@ -350,23 +351,23 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
 
       <div className="auth-brand">
         <h2>一鉴到底</h2>
-        <p>AI创作保护平台</p>
+        <p>AI Agent行为安全平台</p>
         <div className="features">
           <div className="feature">
-            <span className="icon">🔒</span>
-            <span>数据不出境</span>
+            <span className="icon">🤖</span>
+            <span>多智能体协同</span>
           </div>
           <div className="feature">
-            <span className="icon">📜</span>
-            <span>司法级存证</span>
+            <span className="icon">🔒</span>
+            <span>行为安全检测</span>
           </div>
           <div className="feature">
             <span className="icon">🔍</span>
-            <span>AI智能检测</span>
+            <span>全流程可追溯</span>
           </div>
           <div className="feature">
-            <span className="icon">🔄</span>
-            <span>多端同步</span>
+            <span className="icon">⚡</span>
+            <span>一键启动校验</span>
           </div>
         </div>
       </div>

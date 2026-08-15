@@ -291,3 +291,53 @@
   outline: none;
   border-color: var(--primary-color);
 }
+
+/* 操作权限列表（复用 PermissionList 组件，设置页内样式） */
+.permission-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.permission-group {
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: var(--bg-tertiary);
+}
+
+.permission-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.permission-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 6px;
+  margin-bottom: 2px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.permission-item:hover {
+  background: var(--bg-hover);
+}
+
+.permission-item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.permission-item-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
