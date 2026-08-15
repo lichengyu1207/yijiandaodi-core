@@ -21,6 +21,14 @@ coverage/
 .env.*.local
 .env.production
 .env.development
+.env.docker
+config.env
+
+# 密钥/证书（禁止入库）
+*.pem
+*.key
+*.p12
+*.pfx
 
 # 桌面端运行日志 / 测试产物 / 构建缓存
 desktop-client-2.0/logs/
