@@ -85,7 +85,7 @@ npm install c:\MsSafeData\Desktop\yijiandaodi\npm-package
 ```json
 {
   "dependencies": {
-    "yijiandaodi-security-core": "file:../npm-package"
+    "@lichengyu1207/yijiandaodi-security-core": "file:../npm-package"
   }
 }
 ```
@@ -132,7 +132,7 @@ https://www.npmjs.com/settings/lichengyu1207
 2. 选择 "Publishing packages"
 3. 提供以下信息：
    - 用户名：lichengyu1207
-   - 包名：yijiandaodi-security-core
+   - 包名：@lichengyu1207/yijiandaodi-security-core
    - 错误代码：E403
    - 错误日志：已保存在本地
 

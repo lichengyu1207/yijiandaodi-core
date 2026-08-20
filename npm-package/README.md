@@ -1,4 +1,4 @@
-# 一鉴到底核心库 (yijiandaodi-security-core)
+# 一鉴到底核心库 (@lichengyu1207/yijiandaodi-security-core)
 
 > 🇨🇳 AI操作行为实时审计和安全监控核心库  
 > 🇺🇸 AI Operation Behavior Audit and Security Monitoring Core Library
@@ -64,13 +64,13 @@
 ### 安装
 
 ```bash
-npm install yijiandaodi-security-core
+npm install @lichengyu1207/yijiandaodi-security-core
 ```
 
 ### 基本使用
 
 ```typescript
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 // 创建核心实例
 const core = new YijianDaoDiCore({
@@ -81,14 +81,14 @@ const core = new YijianDaoDiCore({
 });
 
 // 检测文本中的安全风险
-const risks = core.detect('SELECT * FROM users WHERE id = 1 OR 1=1');
+const risks = core.detect('包含敏感信息的内容');
 
 console.log('检测到的风险:', risks);
-// 输出: [{ type: 'sqli', matched: 'or 1=1', risk: 'high' }]
+// 输出: [{ type: 'sensitive', matched: '敏感内容', risk: 'high' }]
 
 // 检测并生成报告
 const report = core.detectWithReport(
-  'sk-proj-abc123def456 API Key',
+  '<YOUR_API_KEY> API Key',
   '配置文件'
 );
 
@@ -100,7 +100,7 @@ console.log('检测报告:', report);
 #### 1. 文件监控
 
 ```typescript
-import { YijianDaoDiCore } from 'yijiandaodi-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 const core = new YijianDaoDiCore({
   fileMonitor: {
@@ -250,7 +250,7 @@ interface OperationRecord {
 ### Node.js 项目
 
 ```typescript
-import { YijianDaoDiCore } from 'yijiandaodi-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 const core = new YijianDaoDiCore();
 
@@ -270,7 +270,7 @@ app.use((req, res, next) => {
 ### Electron 应用
 
 ```typescript
-import { YijianDaoDiCore } from 'yijiandaodi-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 import { app } from 'electron';
 
 const core = new YijianDaoDiCore({
@@ -294,7 +294,7 @@ app.whenReady().then(() => {
 ### 作为 Skill 集成
 
 ```typescript
-import { YijianDaoDiCore } from 'yijiandaodi-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 export class SecuritySkill {
   private core: YijianDaoDiCore;
@@ -338,4 +338,4 @@ MIT License
 
 - 官网: https://yijiandaodi.com
 - GitHub: https://github.com/yijiandaodi/core
-- NPM: https://www.npmjs.com/package/yijiandaodi-core
+- NPM: https://www.npmjs.com/package/@lichengyu1207/yijiandaodi-security-core

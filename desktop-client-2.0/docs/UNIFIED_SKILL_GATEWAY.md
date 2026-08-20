@@ -22,7 +22,7 @@ Skill API 网关 (https://api.yijiandaodi.com)
 │   ├── skill-1
 │   └── skill-2
 │
-└── /yijiandaodi-security-core/
+└── /@lichengyu1207/yijiandaodi-security-core/
     ├── ass-gateway
     ├── hashchain-audit
     └── ...

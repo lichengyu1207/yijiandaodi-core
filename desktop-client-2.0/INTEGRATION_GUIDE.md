@@ -7,7 +7,7 @@
 ```json
 {
   "dependencies": {
-    "yijiandaodi-security-core": "file:../npm-package"
+    "@lichengyu1207/yijiandaodi-security-core": "file:../npm-package"
   }
 }
 ```
@@ -27,7 +27,7 @@ npm install
 
 ```typescript
 // electron/main.ts
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 // 创建核心实例
 const core = new YijianDaoDiCore({
@@ -80,7 +80,7 @@ async function checkClipboardContent(content: string) {
 
 ```typescript
 // src/pages/Dashboard.tsx
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 const Dashboard: React.FC = () => {
   const [core] = useState(() => new YijianDaoDiCore());
@@ -108,7 +108,7 @@ const Dashboard: React.FC = () => {
 
 ```typescript
 // electron/monitoring/fileMonitor.ts
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 export class FileMonitor {
   private core: YijianDaoDiCore;
@@ -134,7 +134,7 @@ export class FileMonitor {
 
 ```typescript
 // electron/monitoring/clipboardMonitor.ts
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 export class ClipboardMonitor {
   private core: YijianDaoDiCore;

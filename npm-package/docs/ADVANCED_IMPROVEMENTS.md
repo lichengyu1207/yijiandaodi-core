@@ -15,7 +15,7 @@
 **使用方法**：
 
 ```typescript
-import { SecurityKnowledgeBase } from 'yijiandaodi-security-core';
+import { SecurityKnowledgeBase } from '@lichengyu1207/yijiandaodi-security-core';
 
 // 创建可配置的知识库
 const knowledgeBase = new SecurityKnowledgeBase({
@@ -77,7 +77,7 @@ console.log('导出的规则:', exportedRules);
 **使用方法**：
 
 ```typescript
-import { BehaviorPatternDetector } from 'yijiandaodi-security-core';
+import { BehaviorPatternDetector } from '@lichengyu1207/yijiandaodi-security-core';
 
 const detector = new BehaviorPatternDetector();
 
@@ -169,7 +169,7 @@ export interface BehaviorPattern {
 ### 场景1：企业安全合规
 
 ```typescript
-import { SecurityKnowledgeBase } from 'yijiandaodi-security-core';
+import { SecurityKnowledgeBase } from '@lichengyu1207/yijiandaodi-security-core';
 
 // 创建企业级知识库
 const enterpriseKB = new SecurityKnowledgeBase({
@@ -212,7 +212,7 @@ const enterpriseKB = new SecurityKnowledgeBase({
 ### 场景2：AI Agent 行为监控
 
 ```typescript
-import { BehaviorPatternDetector } from 'yijiandaodi-security-core';
+import { BehaviorPatternDetector } from '@lichengyu1207/yijiandaodi-security-core';
 
 const detector = new BehaviorPatternDetector();
 
@@ -239,7 +239,7 @@ operations.forEach(op => {
 ### 场景3：实时审计
 
 ```typescript
-import { SecurityKnowledgeBase, BehaviorPatternDetector } from 'yijiandaodi-security-core';
+import { SecurityKnowledgeBase, BehaviorPatternDetector } from '@lichengyu1207/yijiandaodi-security-core';
 
 const kb = new SecurityKnowledgeBase();
 const behaviorDetector = new BehaviorPatternDetector();

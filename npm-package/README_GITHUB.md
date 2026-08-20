@@ -1,4 +1,4 @@
-# 一鉴到底核心库 (yijiandaodi-security-core)
+# 一鉴到底核心库 (@lichengyu1207/yijiandaodi-security-core)
 
 > AI操作行为实时审计和安全监控核心库
 
@@ -25,7 +25,7 @@ npm install https://github.com/lichengyu1207/yijiandaodi-core.git
 # 或在 package.json 中指定
 {
   "dependencies": {
-    "yijiandaodi-security-core": "github:lichengyu1207/yijiandaodi-core"
+    "@lichengyu1207/yijiandaodi-security-core": "github:lichengyu1207/yijiandaodi-core"
   }
 }
 ```
@@ -33,7 +33,7 @@ npm install https://github.com/lichengyu1207/yijiandaodi-core.git
 ### 基本使用
 
 ```typescript
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 // 创建核心实例
 const core = new YijianDaoDiCore({
@@ -63,7 +63,7 @@ console.log('检测报告:', report);
 ### 1. 文件监控
 
 ```typescript
-import { FileMonitor } from 'yijiandaodi-security-core';
+import { FileMonitor } from '@lichengyu1207/yijiandaodi-security-core';
 
 const monitor = new FileMonitor(securityKB);
 
@@ -77,7 +77,7 @@ monitor.stop();
 ### 2. 自定义安全知识库
 
 ```typescript
-import { initSecurityKnowledgeBase } from 'yijiandaodi-security-core';
+import { initSecurityKnowledgeBase } from '@lichengyu1207/yijiandaodi-security-core';
 
 // 初始化自定义知识库
 const securityKB = initSecurityKnowledgeBase();

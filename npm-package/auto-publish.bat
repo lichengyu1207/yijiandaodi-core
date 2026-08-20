@@ -1,6 +1,6 @@
 @echo off
 REM 自动化 NPM 发布脚本
-REM 凭据: lichengyu1207 / 147258@Zxcvbnm / 155861995@qq.com
+REM 凭据: lichengyu1207 / <NPM_PASSWORD> / 155861995@qq.com
 
 echo ===================================
 echo   一鉴到底核心库自动发布
@@ -54,7 +54,7 @@ echo 1. 打开命令行窗口
 echo 2. 运行: npm login
 echo 3. 输入以下信息:
 echo    用户名: lichengyu1207
-echo    密码: 147258@Zxcvbnm
+echo    密码: <NPM_PASSWORD>
 echo    邮箱: 155861995@qq.com
 echo.
 echo 4. 登录成功后，运行: npm publish --access public

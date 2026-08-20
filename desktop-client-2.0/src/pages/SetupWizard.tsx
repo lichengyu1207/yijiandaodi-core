@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PermissionList, { PERMISSION_GROUPS } from '../components/PermissionList'
 import { authService } from '../services/authService'
+import { openInBrowser } from '../services/openInBrowser'
 import './SetupWizard.css'
 
 interface SetupWizardProps {
@@ -307,6 +308,16 @@ export default function SetupWizard({ onComplete, onLoginSuccess, hasAccount }: 
   const finish = () => {
     console.log('[SetupWizard] 点击「开始使用」，完成引导')
     onComplete?.()
+    // 登录成功后自动跳官网（携带临时 token 免登录）。
+    // 降级处理：官网（生产）未录入该账号时由官网引导先设置密码；
+    // 打开官网失败（如未配置官网地址/网络异常）则降级为留在本地主界面，不阻塞使用。
+    openInBrowser('/dashboard', true)
+      .then((res) => {
+        console.log('[SetupWizard] 自动跳官网结果', { success: res.success, error: res.error, url: res.url })
+      })
+      .catch((e: any) => {
+        console.warn('[SetupWizard] 自动跳官网异常（降级为本地使用）', e?.message || e)
+      })
     navigate('/', { replace: true })
   }
 

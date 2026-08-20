@@ -82,7 +82,10 @@ const Login: React.FC = () => {
   };
 
   const rememberedUsername = localStorage.getItem('remembered_username') || '';
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  // 支持 ?tab=register&username=xxx：桌面端降级跳转「先设置密码」时预填注册页与用户名
+  const queryTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+  const queryUsername = typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('username') || '') : '';
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>(queryTab === 'register' ? 'register' : 'login');
 
   return (
     <div className="login-page">
@@ -254,6 +257,7 @@ const Login: React.FC = () => {
                       autoComplete="off"
                       size="large"
                       layout="vertical"
+                      initialValues={{ username: queryUsername || undefined }}
                     >
                       <Form.Item name="username" rules={[
                         { required: true, message: '请输入用户名' },

@@ -11,7 +11,7 @@ cd c:\MsSafeData\Desktop\yijiandaodi\npm-package
 # 2. 登录 NPM（输入以下凭据）
 npm login
 # 用户名: lichengyu1207
-# 密码: 147258@Zxcvbnm
+# 密码: <NPM_PASSWORD>
 # 邮箱: 155861995@qq.com
 
 # 3. 发布到 NPM

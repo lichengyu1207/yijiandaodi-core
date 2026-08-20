@@ -30,7 +30,7 @@ echo ✅ 文件已添加
 
 echo.
 echo 步骤3: 创建提交
-git commit -m "发布 yijiandaodi-security-core v1.0.0"
+git commit -m "发布 @lichengyu1207/yijiandaodi-security-core v1.0.0"
 echo ✅ 提交已创建
 
 echo.
@@ -75,7 +75,7 @@ echo 方式1: GitHub URL
 echo   npm install https://github.com/用户名/yijiandaodi-core.git
 echo.
 echo 方式2: package.json
-echo   "yijiandaodi-security-core": "github:用户名/yijiandaodi-core"
+echo   "@lichengyu1207/yijiandaodi-security-core": "github:用户名/yijiandaodi-core"
 echo.
 echo 方式3: GitHub Packages (需要配置)
 echo   npm install @用户名/yijiandaodi-core

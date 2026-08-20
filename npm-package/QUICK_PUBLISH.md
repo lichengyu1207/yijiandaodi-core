@@ -11,7 +11,7 @@ cd c:\MsSafeData\Desktop\yijiandaodi\npm-package
 # 2. 登录 NPM（输入以下凭据）
 npm login
 # 用户名: lichengyu1207
-# 密码: 147258@Zxcvbnm
+# 密码: <NPM_PASSWORD>
 # 邮箱: 155861995@qq.com
 
 # 3. 发布到 NPM
@@ -21,23 +21,23 @@ npm publish --access public
 ### 发布成功后验证：
 
 ```bash
-npm info yijiandaodi-core
+npm info @lichengyu1207/yijiandaodi-security-core
 ```
 
 ### 安装使用：
 
 ```bash
-npm install yijiandaodi-core
+npm install @lichengyu1207/yijiandaodi-security-core
 ```
 
 ---
 
 ## 📦 包信息
 
-- **包名**: yijiandaodi-core
+- **包名**: @lichengyu1207/yijiandaodi-security-core
 - **版本**: 1.0.0
 - **访问级别**: public
-- **发布后地址**: https://www.npmjs.com/package/yijiandaodi-core
+- **发布后地址**: https://www.npmjs.com/package/@lichengyu1207/yijiandaodi-security-core
 
 ---
 

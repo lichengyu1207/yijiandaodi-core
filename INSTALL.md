@@ -7,7 +7,7 @@
 ### 方式1：安装本地tarball
 
 ```bash
-npm install ./yijiandaodi-security-core-1.0.0.tgz
+npm install ./@lichengyu1207/yijiandaodi-security-core-1.0.0.tgz
 ```
 
 ### 方式2：从源码安装
@@ -22,13 +22,13 @@ npm link
 然后在你的项目中：
 
 ```bash
-npm link yijiandaodi-security-core
+npm link @lichengyu1207/yijiandaodi-security-core
 ```
 
 ### 方式3：复制到项目
 
 ```bash
-cp -r npm-package ../your-project/node_modules/yijiandaodi-security-core
+cp -r npm-package ../your-project/node_modules/@lichengyu1207/yijiandaodi-security-core
 ```
 
 ---
@@ -36,7 +36,7 @@ cp -r npm-package ../your-project/node_modules/yijiandaodi-security-core
 ## 使用示例
 
 ```typescript
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 // 创建核心实例
 const core = new YijianDaoDiCore();
@@ -73,7 +73,7 @@ console.log(auditRecord.audit_hash);
 当NPM发布成功后，可以通过以下方式安装：
 
 ```bash
-npm install yijiandaodi-security-core
+npm install @lichengyu1207/yijiandaodi-security-core
 ```
 
 ---

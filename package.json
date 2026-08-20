@@ -1,5 +1,5 @@
 {
-  "name": "yijiandaodi-security-core",
+  "name": "@lichengyu1207/yijiandaodi-security-core",
   "version": "1.0.0",
   "description": "一鉴到底核心库 - AI操作行为实时审计和安全监控",
   "main": "dist/index.js",

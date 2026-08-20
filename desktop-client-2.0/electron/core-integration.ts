@@ -1,12 +1,12 @@
 /**
  * 主进程集成示例
- * 展示如何在 Electron 主进程中使用 yijiandaodi-security-core
+ * 展示如何在 Electron 主进程中使用 @lichengyu1207/yijiandaodi-security-core
  */
 
 import { app, ipcMain } from 'electron';
 import * as path from 'path';
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
-import type { AuditRecord, Risk } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
+import type { AuditRecord, Risk } from '@lichengyu1207/yijiandaodi-security-core';
 
 // 创建全局核心实例
 let core: YijianDaoDiCore;

@@ -80,8 +80,10 @@ export const authApi = {
   },
 
   // P1 账号互通：桌面端一次性临时 token 兑换正式登录态
+  // skipAuthRedirect：兑换失败（官网未录入该账号）时由 App 降级引导「先设置密码」，
+  // 不触发 401 强制跳登录页，避免降级弹窗丢失。
   exchangeDesktopLogin: (token: string): Promise<LoginResult> => {
-    return request.post('/auth/desktop-login/exchange/', { token });
+    return request.post('/auth/desktop-login/exchange/', { token }, { skipAuthRedirect: true } as any);
   },
 
   getSystemStatus: (): Promise<SystemStatus> => {

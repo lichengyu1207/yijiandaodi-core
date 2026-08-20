@@ -115,7 +115,7 @@ npm publish
 ```json
 {
   "dependencies": {
-    "yijiandaodi-security-core": "^1.0.0",  // 从 npm 安装
+    "@lichengyu1207/yijiandaodi-security-core": "^1.0.0",  // 从 npm 安装
     "axios": "^1.6.2",
     // ...
   }

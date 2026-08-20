@@ -1,74 +1,69 @@
-# 一鉴到底核心库 (yijiandaodi-security-core)
+# 一鉴到底 (yijiandaodi-desktop)
 
-> AI Agent 安全检测核心库 - 实时审计、智能检测、区块链存证
+> 本地优先的 AI 操作行为安全审计桌面端 —— 实时监控、智能检测、链式存证、账号互通
 
-## 安装
-
-### 本地安装（推荐）
-
-由于NPM发布权限问题，当前推荐使用本地安装：
-
-```bash
-# 方式1：安装本地tarball
-npm install ./yijiandaodi-security-core-1.0.0.tgz
-
-# 方式2：从源码安装
-cd npm-package && npm install && npm run build && npm link
-```
-
-### NPM安装（稍后支持）
-
-```bash
-npm install yijiandaodi-security-core
-```
-
-详细安装说明请查看 [INSTALL.md](./INSTALL.md)
-
-> 🇨🇳 AI操作行为实时审计和安全监控核心库
-> 🇺🇸 AI Operation Behavior Audit and Security Monitoring Core Library
-
-[![npm version](https://img.shields.io/npm/v/yijiandaodi-security-core.svg)](https://www.npmjs.com/package/yijiandaodi-security-core)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 
-🔒 **企业级 AI 安全审计解决方案** - 支持敏感信息检测、文件监控、剪贴板监控、链式存证、风险拦截。用于企业安全合规、数据防泄漏、AI Agent 行为审计。
+**一鉴到底** 是一款面向个人与企业的 AI 行为安全审计桌面应用。所有检测在本地完成，不上传原始数据；同时提供账号互通、套餐计费、月度账单等云端能力，兼顾离线隐私与在线协同。
 
-**🔗 相关链接**：[官网](https://yijiandaodi.com) · [文档](https://docs.yijiandaodi.com) · [在线演示](https://demo.yijiandaodi.com)
+**🔗 相关链接**：[官网](https://yijiandaodi.com) · [安装包下载](https://yijiandaodi.com/download) · [核心库 SDK](https://www.npmjs.com/package/@lichengyu1207/yijiandaodi-security-core)
 
 ---
 
-## 📖 简介
+## 📦 桌面端安装包
 
-一鉴到底核心库提供AI操作行为实时审计和安全监控功能，包括：
+| 平台 | 版本 | 下载 |
+|------|------|------|
+| Windows x64 | v2.0.0 | [下载安装包](https://yijiandaodi.com/download)（NSIS 安装程序，可选安装目录） |
 
-- 🔍 **敏感信息检测** - SQL注入、XSS、API Key、密码等敏感信息检测
+- **安装方式**：下载 `Setup.exe` 后双击运行，按向导选择安装目录（支持 C/D 盘），安装完成自动启动。
+- **零依赖**：安装包已内置 Django 后端与沙箱推理服务，无需安装 Node.js 或 Python 即可运行。
+- **自动更新**：新版本发布后，可在设置页「检查更新」一键升级。
+
+> 下载入口：官网 [下载页](https://yijiandaodi.com/download) 或 GitHub [Releases](https://github.com/lichengyu1207/yijiandaodi-core/releases)。
+
+---
+
+## ✨ 桌面端核心能力
+
+- 🔍 **敏感信息检测** - SQL 注入、XSS、API Key、密码等敏感信息实时检测
 - 📁 **文件监控** - 实时监控文件系统，检测文件中的安全风险
 - 📋 **剪贴板监控** - 监控剪贴板内容，防止敏感信息泄露
-- 💾 **数据存储** - 本地存储审计记录，支持导出
-- 🔗 **链式存证** - 基于哈希链的不可篡改审计存证
+- 🔗 **链式存证** - 基于哈希链的不可篡改白盒审计存证
 - 🛡️ **风险拦截** - 可配置的风险拦截机制
+- 🤖 **多智能体协同** - 推理引擎 + 集群调度 + 异步任务统一编排
+- 📊 **月度账单** - 套餐用量实时挂钩，消费明细与趋势可视化
+- 🔔 **配额告警** - 熔断/配额超限等场景的告警规则可配置
+- 🔑 **账号互通** - 桌面端登录后一键直达官网免登录（临时 token 兑换）
 
 ---
 
-## 🚀 快速开始
+## 🏠 官网
 
-### 安装
+- **官网地址**：https://yijiandaodi.com
+- 提供产品介绍、能力单元展示、账号注册/登录、套餐计费、开发者中心、下载页面。
+- 桌面端与官网同账号体系：桌面端「官网入口」跳转后自动保持登录态。
+
+---
+
+## 📖 核心库 SDK（@lichengyu1207/yijiandaodi-security-core）
+
+桌面端底层安全能力以独立 SDK 形式提供，供 Node.js / TypeScript 项目直接集成。
+
+### NPM 安装
 
 ```bash
-npm install yijiandaodi-security-core
+npm install @lichengyu1207/yijiandaodi-security-core
 ```
 
 ### 基本使用
 
 ```typescript
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
-// 创建核心实例
 const core = new YijianDaoDiCore({
-  storage: {
-    path: './data',
-    maxRecords: 100
-  }
+  storage: { path: './data', maxRecords: 100 }
 });
 
 // 检测文本中的安全风险
@@ -80,50 +75,92 @@ const report = core.detectWithReport('sk-proj-abc123def456', '配置文件');
 console.log('检测报告:', report);
 ```
 
----
+### 高级功能
 
-## 📚 文档
+```typescript
+import { FileMonitor, initSecurityKnowledgeBase } from '@lichengyu1207/yijiandaodi-security-core';
 
-- [快速开始](npm-package/README.md)
-- [API 文档](npm-package/docs/)
-- [更新日志](CHANGELOG.md)
+// 文件监控
+const monitor = new FileMonitor(securityKB);
+monitor.start();
 
----
+// 自定义安全知识库
+const securityKB = initSecurityKnowledgeBase();
+console.log('SQL注入Payload:', securityKB.sqli.length);
 
-## 📦 项目结构
-
+// 风险检测回调
+const core = new YijianDaoDiCore({
+  callbacks: {
+    onRiskDetected: (risks, context) => {
+      console.log('发现风险:', risks.length, '个');
+      console.log('来源:', context.source);
+    }
+  }
+});
 ```
-npm-package/
-├── src/           # 源代码
-│   ├── core.ts    # 核心类
-│   ├── detectors/ # 检测器
-│   ├── monitors/  # 监控器
-│   └── services/  # 服务层
-├── docs/          # 文档
-├── LICENSE        # Apache 2.0 许可证
-└── README.md      # 使用文档
+
+### 支持的检测类型
+
+| 类型 | 描述 | 风险等级 |
+|------|------|----------|
+| `sqli` | SQL注入攻击 | 🔴 High |
+| `xss` | XSS跨站脚本攻击 | 🔴 High |
+| `apikey` | API Key泄露 | 🔴 High |
+| `password` | 密码明文存储 | 🟡 Medium |
+| `sensitive` | 敏感关键词 | 🟡 Medium |
+
+> 核心库完整 API 文档见 `npm-package/README.md`。
+
+---
+
+## 🛠️ 开发
+
+### 桌面端
+
+```bash
+cd desktop-client-2.0
+npm install
+npm run dev          # 开发模式
+npm run build        # 构建渲染层
+npm test             # 前端测试
+```
+
+### 后端
+
+```bash
+cd backend
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver 8000
+```
+
+### 打包发布
+
+```bash
+cd desktop-client-2.0
+npx electron-builder --win --x64 --publish never
 ```
 
 ---
 
 ## 📄 许可证
 
-本项目采用 Apache 2.0 许可证 - 查看 [LICENSE](npm-package/LICENSE) 文件了解详情
+本项目采用 **Apache 2.0** 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
 ---
 
 ## 🤝 贡献
 
-欢迎社区贡献！请查看贡献指南。
+欢迎社区贡献！请查看贡献指南后提交 Issue 和 Pull Request。
 
 ---
 
 ## 📞 联系方式
 
-- **技术支持**: lichengyu@fangsuanyun.cn
 - **官方网站**: [yijiandaodi.com](https://yijiandaodi.com)
 - **GitHub**: [github.com/lichengyu1207/yijiandaodi-core](https://github.com/lichengyu1207/yijiandaodi-core)
+- **Email**: 155861995@qq.com
 
 ---
 
-**Made with ❤️ by 一鉴到底团队**
+**⭐ 如果这个项目对你有帮助，请给一个 Star！**

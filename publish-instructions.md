@@ -6,7 +6,7 @@
 - **版本**: 1.0.0
 - **作者**: lichengyu1207
 - **邮箱**: 155861995@qq.com
-- **密码**: 147258@Zxcvbnm
+- **密码**: <NPM_PASSWORD>
 
 ## ✅ 已完成的准备工作
 
@@ -31,7 +31,7 @@ npm login
 
 按提示输入：
 - **用户名**: `lichengyu1207`
-- **密码**: `147258@Zxcvbnm`
+- **密码**: `<NPM_PASSWORD>`
 - **邮箱**: `155861995@qq.com`
 
 ### 步骤3：发布到 NPM
@@ -54,7 +54,7 @@ npm info yijiandaodi-core
 
 输入：
 - **用户名**: `lichengyu1207`
-- **密码**: `147258@Zxcvbnm`
+- **密码**: `<NPM_PASSWORD>`
 - **邮箱**: `155861995@qq.com`
 
 ### 步骤2：生成 Access Token

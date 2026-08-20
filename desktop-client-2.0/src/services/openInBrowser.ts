@@ -5,6 +5,8 @@
  *  - 官网地址由 apiConfig.getWebBaseURL() 解析（localStorage 可显式配置）；
  *  - preserveAuth=true 且已登录时：向后端申请一次性临时 token（5 分钟、用后即销毁），
  *    拼到官网 URL 上，官网前端用其兑换正式登录态（免登录）；
+ *  - 同时附带 auth_user（用户名）：官网兑换失败（生产未录入该账号）时，
+ *    降级引导用户「先设置密码」（注册页预填用户名），避免死链；
  *  - 未登录或申请失败时降级为不带 token 直开官网。
  */
 
@@ -33,6 +35,11 @@ export async function openInBrowser(
     if (temp?.token) {
       const sep = url.includes('?') ? '&' : '?';
       url = `${url}${sep}auth_token=${encodeURIComponent(temp.token)}`;
+      // 附带用户名：官网兑换失败（生产未录入该账号）时，降级引导「先设置密码」并可预填用户名
+      const user = authService.getCurrentUser?.();
+      if (user?.username) {
+        url += `&auth_user=${encodeURIComponent(user.username)}`;
+      }
     }
   }
 

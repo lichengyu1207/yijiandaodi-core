@@ -3,14 +3,14 @@
 ## ✅ 安装状态
 
 ```
-✅ yijiandaodi-security-core 已安装
+✅ @lichengyu1207/yijiandaodi-security-core 已安装
 ✅ 依赖包已更新 (411 packages)
 ✅ 可以开始使用
 ```
 
 ## 📦 安装信息
 
-- **包名**: `yijiandaodi-security-core`
+- **包名**: `@lichengyu1207/yijiandaodi-security-core`
 - **版本**: `1.0.0`
 - **来源**: `file:../npm-package` (本地路径)
 - **大小**: 26.1 KB
@@ -32,7 +32,7 @@ node test-integration.js
 
 ```typescript
 // electron/main.ts
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 // 创建实例
 const core = new YijianDaoDiCore();
@@ -48,7 +48,7 @@ const report = core.detectWithReport('password=admin', '配置文件');
 
 ```typescript
 // src/pages/Dashboard.tsx
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 const Dashboard = () => {
   const handleAnalyze = async () => {
@@ -94,7 +94,7 @@ const Dashboard = () => {
 
 ```typescript
 // electron/monitoring/fileMonitor.ts
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 export class FileMonitor {
   private core = new YijianDaoDiCore();
@@ -115,7 +115,7 @@ export class FileMonitor {
 
 ```typescript
 // electron/monitoring/clipboardMonitor.ts
-import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
 
 export class ClipboardMonitor {
   private core = new YijianDaoDiCore();

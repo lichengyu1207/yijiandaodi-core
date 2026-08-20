@@ -1,6 +1,6 @@
 # NPM 依赖问题解决方案
 
-**问题**: 项目依赖本地包 `yijiandaodi-security-core`
+**问题**: 项目依赖本地包 `@lichengyu1207/yijiandaodi-security-core`
 
 ---
 
@@ -10,7 +10,7 @@
 ```json
 {
   "dependencies": {
-    "yijiandaodi-security-core": "file:../npm-package"
+    "@lichengyu1207/yijiandaodi-security-core": "file:../npm-package"
   }
 }
 ```
@@ -65,7 +65,7 @@ npm run electron:dev
 // package.json
 {
   "dependencies": {
-    // "yijiandaodi-security-core": "file:../npm-package",  ← 删除这行
+    // "@lichengyu1207/yijiandaodi-security-core": "file:../npm-package",  ← 删除这行
     "axios": "^1.6.2",
     // ... 其他依赖保持不变
   }
@@ -138,7 +138,7 @@ npm run electron:dev
   npm install
 
 方案B: 移除本地包依赖（推荐）
-  修改 package.json，删除 yijiandaodi-security-core 依赖
+  修改 package.json，删除 @lichengyu1207/yijiandaodi-security-core 依赖
 ```
 
 ### 问题2: 缺少功能
@@ -160,7 +160,7 @@ npm run electron:dev
 
 ### 问题3: 本地包的作用
 ```
-yijiandaodi-security-core 包含:
+@lichengyu1207/yijiandaodi-security-core 包含:
 - 核心检测算法的原始实现
 - 可复用的安全检测库
 - 可发布到 npm 的独立包
@@ -195,7 +195,7 @@ yijiandaodi-security-core 包含:
 {
   "dependencies": {
     // 删除这行 ↓
-    // "yijiandaodi-security-core": "file:../npm-package",
+    // "@lichengyu1207/yijiandaodi-security-core": "file:../npm-package",
     
     "axios": "^1.6.2",
     // ... 其他依赖

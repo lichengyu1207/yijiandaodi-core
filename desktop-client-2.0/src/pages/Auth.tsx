@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './Auth.css'
 import { authService } from '../services/authService'
+import { openInBrowser } from '../services/openInBrowser'
 import { parseError, showError } from '../utils/errorHandler'
 
 type AuthStep = 'login' | 'register' | 'success'
@@ -122,6 +123,17 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
         if (onLoginSuccess) {
           onLoginSuccess()
         }
+
+        // 登录成功后自动跳官网（携带临时 token 免登录）。
+        // 降级处理：官网（生产）未录入该账号时由官网引导先设置密码；
+        // 打开官网失败（未配置官网地址/网络异常）则降级为留在本地界面，不阻塞登录。
+        openInBrowser('/dashboard', true)
+          .then((res) => {
+            console.log('[Auth] 自动跳官网结果', { success: res.success, error: res.error })
+          })
+          .catch((e: any) => {
+            console.warn('[Auth] 自动跳官网异常（降级为本地使用）', e?.message || e)
+          })
 
         // 登录成功
         setStep('success')

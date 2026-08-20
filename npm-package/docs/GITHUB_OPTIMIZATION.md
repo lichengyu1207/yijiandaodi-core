@@ -47,7 +47,7 @@ risk-detection
 ### 标题优化
 **当前标题**：
 ```
-一鉴到底核心库 (yijiandaodi-security-core)
+一鉴到底核心库 (@lichengyu1207/yijiandaodi-security-core)
 ```
 
 **建议标题**：
@@ -170,7 +170,7 @@ electron
 > 🇨🇳 AI操作行为实时审计和安全监控核心库  
 > 🇺🇸 AI Operation Behavior Audit and Security Monitoring Core Library
 
-[![npm version](https://img.shields.io/npm/v/yijiandaodi-security-core.svg)](https://www.npmjs.com/package/yijiandaodi-security-core)
+[![npm version](https://img.shields.io/npm/v/%40lichengyu1207%2Fyijiandaodi-security-core.svg)](https://www.npmjs.com/package/@lichengyu1207/yijiandaodi-security-core)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 ```
@@ -181,7 +181,7 @@ electron
 ```markdown
 [![Build Status](https://img.shields.io/github/workflow/status/lichengyu1207/yijiandaodi-core/CI)](https://github.com/lichengyu1207/yijiandaodi-core/actions)
 [![Test Coverage](https://img.shields.io/codecov/c/github/lichengyu1207/yijiandaodi-core.svg)](https://codecov.io/gh/lichengyu1207/yijiandaodi-core)
-[![Downloads](https://img.shields.io/npm/dm/yijiandaodi-security-core.svg)](https://www.npmjs.com/package/yijiandaodi-security-core)
+[![Downloads](https://img.shields.io/npm/dm/%40lichengyu1207%2Fyijiandaodi-security-core.svg)](https://www.npmjs.com/package/@lichengyu1207/yijiandaodi-security-core)
 [![GitHub Stars](https://img.shields.io/github/stars/lichengyu1207/yijiandaodi-core.svg)](https://github.com/lichengyu1207/yijiandaodi-core/stargazers)
 ```
 

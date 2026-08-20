@@ -192,7 +192,7 @@ function verifyAuditChain(records: OperationRecord[]): boolean {
 
 1. **桌面应用集成**
    ```typescript
-   import { YijianDaoDiCore } from 'yijiandaodi-security-core';
+   import { YijianDaoDiCore } from '@lichengyu1207/yijiandaodi-security-core';
    
    const core = new YijianDaoDiCore();
    

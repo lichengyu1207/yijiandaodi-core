@@ -26,7 +26,7 @@ publish.bat
 然后：
 1. 输入 NPM 凭据（如果未登录）
    - 用户名: `lichengyu1207`
-   - 密码: `147258@Zxcvbnm`
+   - 密码: `<NPM_PASSWORD>`
    - 邮箱: (输入你的邮箱)
 2. 确认发布
 
@@ -38,7 +38,7 @@ publish.bat
 # 1. 登录 NPM
 npm login
 # 用户名: lichengyu1207
-# 密码: 147258@Zxcvbnm
+# 密码: <NPM_PASSWORD>
 # 邮箱: (输入你的邮箱)
 
 # 2. 发布到 NPM

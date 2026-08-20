@@ -28,11 +28,11 @@ const DownloadPage: React.FC = () => {
       platform: 'Windows',
       icon: WindowsIcon,
       version: 'v2.0.0',
-      size: '109MB',
-      url: '/downloads/yijiandaodi-win-portable.zip',
+      size: '161MB',
+      url: 'https://github.com/lichengyu1207/yijiandaodi-core/releases/download/v2.0.0/yijiandaodi-desktop-setup-2.0.0.exe',
       recommended: true,
       available: true,
-      description: '便携版（解压即用，已包含所有依赖）',
+      description: '安装程序（NSIS 安装包，可自选目录，含后端/推理服务）',
     },
     {
       platform: 'macOS',
@@ -310,10 +310,10 @@ const DownloadPage: React.FC = () => {
             gap: 16,
           }}>
             {[
-              { step: 1, title: '下载', desc: '点击上方"立即下载"按钮，下载便携版压缩包' },
-              { step: 2, title: '解压', desc: '将下载的 zip 文件解压到任意目录（如桌面或D盘）' },
-              { step: 3, title: '运行', desc: '双击运行"一鉴到底.exe"即可启动程序' },
-              { step: 4, title: '使用', desc: '首次使用需要登录账号，之后即可离线使用部分功能' },
+              { step: 1, title: '下载', desc: '点击上方"立即下载"按钮，下载 Windows 安装程序（Setup.exe）' },
+              { step: 2, title: '安装', desc: '双击运行安装程序，选择安装目录（支持 C 盘或 D 盘）' },
+              { step: 3, title: '启动', desc: '安装完成自动启动"一鉴到底"桌面端' },
+              { step: 4, title: '使用', desc: '首次使用需设置账号密码，之后即可离线使用安全检测功能' },
             ].map((item) => (
               <div
                 key={item.step}
@@ -373,7 +373,7 @@ const DownloadPage: React.FC = () => {
               fontSize: '0.85rem',
               color: 'rgba(251,191,36,0.9)',
             }}>
-              💡 提示：便携版无需安装，解压即用。如遇到"缺少 ffmpeg.dll"提示，请重新下载最新版本。
+              💡 提示：安装程序已内置后端与推理服务，无需安装 Node.js 或 Python。若官网下载较慢，可前往 GitHub Releases 下载。
             </p>
           </div>
         </motion.div>

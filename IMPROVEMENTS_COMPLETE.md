@@ -195,7 +195,7 @@ export interface BehaviorPattern {
 import { 
   SecurityKnowledgeBase, 
   BehaviorPatternDetector 
-} from 'yijiandaodi-security-core';
+} from '@lichengyu1207/yijiandaodi-security-core';
 
 // 使用可配置的知识库
 const kb = new SecurityKnowledgeBase({...});

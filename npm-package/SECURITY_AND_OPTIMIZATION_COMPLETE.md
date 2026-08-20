@@ -43,7 +43,7 @@ npm run test:watch          # 监听模式
 
 **使用方法**：
 ```typescript
-import { OptimizedSecurityKnowledgeBase } from 'yijiandaodi-security-core';
+import { OptimizedSecurityKnowledgeBase } from '@lichengyu1207/yijiandaodi-security-core';
 
 const optimizedKB = new OptimizedSecurityKnowledgeBase();
 const risks = optimizedKB.detect(content);
