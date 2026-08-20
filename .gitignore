@@ -104,6 +104,7 @@ data/test_*.db
 .idea/
 .trae/
 .vite/
+.claude/
 *.swp
 *.swo
 
