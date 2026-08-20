@@ -1,27 +1,27 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Network, MousePointerClick, Layers } from 'lucide-react';
+import { Eye, Network, Link2 } from 'lucide-react';
 
 const cards = [
   {
-    icon: <Network />,
-    title: '多角色智能体，协作无死角',
+    icon: <Eye />,
+    title: '操作白盒化，AI 行为全透明',
     description:
-      '聚合代码检测、风险识别、合规校验等多类型智能体，形成协同校验网络，覆盖从输入到输出的全流程风险',
+      '从输入到输出全链路白盒审计，AI 每一步操作可追溯、可验证、可拦截，行为风险一目了然',
     origin: 'right' as const,
   },
   {
-    icon: <MousePointerClick />,
-    title: '无需专业背景，校验一键启动',
+    icon: <Network />,
+    title: '多智能体协同，检测无死角',
     description:
-      '可视化交互界面，智能体自动调度协作，只需简单操作即可完成复杂校验，让安全校验不再是专业门槛',
+      '聚合代码检测、风险识别、合规校验等多类型智能体，形成协同检测网络，覆盖全流程风险',
     origin: 'left' as const,
   },
   {
-    icon: <Layers />,
-    title: '企业级+个人级，场景全兼容',
+    icon: <Link2 />,
+    title: '链式存证，记录不可篡改',
     description:
-      '支持企业团队协作校验、个人开发者独立校验，适配代码、文档、数据等多类型资产的安全合规需求',
+      '基于哈希链的不可篡改审计存证，每条记录环环相扣，支持合规报告一键导出与可信追溯',
     origin: 'bottom' as const,
   },
 ];

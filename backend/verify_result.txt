@@ -1,6 +1,0 @@
-FirstOrderPromo: 1 rows
-  name=V1.0.1 新人首单优惠, type=percent, value=50.00, status=active
-UserCoupon: 0 rows
-Migrations: 24 applied
-  Has promo migration: True
-  Latest: 0024_add_first_order_promo

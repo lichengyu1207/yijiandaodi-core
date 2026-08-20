@@ -89,10 +89,21 @@ desktop-client-2.0/agent-tests.json
 desktop-client-2.0/*.tsbuildinfo
 backend/logs/
 backend/*.out.txt
+logs/
+
+# 运行时数据 / 生成报告（含用户敏感数据与测试产物）
+data/*.db
+data/~$*
+data/*report*.json
+data/report.html
+data/test_*.json
+data/test_*.db
 
 # IDE
 .vscode/
 .idea/
+.trae/
+.vite/
 *.swp
 *.swo
 
