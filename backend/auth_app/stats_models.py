@@ -167,3 +167,43 @@ class RevenueDailyStats(models.Model):
 
     def __str__(self):
         return f'{self.date} \u00a5{self.gross_revenue}'
+
+
+class HourlyRegionStats(models.Model):
+    """每小时区域监控聚合（P2 统计二期：区域热力图数据源）。
+
+    由 GET /api/stats/hourly 实时聚合 APIKeyUsageLog 后 upsert，
+    保留最近一次聚合结果供离线读取/审计。
+    字段按需求 §3.2.3：hour / region / total_cost / call_count / error_count / avg_latency。
+    """
+
+    REGION_CHOICES = [
+        ('cn', '\u4e2d\u56fd\u5927\u9646'),
+        ('us', '\u5317\u7f8e'),
+        ('eu', '\u6b27\u6d32'),
+        ('all', '\u5176\u4ed6/\u5168\u5c40'),
+    ]
+
+    id = models.BigAutoField(primary_key=True)
+    hour = models.DateTimeField('\u5c0f\u65f6', db_index=True)
+    region = models.CharField('\u533a\u57df', max_length=10, choices=REGION_CHOICES, default='all', db_index=True)
+
+    total_cost = models.DecimalField('\u6d88\u8017\u989d\u5ea6(\u5143)', max_digits=14, decimal_places=6, default=0)
+    call_count = models.PositiveIntegerField('\u8c03\u7528\u6b21\u6570', default=0)
+    error_count = models.PositiveIntegerField('\u9519\u8bef\u6b21\u6570', default=0)
+    avg_latency = models.PositiveIntegerField('\u5e73\u5747\u8017\u65f6(ms)', default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'hourly_region_stats'
+        verbose_name = '\u6bcf\u5c0f\u65f6\u533a\u57df\u76d1\u63a7'
+        verbose_name_plural = verbose_name
+        ordering = ['-hour', 'region']
+        indexes = [
+            models.Index(fields=['hour', 'region'], name='idx_hour_region'),
+        ]
+
+    def __str__(self):
+        return f'{self.hour:%Y-%m-%d %H} {self.region} calls={self.call_count}'

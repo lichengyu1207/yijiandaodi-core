@@ -4,6 +4,7 @@
 
 export { TrayService } from './trayService'
 export { ApiService } from './apiService'
+export { BackendService } from './backendService'
 export { StorageService } from './storageService'
 export { syncService, SyncService } from './syncService'
 export { LoggerService, logger, createContextLogger, LogLevel } from './loggerService'
@@ -48,3 +49,18 @@ export type {
 // 导出治理健康度监控器
 export { GovernanceHealthMonitor } from './governanceHealthMonitor'
 export type { HealthMetrics } from './governanceHealthMonitor'
+
+// 自动更新（electron-updater）
+export { UpdaterService, updaterService, UPDATER_EVENTS } from './updaterService'
+
+// P0 统一控制面（M1 MVP）：模块状态聚合 / 日志级别 / 预算额度
+export { ModuleControlService, computeModuleSummary } from './moduleControlService'
+export type {
+  ModuleStatus,
+  ModuleSummary,
+  ModuleKind,
+  ModuleState,
+  ModuleHealth,
+  DeepSeekQuotaStatus,
+  ModuleControlDeps,
+} from './moduleControlService'

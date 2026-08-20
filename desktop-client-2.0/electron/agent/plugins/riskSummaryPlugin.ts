@@ -16,12 +16,10 @@
 import type { AgentEventBus, AgentEventEnvelope, RiskEventData } from '../../events/agentEventBus'
 import type { GovernanceLoggerLike } from '../../events/governanceLogger'
 import type { RiskAssessment } from '../hooks/types'
+import { PERCEPTION_STREAMS } from '../planner'
 import { ToolRegistry } from '../toolRegistry'
 import { runOncePerAgentRun } from '../pluginRegistry'
 import type { GovTool } from '../types'
-
-/** 感知流白名单（对齐 MonitorEventAdapter 映射） */
-const PERCEPTION_STREAMS = ['file', 'process', 'network', 'clipboard', 'api_call', 'resource'] as const
 
 /** 风险统计条目 */
 export interface RiskSummaryEntry {
@@ -132,6 +130,8 @@ export function createRiskSummaryPlugin(opts?: {
     id: 'risk-summary',
     version: '1.0.0',
     description: '风险概览 Skill：订阅感知流，统计近期 warning/critical 风险事件，并提供 risk.summary 只读工具',
+    /** 卸载后保留工具：risk.summary 是治理视图工具，卸载后仍返回停用状态（active:false）供调用方优雅降级 */
+    keepToolsOnUninstall: true,
 
     /** 订阅感知流：对风险事件做单飞去重登记（防事件风暴重复入账） */
     subscribe(bus: AgentEventBus): Array<() => void> {

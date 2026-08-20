@@ -11,6 +11,9 @@ export enum CircuitStateType {
  * 熔断器配置
  */
 export interface CircuitBreakerConfig {
+  // 开关（可选项，默认 true 即启用熔断器）
+  enabled?: boolean
+
   // 失败阈值配置
   failureThreshold: number           // 失败次数阈值
   failureRateThreshold: number       // 失败率阈值（0-1）

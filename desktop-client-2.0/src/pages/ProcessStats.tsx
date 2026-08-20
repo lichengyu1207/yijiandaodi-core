@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { processApiService, ProcessStats, ProcessTimeline, ToolStat, TimelineEvent } from '../services/processApi'
+import { processApiService } from '../services/processApi'
+import type { ProcessStats, ProcessTimeline, ToolStat, TimelineEvent } from '../services/processApi'
 import './ProcessStats.css'
 
 function formatDuration(seconds: number): string {
@@ -26,6 +27,49 @@ const OPERATION_LABEL: Record<string, string> = {
   modify: '修改',
   rename: '重命名',
   delete: '删除',
+}
+
+/** 常见漫剧生产工具 → 图标（未知工具回退通用图标） */
+const TOOL_ICON: Record<string, string> = {
+  'Unity': '🎮',
+  'UnityEditor': '🎮',
+  'Unity Hub': '🎮',
+  'Blender': '🧊',
+  'Maya': '🎭',
+  '3ds Max': '🏗️',
+  'C4D': '🪐',
+  'Cinema 4D': '🪐',
+  'Photoshop': '🖌️',
+  'Ps': '🖌️',
+  'Illustrator': '✒️',
+  'AfterEffects': '🎞️',
+  'AE': '🎞️',
+  'PremierePro': '🎬',
+  'Premiere Pro': '🎬',
+  'PR': '🎬',
+  'DaVinciResolve': '🎥',
+  'Audacity': '🎙️',
+  'Ableton': '🎹',
+  'FL Studio': '🎧',
+  'ClipStudio': '✏️',
+  'Procreate': '🎨',
+  'SubstancePainter': '🧱',
+  'ZBrush': '🗿',
+  'Houdini': '🌋',
+  'Nuke': '🔥',
+  'Substance3D': '🧱',
+  'Visual Studio Code': '💻',
+  'Code': '💻',
+  'chrome': '🌐',
+  'Chrome': '🌐',
+  'Edge': '🌐',
+  'explorer': '📁',
+  'Explorer': '📁',
+}
+
+function toolIcon(name: string): string {
+  const hit = TOOL_ICON[name] ?? TOOL_ICON[Object.keys(TOOL_ICON).find((k) => name.includes(k)) ?? '']
+  return hit ?? '🧰'
 }
 
 const RISK_COLOR: Record<string, string> = {
@@ -100,6 +144,7 @@ export default function ProcessStats() {
               <div className="tool-grid">
                 {stats.tools.map((tool: ToolStat) => (
                   <div className="tool-card" key={tool.tool_name}>
+                    <div className="tool-icon">{toolIcon(tool.tool_name)}</div>
                     <div className="tool-name">{tool.tool_name}</div>
                     <div className="tool-duration">{formatDuration(tool.total_duration_seconds)}</div>
                     <div className="tool-count">使用 {tool.usage_count} 次</div>

@@ -2,17 +2,25 @@
  * IPC处理器模块
  */
 
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
+import * as path from 'path'
+import * as fs from 'fs'
 import { StorageService } from '../services/storageService'
 import { FileMonitor, ClipboardMonitor, ApiCallMonitor, ProcessMonitor } from '../monitoring'
 import { PetState } from '../windows/petWindow'
-import { syncService } from '../services/syncService'
+import type { PetCharacterInfo } from '../windows/petWindow'
+import type { GovernanceProfile } from '../agent/pet/companion'
+import type { SyncService } from '../services/syncService'
 import { LogLevel } from '../services/loggerService'
-import { localAuthService } from '../services/localAuthService'
+import type { LocalAuthService } from '../services/localAuthService'
 import { GovernanceLogger, loadGovernanceLogLevel, saveGovernanceLogLevel } from '../events/governanceLogger'
 import type { GovernanceHealthMonitor } from '../services/governanceHealthMonitor'
+import { ModuleControlService } from '../services/moduleControlService'
+import { updaterService } from '../services/updaterService'
 import { getRunOnceStats, type PluginRegistry } from '../agent/pluginRegistry'
 import { checkHookHostStats } from '../agent/hooks/statsCheck'
+import { scanPluginDir, installPluginFromMarket, uninstallPluginFromDir } from '../agent/pluginDirLoader'
+import { setBackendClientConfig } from '../agent'
 import {
   PERMISSION_KEYS,
   PermissionConfig,
@@ -33,24 +41,37 @@ export class IPCHandlers {
   private userDataPath: string
   private onPermissionChanged?: () => void
   private pluginRegistry?: PluginRegistry
+  /** A4：同步服务 / 本地账号服务由 main.ts 注入（不再直接 import 模块单例） */
+  private syncService: SyncService
+  private localAuthService: LocalAuthService
+  /** 桌宠角色+治理画像提供方（main.ts 注入 computePetCharacter） */
+  private getPetCharacter?: () => { character: PetCharacterInfo; profile: GovernanceProfile } | null
+  /** P0 统一控制面（M1 MVP）：模块状态 / 日志级别 / 预算额度（main.ts 注入） */
+  private moduleControl?: ModuleControlService
 
   constructor(
     storageService: StorageService,
     fileMonitor: FileMonitor,
     clipboardMonitor: ClipboardMonitor,
     getPetState: () => PetState,
+    syncService: SyncService,
+    localAuthService: LocalAuthService,
     healthMonitor?: GovernanceHealthMonitor,
     apiCallMonitor?: ApiCallMonitor,
     processMonitor?: ProcessMonitor,
     governanceLogger?: GovernanceLogger,
     userDataPath?: string,
     onPermissionChanged?: () => void,
-    pluginRegistry?: PluginRegistry
+    pluginRegistry?: PluginRegistry,
+    getPetCharacter?: () => { character: PetCharacterInfo; profile: GovernanceProfile } | null,
+    moduleControl?: ModuleControlService
   ) {
     this.storageService = storageService
     this.fileMonitor = fileMonitor
     this.clipboardMonitor = clipboardMonitor
     this.getPetState = getPetState
+    this.syncService = syncService
+    this.localAuthService = localAuthService
     this.healthMonitor = healthMonitor
     this.apiCallMonitor = apiCallMonitor || new ApiCallMonitor()
     this.processMonitor = processMonitor || new ProcessMonitor()
@@ -58,6 +79,8 @@ export class IPCHandlers {
     this.userDataPath = userDataPath || ''
     this.onPermissionChanged = onPermissionChanged
     this.pluginRegistry = pluginRegistry
+    this.getPetCharacter = getPetCharacter
+    this.moduleControl = moduleControl
   }
 
   registerAll() {
@@ -73,6 +96,9 @@ export class IPCHandlers {
     this.registerPermissionHandlers()
     this.registerLocalAuthHandlers()
     this.registerPluginHandlers()
+    this.registerModuleControlHandlers()
+    this.registerBrowserHandlers()
+    this.registerUpdaterHandlers()
   }
 
   private registerStorageHandlers() {
@@ -132,6 +158,22 @@ export class IPCHandlers {
       return this.getPetState()
     })
 
+    // 桌宠角色+治理画像（设置页「治理桌宠」面板）：角色属性绑定真实治理数据，
+    // profile 为治理画像快照（run/成功/失败/告警/工具/拒绝/验证次数）
+    ipcMain.handle('get-pet-stats', async () => {
+      try {
+        if (!this.getPetCharacter) return { success: false, error: '桌宠系统未初始化' }
+        const result = this.getPetCharacter()
+        if (!result) return { success: false, error: '角色生成失败' }
+        return { success: true, data: result }
+      } catch (error: any) {
+        this.governanceLogger?.error('[IPC:get-pet-stats] 读取桌宠角色异常', {
+          module: 'IPCHandlers', function: 'registerPetHandlers',
+        }, { error: error.message })
+        return { success: false, error: error.message }
+      }
+    })
+
     // 确认风险
     ipcMain.handle('confirm-risk', async (event, action: 'allow' | 'deny') => {
       console.log(`[风险] 用户确认: ${action}`)
@@ -144,7 +186,7 @@ export class IPCHandlers {
     // 获取同步配置
     ipcMain.handle('get-sync-config', async () => {
       try {
-        const config = syncService.getConfig()
+        const config = this.syncService.getConfig()
         return { success: true, data: config }
       } catch (error: any) {
         return { success: false, error: error.message }
@@ -154,7 +196,7 @@ export class IPCHandlers {
     // 保存同步配置
     ipcMain.handle('save-sync-config', async (event, config) => {
       try {
-        syncService.saveConfig(config)
+        this.syncService.saveConfig(config)
         return { success: true }
       } catch (error: any) {
         return { success: false, error: error.message }
@@ -170,7 +212,7 @@ export class IPCHandlers {
         // 实际使用时需要根据业务逻辑处理
         const sessions: any[] = []
 
-        const result = await syncService.syncAll(sessions)
+        const result = await this.syncService.syncAll(sessions)
         return result
       } catch (error: any) {
         return { success: false, error: error.message }
@@ -183,7 +225,7 @@ export class IPCHandlers {
         const operations = await this.storageService.getOperations()
         const sessions: any[] = []
 
-        const result = await syncService.uploadSessions(sessions)
+        const result = await this.syncService.uploadSessions(sessions)
         return result
       } catch (error: any) {
         return { success: false, error: error.message }
@@ -193,7 +235,7 @@ export class IPCHandlers {
     // 仅下载
     ipcMain.handle('download-data', async () => {
       try {
-        const result = await syncService.downloadSessions()
+        const result = await this.syncService.downloadSessions()
         if (result.success && result.data) {
           // 保存到本地
           // 这里需要根据实际业务逻辑处理
@@ -208,7 +250,7 @@ export class IPCHandlers {
     // 清除同步数据
     ipcMain.handle('clear-sync-data', async () => {
       try {
-        syncService.clearSyncData()
+        this.syncService.clearSyncData()
         return { success: true }
       } catch (error: any) {
         return { success: false, error: error.message }
@@ -218,10 +260,40 @@ export class IPCHandlers {
     // 设置认证Token
     ipcMain.handle('set-sync-token', async (event, token: string) => {
       try {
-        syncService.setAuthToken(token)
+        this.syncService.setAuthToken(token)
+        // 同步注入治理工具后端客户端（evidence / report / 自动存证联动共用同一认证）
+        setBackendClientConfig({ token })
         return { success: true }
       } catch (error: any) {
         return { success: false, error: error.message }
+      }
+    })
+
+    // 登录态持久化（主进程文件备份，抗强杀/防 localStorage 丢失）
+    ipcMain.handle('save-auth-state', async (event, state: Record<string, unknown> | null) => {
+      try {
+        const p = path.join(this.userDataPath, 'data', 'auth-state.json')
+        if (!state || typeof state !== 'object') {
+          // 传 null/空 = 清除备份（登出时调用）
+          if (fs.existsSync(p)) fs.unlinkSync(p)
+          return { success: true }
+        }
+        fs.mkdirSync(path.dirname(p), { recursive: true })
+        fs.writeFileSync(p, JSON.stringify(state, null, 2), 'utf-8')
+        return { success: true }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 读取登录态备份（渲染进程启动时恢复缺失的 localStorage 凭据）
+    ipcMain.handle('get-auth-state', async () => {
+      try {
+        const p = path.join(this.userDataPath, 'data', 'auth-state.json')
+        if (!fs.existsSync(p)) return null
+        return JSON.parse(fs.readFileSync(p, 'utf-8'))
+      } catch {
+        return null
       }
     })
   }
@@ -470,7 +542,7 @@ export class IPCHandlers {
     // 本地账号状态（用于判断是否已完成首次设置）
     ipcMain.handle('get-local-auth-status', async () => {
       try {
-        const data = localAuthService.getAccount()
+        const data = this.localAuthService.getAccount()
         console.log('[IPC:get-local-auth-status] 返回', { data })
         return { success: true, data }
       } catch (error: any) {
@@ -484,7 +556,7 @@ export class IPCHandlers {
       const start = Date.now()
       console.log('[IPC:register-local-auth] 收到请求', { username: credentials?.username, passwordLen: credentials?.password?.length || 0 })
       try {
-        const result = localAuthService.register(credentials?.username || '', credentials?.password || '')
+        const result = this.localAuthService.register(credentials?.username || '', credentials?.password || '')
         console.log('[IPC:register-local-auth] 处理完成', { success: result.success, error: result.error, elapsedMs: Date.now() - start })
         if (!result.success) {
           return { success: false, error: result.error }
@@ -501,7 +573,7 @@ export class IPCHandlers {
       const start = Date.now()
       console.log('[IPC:login-local-auth] 收到请求', { username: credentials?.username })
       try {
-        const result = localAuthService.login(credentials?.username || '', credentials?.password || '')
+        const result = this.localAuthService.login(credentials?.username || '', credentials?.password || '')
         console.log('[IPC:login-local-auth] 处理完成', { success: result.success, error: result.error, elapsedMs: Date.now() - start })
         if (!result.success) {
           return { success: false, error: result.error }
@@ -518,7 +590,7 @@ export class IPCHandlers {
       const start = Date.now()
       console.log('[IPC:complete-local-setup] 收到请求')
       try {
-        const result = localAuthService.completeSetup()
+        const result = this.localAuthService.completeSetup()
         console.log('[IPC:complete-local-setup] 处理完成', { success: result.success, error: result.error, elapsedMs: Date.now() - start })
         if (!result.success) {
           return { success: false, error: result.error }
@@ -645,6 +717,157 @@ export class IPCHandlers {
         }, { error: error.message, elapsedMs: Date.now() - start })
         return { success: false, error: error.message }
       }
+    })
+
+    // —— M3 插件源打通：目录扫描 / 市场浏览 / 安装 / 卸载 ——
+    // 插件目录：userData/plugins；市场目录：userData/plugins-market（放入 openclaw.plugin.json 即被识别）
+    const pluginsDir = () => path.join(this.userDataPath, 'plugins')
+    const marketDir = () => path.join(this.userDataPath, 'plugins-market')
+
+    // 浏览市场目录（扫描每个子目录的 openclaw.plugin.json 清单）
+    ipcMain.handle('plugins:list-market', async () => {
+      try {
+        return { success: true, data: { plugins: scanPluginDir(marketDir()), marketDir: marketDir() } }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 扫描插件目录并注册到注册表（"放入插件目录的插件可被识别并启用"）
+    ipcMain.handle('plugins:scan-installed', async () => {
+      try {
+        const registry = this.pluginRegistry
+        if (!registry) return { success: false, error: '插件系统未初始化' }
+        const loaded = registry.loadFromDir(pluginsDir())
+        return { success: true, data: { plugins: scanPluginDir(pluginsDir()), loaded: loaded.map((p) => p.id) } }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 从市场安装插件（复制目录 + 注册到注册表）
+    ipcMain.handle('plugins:install', async (event, pkgId: string) => {
+      try {
+        const registry = this.pluginRegistry
+        if (!registry) return { success: false, error: '插件系统未初始化' }
+        if (!pkgId) return { success: false, error: '缺少插件 id' }
+        const installed = installPluginFromMarket(marketDir(), pkgId, pluginsDir())
+        registry.loadFromDir(pluginsDir())
+        this.governanceLogger?.info('[IPC:plugins:install] 插件已安装', {
+          module: 'IPCHandlers', function: 'registerPluginHandlers',
+        }, { pkgId })
+        return { success: true, data: installed }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    // 卸载插件（删除目录 + 从注册表移除）
+    ipcMain.handle('plugins:uninstall', async (event, pkgId: string) => {
+      try {
+        const registry = this.pluginRegistry
+        if (!registry) return { success: false, error: '插件系统未初始化' }
+        if (!pkgId) return { success: false, error: '缺少插件 id' }
+        registry.uninstall(pkgId)
+        const removed = uninstallPluginFromDir(pluginsDir(), pkgId)
+        this.governanceLogger?.info('[IPC:plugins:uninstall] 插件已卸载', {
+          module: 'IPCHandlers', function: 'registerPluginHandlers',
+        }, { pkgId, removed })
+        return { success: true, data: { id: pkgId, removed } }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    })
+  }
+
+  // P0 统一控制面（M1 MVP）：设置页「模块管理」面板数据源
+  private registerModuleControlHandlers() {
+    // 模块状态聚合（本地 + 云端；云端不可达时降级 unknown，不阻断）
+    ipcMain.handle('modules:get-status', async () => {
+      try {
+        if (!this.moduleControl) return { success: false, error: '模块控制服务未初始化' }
+        const data = await this.moduleControl.getStatus()
+        return { success: true, data }
+      } catch (error: any) {
+        this.governanceLogger?.error('[控制面] 模块状态聚合异常', {
+          module: 'ModuleControlService', function: 'getStatus',
+        }, { error: error?.message })
+        return { success: false, error: error?.message }
+      }
+    })
+
+    // 当前日志级别状态（全局级别 + 按模块覆盖）
+    ipcMain.handle('modules:get-log-level', async () => {
+      try {
+        if (!this.moduleControl) return { success: false, error: '模块控制服务未初始化' }
+        return { success: true, data: this.moduleControl.getLogLevel() }
+      } catch (error: any) {
+        return { success: false, error: error?.message }
+      }
+    })
+
+    // 设置日志级别：moduleId 为空 = 全局；否则 = 按模块覆盖
+    ipcMain.handle('modules:set-log-level', async (event, req: { level?: string; moduleId?: string }) => {
+      try {
+        if (!this.moduleControl) return { success: false, error: '模块控制服务未初始化' }
+        const normalized = String(req?.level || '').toLowerCase()
+        if (!Object.values(LogLevel).includes(normalized as LogLevel)) {
+          return { success: false, error: `无效日志级别: ${req?.level}` }
+        }
+        const state = this.moduleControl.setLogLevel(normalized as LogLevel, req?.moduleId)
+        return { success: true, data: state }
+      } catch (error: any) {
+        return { success: false, error: error?.message }
+      }
+    })
+
+    // DeepSeek 预算闸门实时额度（云端代理；失败返回 error 不抛）
+    ipcMain.handle('modules:get-deepseek-quota', async () => {
+      try {
+        if (!this.moduleControl) return { success: false, error: '模块控制服务未初始化' }
+        return await this.moduleControl.getDeepSeekQuota()
+      } catch (error: any) {
+        return { success: false, error: error?.message }
+      }
+    })
+  }
+
+  /**
+   * P1 账号互通：桌面端→官网跳转
+   * 渲染进程已组装好完整 URL（携带一次性临时 token 保持登录态），主进程仅负责外开。
+   * 仅允许 http/https 协议，避免 file:// 等危险协议被利用。
+   */
+  private registerBrowserHandlers() {
+    ipcMain.handle('open-in-browser', async (event, url: string) => {
+      const raw = String(url || '').trim()
+      if (!/^https?:\/\//i.test(raw)) {
+        return { success: false, error: '仅允许 http/https 链接' }
+      }
+      try {
+        await shell.openExternal(raw)
+        return { success: true }
+      } catch (error: any) {
+        return { success: false, error: error?.message || '打开外部浏览器失败' }
+      }
+    })
+  }
+
+  /** 自动更新 IPC（开发环境/未打包时返回降级态，前端据此隐藏入口） */
+  private registerUpdaterHandlers() {
+    ipcMain.handle('updater:check', async () => {
+      try {
+        updaterService.checkForUpdates()
+        return { success: true }
+      } catch (error: any) {
+        return { success: false, error: error?.message || '检查更新失败' }
+      }
+    })
+    ipcMain.handle('updater:is-downloaded', async () => {
+      return { downloaded: updaterService.isUpdateDownloaded() }
+    })
+    ipcMain.handle('updater:quit-and-install', async () => {
+      updaterService.quitAndInstall()
+      return { success: true }
     })
   }
 }

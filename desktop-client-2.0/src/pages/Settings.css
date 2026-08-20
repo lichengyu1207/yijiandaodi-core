@@ -140,6 +140,49 @@
   gap: 8px;
 }
 
+/* P1 账号互通：官网入口卡片 */
+.official-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.official-entry-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  text-align: left;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.official-entry-card:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--primary-color);
+}
+
+.official-entry-card:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.official-entry-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.official-entry-desc {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
 .btn {
   padding: 8px 16px;
   border-radius: 6px;

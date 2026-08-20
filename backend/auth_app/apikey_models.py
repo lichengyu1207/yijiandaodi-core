@@ -122,7 +122,14 @@ class APIKey(models.Model):
 
 class APIKeyUsageLog(models.Model):
     """API Key使用日志"""
-    
+
+    REGION_CHOICES = [
+        ('cn', '中国大陆'),
+        ('us', '北美'),
+        ('eu', '欧洲'),
+        ('all', '其他/全局'),
+    ]
+
     api_key = models.ForeignKey(
         APIKey,
         on_delete=models.CASCADE,
@@ -135,6 +142,9 @@ class APIKeyUsageLog(models.Model):
     method = models.CharField('方法', max_length=10)
     status_code = models.IntegerField('状态码')
     response_time_ms = models.IntegerField('响应时间（毫秒）')
+    
+    # 区域维度（P1-1：区域维度统计）
+    region = models.CharField('区域', max_length=10, choices=REGION_CHOICES, default='all', db_index=True)
     
     # 时间戳
     timestamp = models.DateTimeField('时间', auto_now_add=True)

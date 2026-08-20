@@ -121,7 +121,7 @@ export class ThrottledLogger {
   private static addToBuffer(
     key: string, 
     message: string, 
-    args?: any[],
+    args: any[] | undefined,
     config: ThrottleConfig
   ): void {
     if (!this.logBuffers.has(key)) {
@@ -156,7 +156,7 @@ export class ThrottledLogger {
   private static outputLog(
     key: string,
     message: string,
-    args?: any[],
+    args: any[] | undefined,
     time: number,
     config: ThrottleConfig
   ): void {

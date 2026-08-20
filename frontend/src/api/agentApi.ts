@@ -243,6 +243,29 @@ export const agentApi = {
     return request.get('/agent/public/sessions/', { params: { limit: limit || 20 } });
   },
 
+  /** 获取单个会话的消息历史 */
+  getSessionMessages: (sessionId: string): Promise<{
+    success: boolean;
+    data: {
+      sessionId: string;
+      title: string;
+      status: string;
+      messageCount: number;
+      messages: Array<{
+        id: string;
+        role: 'user' | 'assistant' | 'system';
+        content: string;
+        modelUsed?: string;
+        latencyMs?: number;
+        createdAt: string;
+      }>;
+      createdAt: string;
+      updatedAt: string;
+    };
+  }> => {
+    return request.get(`/agent/public/sessions/${sessionId}/messages/`);
+  },
+
   getVerificationRecords: (articleId: number): Promise<VerificationRecordItem[]> => {
     return request.get('/agent/verification/', { params: { article_id: articleId } });
   },

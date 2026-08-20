@@ -213,6 +213,11 @@ export class CPUMonitor extends EventEmitter {
     console.log(`[CPU监控] 危险阈值: ${this.config.criticalThreshold}%`);
   }
 
+  /** 当前是否在监控中（P0 统一控制面：desktop.monitor.cpu 状态查询） */
+  isRunning(): boolean {
+    return this.isMonitoring
+  }
+
   /**
    * 停止 CPU 监控
    */

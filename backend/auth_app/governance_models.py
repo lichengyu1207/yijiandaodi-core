@@ -441,30 +441,59 @@ class GovernanceHealth(models.Model):
     def take_snapshot(cls):
         """
         拍摄治理健康度快照
-        
+
+        集成自监控结果，使健康度评分反映性能漂移、权限异常等问题。
+        并发请求下 SQLite 可能出现表锁冲突，这里做有限次重试。
+
+        Returns:
+            GovernanceHealth: 新创建的快照对象
+        """
+        from django.db import OperationalError
+        import time as _time
+
+        max_attempts = 5
+        for attempt in range(max_attempts):
+            try:
+                return cls._take_snapshot_once()
+            except OperationalError as e:
+                message = str(e).lower()
+                if ('locked' in message or 'busy' in message) and attempt < max_attempts - 1:
+                    _time.sleep(0.1 * (attempt + 1))
+                    logger.warning(
+                        f"[治理健康度快照] 数据库锁冲突，第{attempt + 1}次重试 | 错误: {str(e)}"
+                    )
+                    continue
+                raise
+
+    @classmethod
+    def _take_snapshot_once(cls):
+        """
+        拍摄治理健康度快照（单次执行）
+
         Returns:
             GovernanceHealth: 新创建的快照对象
         """
         from .agent_identity_models import AgentIdentity
         from .memory_models import ShortTermMemory
-        
+        from .self_audit_models import PerformanceDriftRecord, AgentPermissionAuditLog, RuleFreshnessCheck
+
         start_time = time.time()
-        
+
         try:
             # 统计Agent数据
             total_agents = AgentIdentity.objects.count()
             active_agents = AgentIdentity.objects.filter(
                 last_active_at__gte=timezone.now() - timedelta(hours=24)
             ).count()
-            
+
             compliant_agents = AgentIdentity.objects.filter(
                 compliance_score__overall_score__gte=60
             ).count()
-            
+
             high_risk_agents = AgentIdentity.objects.filter(
                 compliance_score__overall_score__lt=40
             ).count()
-            
+
             # 统计操作数据（从短期记忆）
             now = timezone.now()
             operations_24h = ShortTermMemory.objects.filter(
@@ -489,18 +518,53 @@ class GovernanceHealth(models.Model):
                 timestamp__gte=now - timedelta(hours=24),
                 decision='block'
             ).count()
-            
+
             # 计算合规率和阻断率
             compliance_rate = (
                 (operations_24h - violations_24h) / operations_24h * 100
                 if operations_24h > 0 else 100.0
             )
-            
+
             blocking_rate = (
                 blocked_24h / operations_24h * 100
                 if operations_24h > 0 else 0.0
             )
-            
+
+            # ==================== 自监控集成 ====================
+            # 获取自监控统计数据
+            performance_drifts_24h = PerformanceDriftRecord.objects.filter(
+                detected_at__gte=now - timedelta(hours=24),
+                is_resolved=False
+            ).count()
+
+            critical_drifts_24h = PerformanceDriftRecord.objects.filter(
+                detected_at__gte=now - timedelta(hours=24),
+                severity='critical',
+                is_resolved=False
+            ).count()
+
+            permission_anomalies_24h = AgentPermissionAuditLog.objects.filter(
+                timestamp__gte=now - timedelta(hours=24),
+                is_anomaly=True
+            ).count()
+
+            stale_rules = RuleFreshnessCheck.objects.filter(
+                checked_at__gte=now - timedelta(hours=24),
+                freshness_status__in=['stale', 'outdated']
+            ).count()
+
+            deprecated_rules = RuleFreshnessCheck.objects.filter(
+                checked_at__gte=now - timedelta(hours=24),
+                freshness_status='deprecated'
+            ).count()
+
+            # 计算自监控评分（基于问题的严重程度扣分）
+            self_audit_penalty = 0
+            self_audit_penalty += critical_drifts_24h * 10  # 严重漂移每个扣10分
+            self_audit_penalty += (performance_drifts_24h - critical_drifts_24h) * 5  # 普通漂移每个扣5分
+            self_audit_penalty += permission_anomalies_24h * 8  # 权限异常每个扣8分
+            self_audit_penalty += deprecated_rules * 3  # 废弃规则每个扣3分
+
             # 计算健康度评分
             health_score = cls._calculate_health_score(
                 compliance_rate=compliance_rate,
@@ -508,7 +572,10 @@ class GovernanceHealth(models.Model):
                 high_risk_ratio=high_risk_agents / total_agents if total_agents > 0 else 0.0,
                 blocking_rate=blocking_rate
             )
-            
+
+            # 应用自监控惩罚（确保评分不低于0）
+            health_score = max(0, health_score - self_audit_penalty)
+
             # 创建快照
             snapshot = cls.objects.create(
                 health_score=health_score,
@@ -525,17 +592,20 @@ class GovernanceHealth(models.Model):
                 blocking_rate=blocking_rate,
                 snapshot_time=now
             )
-            
+
             elapsed_ms = (time.time() - start_time) * 1000
-            
+
             logger.info(
                 f"[治理健康度快照] 快照创建成功 | "
                 f"健康度: {health_score:.1f} | "
                 f"活跃Agent: {active_agents}/{total_agents} | "
                 f"合规率: {compliance_rate:.1f}% | "
+                f"性能漂移: {performance_drifts_24h} | "
+                f"权限异常: {permission_anomalies_24h} | "
+                f"自监控惩罚: -{self_audit_penalty}分 | "
                 f"耗时: {elapsed_ms:.2f}ms"
             )
-            
+
             return snapshot
             
         except Exception as e:

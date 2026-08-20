@@ -33,3 +33,11 @@ export { ProactiveAlerter, proactiveAlerter } from './proactiveAlerter'
 // 导出污点追踪系统
 export { TaintTracker, taintTracker } from './taintTracking'
 export type { TaintMark, TaintPropagation, TaintFlowGraph, TaintType } from './taintTracking'
+
+// A5：监控器家族统一接缝（可替换实现；消费方只依赖 MonitorProvider）
+export { createMonitorProvider } from './monitorProvider'
+export type { MonitorProvider, MonitorProviderRegistry } from './monitorProvider'
+
+// 监控事件 → 存证中心 自动联动
+export { linkHighRiskToEvidence, setEvidenceLinkageEnabled, resetEvidenceLinkageDedup } from './evidenceLinkage'
+export type { EvidenceLinkageInput, EvidenceLinkageSink } from './evidenceLinkage'

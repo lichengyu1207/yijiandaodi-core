@@ -31,6 +31,20 @@ export const PERMISSION_KEYS = [
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
 
+/** 门控监控的短 key（单一事实来源；permissionGating / main.ts cleanup 共用） */
+export const MONITOR_KEYS = ['file', 'clipboard', 'process', 'network', 'apiCall', 'resource'] as const
+export type MonitorKey = (typeof MONITOR_KEYS)[number]
+
+/** 监控短 key → 授权键名 映射（唯一翻译点，替代 wantMap） */
+export const MONITOR_KEY_TO_PERMISSION: Record<MonitorKey, PermissionKey> = {
+  file: 'fileMonitor',
+  clipboard: 'clipboardMonitor',
+  process: 'processMonitor',
+  network: 'networkMonitor',
+  apiCall: 'apiCallMonitor',
+  resource: 'resourceMonitor',
+}
+
 export interface PermissionConfig {
   /** 是否已完成首次授权引导 */
   onboarded: boolean
@@ -99,22 +113,12 @@ export function savePermissionConfig(userData: string, cfg: PermissionConfig): v
 }
 
 /** 按权限生成"应启用的监控"启动计划（供主进程门控 + 单测） */
-export interface MonitorStartPlan {
-  fileMonitor: boolean
-  clipboardMonitor: boolean
-  networkMonitor: boolean
-  apiCallMonitor: boolean
-  processMonitor: boolean
-  resourceMonitor: boolean
-}
+export type MonitorStartPlan = Record<MonitorKey, boolean>
 
 export function buildMonitorStartPlan(granted: Record<PermissionKey, boolean>): MonitorStartPlan {
-  return {
-    fileMonitor: granted.fileMonitor,
-    clipboardMonitor: granted.clipboardMonitor,
-    networkMonitor: granted.networkMonitor,
-    apiCallMonitor: granted.apiCallMonitor,
-    processMonitor: granted.processMonitor,
-    resourceMonitor: granted.resourceMonitor,
+  const plan = {} as MonitorStartPlan
+  for (const key of MONITOR_KEYS) {
+    plan[key] = granted[MONITOR_KEY_TO_PERMISSION[key]]
   }
+  return plan
 }

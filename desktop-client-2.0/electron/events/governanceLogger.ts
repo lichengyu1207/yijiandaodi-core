@@ -286,23 +286,51 @@ export function getGovernanceLogConfigPath(): string {
   return path.join(app.getPath('userData'), 'data', 'governanceLogConfig.json')
 }
 
-/** 读取持久化的治理日志级别（缺失 / 非法 → 默认 DEBUG） */
-export function loadGovernanceLogLevel(): LogLevel {
-  try {
-    const raw = JSON.parse(fs.readFileSync(getGovernanceLogConfigPath(), 'utf-8'))
-    const level = raw?.level
-    if (typeof level === 'string' && Object.values(LogLevel).includes(level as LogLevel)) {
-      return level as LogLevel
-    }
-  } catch {
-    // 文件缺失或解析失败 → 使用默认级别
-  }
-  return DEFAULT_GOVERNANCE_LOG_LEVEL
+/** 持久化到配置文件的完整状态：全局默认级别 + 按模块覆盖（P0 统一控制面） */
+export interface GovernanceLogLevelState {
+  level: LogLevel
+  overrides: Record<string, LogLevel>
 }
 
-/** 持久化治理日志级别 */
-export function saveGovernanceLogLevel(level: LogLevel): void {
+/** 校验日志级别值（非法 → undefined） */
+function asValidLogLevel(value: unknown): LogLevel | undefined {
+  return typeof value === 'string' && Object.values(LogLevel).includes(value as LogLevel)
+    ? (value as LogLevel)
+    : undefined
+}
+
+/** 读取持久化的治理日志级别状态（全局级别 + 按模块覆盖；缺失 / 非法 → 默认 DEBUG / 空覆盖） */
+export function loadGovernanceLogLevelState(): GovernanceLogLevelState {
+  try {
+    const raw = JSON.parse(fs.readFileSync(getGovernanceLogConfigPath(), 'utf-8'))
+    const level = asValidLogLevel(raw?.level) ?? DEFAULT_GOVERNANCE_LOG_LEVEL
+    const overrides: Record<string, LogLevel> = {}
+    if (raw?.overrides && typeof raw.overrides === 'object') {
+      for (const [moduleId, lv] of Object.entries(raw.overrides)) {
+        const valid = asValidLogLevel(lv)
+        if (valid) overrides[moduleId] = valid
+      }
+    }
+    return { level, overrides }
+  } catch {
+    // 文件缺失或解析失败 → 使用默认状态
+  }
+  return { level: DEFAULT_GOVERNANCE_LOG_LEVEL, overrides: {} }
+}
+
+/** 持久化治理日志级别状态（保留既有 overrides，避免覆盖丢失） */
+export function saveGovernanceLogLevelState(state: GovernanceLogLevelState): void {
   const filePath = getGovernanceLogConfigPath()
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
-  fs.writeFileSync(filePath, JSON.stringify({ level }, null, 2))
+  fs.writeFileSync(filePath, JSON.stringify({ level: state.level, overrides: state.overrides ?? {} }, null, 2))
+}
+
+/** 读取持久化的治理日志级别（缺失 / 非法 → 默认 DEBUG） */
+export function loadGovernanceLogLevel(): LogLevel {
+  return loadGovernanceLogLevelState().level
+}
+
+/** 持久化治理日志级别（保留既有 overrides） */
+export function saveGovernanceLogLevel(level: LogLevel): void {
+  saveGovernanceLogLevelState({ level, overrides: loadGovernanceLogLevelState().overrides })
 }

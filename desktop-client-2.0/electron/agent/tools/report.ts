@@ -3,7 +3,7 @@
  *
  * 审计报告：聚合后端 LongTermMemory（存证链）生成 markdown 审计报告。
  *  - 只读 / 并发安全：纯聚合查询，不修改本地状态。
- *  - 数据源：GET /api/agent/memory/?limit=N（存证记录列表）。
+ *  - 数据源：GET /api/v1/memory/long-term/?limit=N（与「存证中心」同一存证链）。
  *
  * 详见 docs/AGENT_FUSION_MODULE_DESIGN.md §0.4 / M4
  */
@@ -11,13 +11,15 @@
 import { GovTool, ToolContext } from '../types'
 import { backendRequest, backendLog, parseBackendData, callBackendWithRetry } from './backendConfig'
 
-/** 后端存证记录结构 */
+/** 后端存证记录结构（LongTermMemorySerializer 字段） */
 interface MemoryEntry {
-  id?: string
-  content?: string
-  metadata?: Record<string, unknown>
-  created_at?: string
-  updated_at?: string
+  id?: number
+  agent_id?: string
+  operation_type?: string
+  operation_content?: string
+  risk_level?: string
+  decision?: string
+  timestamp?: string
 }
 
 /** 构建 report 系列内置治理工具 */
@@ -40,22 +42,23 @@ export function createReportTools(): GovTool[] {
         ctx.onProgress?.({ tool: 'report.generate', detail: `聚合最近 ${limit} 条存证生成审计报告` })
 
         const data = await callBackendWithRetry('report.generate', async () => {
-          const res = await backendRequest('GET', `/api/agent/memory/?limit=${limit}`)
+          const res = await backendRequest('GET', `/api/v1/memory/long-term/?limit=${limit}`)
           return parseBackendData(res, 'report.generate')
         })
 
-        // data 可能是数组（存证列表），也可能是 {…}（空/异常结构）
-        const entries: MemoryEntry[] = Array.isArray(data) ? (data as MemoryEntry[]) : []
+        // data 可能是 DRF 分页 {results: []} 或数组；取存证列表
+        const raw = (data as { results?: MemoryEntry[] })?.results
+        const entries: MemoryEntry[] = Array.isArray(raw) ? raw : Array.isArray(data) ? (data as MemoryEntry[]) : []
         const sinceMs = input.since ? new Date(input.since).getTime() : undefined
 
         const filtered = sinceMs
-          ? entries.filter((e) => e.created_at && new Date(e.created_at).getTime() >= sinceMs)
+          ? entries.filter((e) => e.timestamp && new Date(e.timestamp).getTime() >= sinceMs)
           : entries
 
-        // 动作分布统计（从 metadata.action 提取）
+        // 动作分布统计（从 operation_type 提取）
         const byAction: Record<string, number> = {}
         for (const e of filtered) {
-          const action = String(e.metadata?.action ?? 'unknown')
+          const action = String(e.operation_type ?? 'unknown')
           byAction[action] = (byAction[action] ?? 0) + 1
         }
 
@@ -63,9 +66,9 @@ export function createReportTools(): GovTool[] {
         const rows = filtered
           .slice(-50)
           .map((e, i) => {
-            const created = (e.created_at ?? '').slice(0, 19).replace('T', ' ')
-            const content = (e.content ?? '').slice(0, 60)
-            return `| ${filtered.length - i} | ${created} | ${content} | ${JSON.stringify(e.metadata ?? {}).slice(0, 60)} |`
+            const created = (e.timestamp ?? '').slice(0, 19).replace('T', ' ')
+            const content = (e.operation_content ?? '').slice(0, 60)
+            return `| ${filtered.length - i} | ${created} | ${content} | ${e.risk_level ?? ''} | ${e.decision ?? ''} |`
           })
           .join('\n')
 
@@ -82,7 +85,7 @@ export function createReportTools(): GovTool[] {
           `- 存证记录数: ${filtered.length}（共查询 ${entries.length} 条${sinceMs ? '，含时间过滤' : ''}）\n\n` +
           `## 动作分布\n${distribution || '  （无记录）'}\n\n` +
           `## 存证明细（最近 ${Math.min(filtered.length, 50)} 条）\n` +
-          `| # | 时间 | 内容 | 元数据 |\n|---|---|---|---|\n${rows || '（无记录）'}`
+          `| # | 时间 | 内容 | 风险等级 | 决策 |\n|---|---|---|---|---|\n${rows || '（无记录）'}`
 
         return {
           output: {

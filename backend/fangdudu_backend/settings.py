@@ -6,6 +6,11 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# 运行时数据目录（PyInstaller 打包生产环境用）：
+# 安装目录可能只读（Program Files），DB/密钥/日志/媒体统一落到可写位置。
+# 未设置时回退 BASE_DIR（本地开发保持原行为）。
+DATA_DIR = Path(os.environ.get('YJD_DATA_DIR') or BASE_DIR)
+
 # 加载 .env 环境变量文件（密钥等敏感配置从 .env 读取，禁止硬编码到源码）
 try:
     from dotenv import load_dotenv
@@ -15,12 +20,28 @@ except ImportError:
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
 if not SECRET_KEY:
-    SECRET_KEY = secrets.token_urlsafe(50)
-    warnings.warn(
-        "[SECURITY] SECRET_KEY not set in environment! Using auto-generated key. "
-        "Set SECRET_KEY env var for production.",
-        stacklevel=2,
-    )
+    # 环境变量未设置 → 尝试从本地持久化文件读取（防止重启 token 全部失效）
+    secret_key_path = DATA_DIR / '.secret_key'
+    if secret_key_path.exists():
+        with open(secret_key_path, 'r') as f:
+            SECRET_KEY = f.read().strip()
+    else:
+        # 文件也不存在 → 生成并持久化到磁盘（下次启动读取同一份）
+        SECRET_KEY = secrets.token_urlsafe(50)
+        try:
+            with open(secret_key_path, 'w') as f:
+                f.write(SECRET_KEY)
+        except OSError:
+            warnings.warn(
+                "[SECURITY] Failed to persist .secret_key to disk! "
+                "SECRET_KEY will change on every restart, which invalidates all existing JWT tokens.",
+                stacklevel=2,
+            )
+        warnings.warn(
+            "[SECURITY] SECRET_KEY not set in environment! Using auto-generated and persisted key. "
+            "Set SECRET_KEY env var for production.",
+            stacklevel=2,
+        )
 
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
@@ -42,6 +63,7 @@ INSTALLED_APPS = [
     # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
 
     # Custom apps
@@ -108,7 +130,7 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': DATA_DIR / 'db.sqlite3',
         }
     }
 
@@ -138,7 +160,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = DATA_DIR / 'media'
 
 # 请求体大小限制（防止大文件上传导致内存耗尽/DoS）
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
@@ -167,12 +189,14 @@ REST_FRAMEWORK = {
 # CORS settings (for frontend development)
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://admin.fangdudu.top",
 ]
 if DEBUG:
-    CORS_ALLOWED_ORIGINS.append("http://localhost:3000")
+    CORS_ALLOWED_ORIGINS.extend(["http://localhost:5173", "http://127.0.0.1:5173"])
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_HEADERS = [
@@ -210,7 +234,7 @@ SECURE_BROWSER_XSS_FILTER = True
 # JWT hardening
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
@@ -219,12 +243,42 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# DeepSeek API 多 Key 轮换池（逗号分隔，生产环境建议通过环境变量注入）
-DEEPSEEK_API_KEYS = os.environ.get('DEEPSEEK_API_KEYS',
-    'sk-d8d631cfd0b04280810fd37dec9e6bf3,sk-78d7f40a90d247a399d260ca1d31b48f,sk-6933250bf4de49ec902a89b86f7a0307,sk-b35e36723b6b4a2994cfae367b75e86f'
-)
+# DeepSeek API 多 Key 轮换池（逗号分隔）。
+# 安全：密钥必须通过环境变量注入，严禁硬编码在源码中；未配置时默认空，相关功能自动停用。
+DEEPSEEK_API_KEYS = os.environ.get('DEEPSEEK_API_KEYS', '')
 DEEPSEEK_BASE_URL = os.environ.get('DEEPSEEK_BASE_URL', 'https://api.deepseek.com/v1')
 DEEPSEEK_MODEL = os.environ.get('DEEPSEEK_MODEL', 'deepseek-chat')
+
+# ===== DeepSeek 预算闸门（成本控制）=====
+# 每日全局调用上限（0 = 不限制）。默认 200 次共享平台额度，超出后拦截并提示用户绑定自有 Key。
+DEEPSEEK_DAILY_CALL_LIMIT = int(os.environ.get('DEEPSEEK_DAILY_CALL_LIMIT', '200'))
+# 每用户每日调用上限（0 = 不限制）
+DEEPSEEK_USER_DAILY_CALL_LIMIT = int(os.environ.get('DEEPSEEK_USER_DAILY_CALL_LIMIT', '0'))
+# 连续失败（401/429/5xx/超时）触发熔断的阈值
+DEEPSEEK_CIRCUIT_BREAKER_THRESHOLD = int(os.environ.get('DEEPSEEK_CIRCUIT_BREAKER_THRESHOLD', '5'))
+# 熔断持续时间（秒）
+DEEPSEEK_CIRCUIT_BREAKER_COOLDOWN = int(os.environ.get('DEEPSEEK_CIRCUIT_BREAKER_COOLDOWN', '300'))
+
+# ===== P1-2 计费落库：DeepSeek 单价（元 / 百万 tokens）=====
+DEEPSEEK_INPUT_PRICE = float(os.environ.get('DEEPSEEK_INPUT_PRICE', '0.5'))   # 输入
+DEEPSEEK_OUTPUT_PRICE = float(os.environ.get('DEEPSEEK_OUTPUT_PRICE', '2.0'))  # 输出
+
+# ===== P1-2 消费额度预警阈值（百分比）=====
+# 仅当未配置 /api/settings/quota-alert 时作为默认值；get_quota_status 返回 ratio（0.8/0.95）
+DEEPSEEK_BUDGET_WARN_THRESHOLD = int(os.environ.get('DEEPSEEK_BUDGET_WARN_THRESHOLD', '80'))
+DEEPSEEK_BUDGET_CRITICAL_THRESHOLD = int(os.environ.get('DEEPSEEK_BUDGET_CRITICAL_THRESHOLD', '95'))
+
+# ===== P1-5 推理引擎统一接口（M2）：默认推理提供者（deepseek / grok）=====
+INFERENCE_PROVIDER = os.environ.get('INFERENCE_PROVIDER', 'deepseek')
+
+# ===== P3 M4 推理集群接入：本地优先 + 过载回退路由 =====
+INFERENCE_ROUTER = {
+    'enabled': os.environ.get('INFERENCE_ROUTER_ENABLED', 'false').lower() == 'true',
+    'local_overload_ratio': float(os.environ.get('LOCAL_OVERLOAD_RATIO', '0.9')),
+    'max_local_concurrency': int(os.environ.get('MAX_LOCAL_CONCURRENCY', '8')),
+    'cluster_timeout_sec': float(os.environ.get('CLUSTER_TIMEOUT_SEC', '30')),
+    'fallback_enabled': os.environ.get('INFERENCE_FALLBACK_ENABLED', 'true').lower() == 'true',
+}
 
 # DRF security settings
 REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
@@ -248,14 +302,22 @@ LOGGING = {
         'json': {
             'format': '{"time": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": %(message)s}',
         },
+        'verbose': {
+            'format': '[{levelname}] {asctime} | {name} | {message}',
+            'style': '{',
+        },
+        'performance': {
+            'format': '[性能监控] {asctime} | {message}',
+            'style': '{',
+        },
     },
     'handlers': {
         'security_audit_file': {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'security_audit.log',
-            'maxBytes': 50 * 1024 * 1024,
-            'backupCount': 180,
+            'filename': DATA_DIR / 'logs' / 'security_audit.log',
+            'maxBytes': 50 * 1024 * 1024,  # 50MB
+            'backupCount': 180,  # 180个备份文件（6个月）
             'encoding': 'utf-8',
         },
         'security_console': {
@@ -266,7 +328,7 @@ LOGGING = {
         'tracing_file': {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'tracing.log',
+            'filename': DATA_DIR / 'logs' / 'tracing.log',
             'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
             'encoding': 'utf-8',
@@ -276,6 +338,71 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'json',
+        },
+        # DeepSeek 预算闸门日志处理器（成本控制 / 调用失败排查）
+        'deepseek_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': DATA_DIR / 'logs' / 'deepseek.log',
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
+            'backupCount': 10,
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+        },
+        'deepseek_console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        # 海马体记忆系统日志处理器
+        'hippocampus_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': DATA_DIR / 'logs' / 'hippocampus.log',
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
+            'backupCount': 10,  # 10个备份文件（总共约100MB）
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+        },
+        'hippocampus_console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        # 性能监控日志处理器（单独文件）
+        'performance_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': DATA_DIR / 'logs' / 'performance.log',
+            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'backupCount': 20,  # 20个备份文件（总共约100MB）
+            'encoding': 'utf-8',
+            'formatter': 'performance',
+        },
+        # 自监控系统日志处理器
+        'self_audit_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': DATA_DIR / 'logs' / 'self_audit.log',
+            'maxBytes': 20 * 1024 * 1024,  # 20MB（自监控日志较多）
+            'backupCount': 30,  # 30个备份文件（总共约600MB，约一个月）
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+        },
+        'self_audit_console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        # Celery 任务日志处理器
+        'celery_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': DATA_DIR / 'logs' / 'celery.log',
+            'maxBytes': 20 * 1024 * 1024,  # 20MB
+            'backupCount': 10,  # 10个备份文件（总共约200MB）
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
         },
     },
     'loggers': {
@@ -294,28 +421,86 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        # DeepSeek 预算闸门日志（调用失败原因 / 熔断 / 配额排查）
+        'content_app.deepseek_service': {
+            'handlers': ['deepseek_file', 'deepseek_console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',  # 开发环境全量，生产只留 INFO/WARNING
+            'propagate': False,
+        },
+        # Agent身份查询日志（生产环境可调整级别）
+        'auth_app.agent_identity_models': {
+            'handlers': ['security_console'],
+            'level': 'DEBUG' if DEBUG else 'WARNING',
+            'propagate': False,
+        },
+        # 海马体记忆系统日志（ChainIndexCounter、LongTermMemory）
+        'auth_app.memory_models': {
+            'handlers': ['hippocampus_file', 'hippocampus_console', 'performance_file'],
+            'level': 'DEBUG' if DEBUG else 'INFO',  # 生产环境使用INFO
+            'propagate': False,
+        },
+        # 海马体记忆视图日志（策略缓存）
+        'auth_app.memory_views': {
+            'handlers': ['hippocampus_file', 'hippocampus_console', 'performance_file'],
+            'level': 'DEBUG' if DEBUG else 'INFO',  # 生产环境使用INFO
+            'propagate': False,
+        },
+        # 自监控系统日志（性能漂移、权限审计、规则时效性）
+        'auth_app.self_audit_service': {
+            'handlers': ['self_audit_file', 'self_audit_console', 'performance_file'],
+            'level': 'DEBUG' if DEBUG else 'INFO',  # 生产环境使用INFO
+            'propagate': False,
+        },
+        # 自监控数据模型日志
+        'auth_app.self_audit_models': {
+            'handlers': ['self_audit_file', 'self_audit_console'],
+            'level': 'DEBUG' if DEBUG else 'WARNING',  # 生产环境使用WARNING
+            'propagate': False,
+        },
+        # Celery 任务日志（包括定时任务）
+        'celery': {
+            'handlers': ['celery_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'celery.app': {
+            'handlers': ['celery_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'celery.worker': {
+            'handlers': ['celery_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'celery.beat': {
+            'handlers': ['celery_file', 'self_audit_file'],  # Beat任务同时记录到自监控日志
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
 
 import os
-os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+os.makedirs(DATA_DIR / 'logs', exist_ok=True)
 
 # Django Channels 配置
+# 使用 Redis Channel Layer（生产环境）
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
     },
 }
 
 ASGI_APPLICATION = 'fangdudu_backend.asgi.application'
 
-# 生产环境使用 Redis Channel Layer (取消注释并注释掉上面的 InMemory 配置)
+# 开发环境使用 InMemory Channel Layer (取消注释并注释掉上面的 Redis 配置)
 # CHANNEL_LAYERS = {
 #     'default': {
-#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
-#         'CONFIG': {
-#             "hosts": [('127.0.0.1', 6379)],
-#         },
+#         'BACKEND': 'channels.layers.InMemoryChannelLayer',
 #     },
 # }
 
@@ -372,11 +557,32 @@ CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
 CELERY_TASK_ROUTES = {
     'auth_app.tasks.send_email_notification': {'queue': 'notifications'},
     'auth_app.tasks.send_websocket_notification': {'queue': 'notifications'},
-    'auth_app.tasks.cleanup_*': {'queue': 'maintenance'},
-    'auth_app.tasks.generate_daily_stats': {'queue': 'analytics'},
-    'auth_app.tasks.check_agent_health': {'queue': 'security'},
-    'auth_app.tasks.aggregate_alerts': {'queue': 'security'},
+    'auth_app.tasks.cleanup_old_activities_task': {'queue': 'maintenance'},
+    'auth_app.tasks.archive_old_trajectories_async': {'queue': 'maintenance'},
+    'auth_app.tasks.check_disk_space_task': {'queue': 'monitoring'},
+    'auth_app.tasks.get_table_sizes_task': {'queue': 'monitoring'},
+    'auth_app.tasks.build_trajectory_async': {'queue': 'trajectory'},
 }
+
+# Celery Beat配置
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# ===== 数据保留与边界策略 =====
+# 合规依据：《网络安全法》第21条（网络日志留存≥6个月）、《个人信息保护法》第19条（保存期限为实现目的之最短时间）、
+# 《数据安全法》第21条（数据分类分级）。保留期均可通过环境变量覆盖。
+DATA_RETENTION_DAYS = {
+    # 安全/操作日志类（含登录 IP、设备等个人信息）：网安法最低 6 个月
+    'security_logs': int(os.environ.get('DATA_RETENTION_SECURITY_LOGS', 180)),
+    # 计费/消费记录（费用核算，覆盖对账周期 1 年）
+    'billing_logs': int(os.environ.get('DATA_RETENTION_BILLING', 365)),
+    # 统计聚合快照（聚合数据非原始个人信息，支撑 2 年趋势对比）
+    'stats_snapshots': int(os.environ.get('DATA_RETENTION_STATS', 730)),
+}
+
+# 统计接口最大可查时间跨度（天），防止超大范围查询拖垮数据库
+STATS_MAX_RANGE_DAYS = int(os.environ.get('STATS_MAX_RANGE_DAYS', 730))
+# 统计接口单次返回桶数上限（趋势/热力图），超出自动截断
+STATS_MAX_BUCKETS = int(os.environ.get('STATS_MAX_BUCKETS', 2000))
 
 # ===== Django 缓存配置 =====
 # 优先使用Redis，不可用时回退到本地内存缓存

@@ -1,2 +1,0 @@
-Auth OK: admin | role=viewer | active=True
-Role updated to: superadmin

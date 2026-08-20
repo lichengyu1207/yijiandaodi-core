@@ -12,7 +12,9 @@ export default defineConfig({
       {
         entry: 'electron/main.ts',
         onstart(options) {
-          options.startup()
+          // 沙箱限制默认 AppData 创建锁文件，通过 --user-data-dir 绕过。
+          // 注意 startup(argv) 会整体覆盖默认 ['--no-sandbox']，必须显式带上 app 路径 '.'。
+          options.startup(['.', '--no-sandbox', '--user-data-dir=' + path.resolve(__dirname, '.electron-dev-userdata')])
         },
         vite: {
           build: {
@@ -45,23 +47,6 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         xiaojian: resolve(__dirname, 'xiaojian.html'),
       },
-    },
-  },
-  // Vitest 配置
-  test: {
-    globals: true,
-    environment: 'node',
-    include: ['electron/**/*.test.ts'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'dist/',
-        'dist-electron/',
-        '**/*.test.ts',
-        '**/*.spec.ts',
-      ],
     },
   },
 })

@@ -1,8 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { authService } from '../services/authService'
+import { apiKeyService, UserKeyStatus, type QuotaAlertConfig } from '../services/apiKeyService'
 import { StrategicMemoryApi, StrategicMemory } from '../services/memoryApi'
+import { themeService } from '../services/themeService'
+import { pushThemeToProfile } from '../services/profileService'
+import {
+  THEME_NAMES,
+  THEME_LABELS,
+  COLOR_PRESETS,
+  GRADIENT_PRESETS,
+  TEXTURE_PRESETS,
+  type ThemeName,
+  type CustomBg,
+  type CustomBgType,
+} from '../styles/themes'
 import PermissionList from '../components/PermissionList'
-import type { PluginInfo, PluginHookHealth, PluginStatsData } from '../types/electron'
+import { openInBrowser, OFFICIAL_SITE_ENTRIES } from '../services/openInBrowser'
+import type { PluginInfo, PluginHookHealth, PluginStatsData, PetStatsData, MarketPlugin } from '../types/electron'
 import './Settings.css'
 
 interface ServiceStatus {
@@ -47,6 +61,42 @@ const HOOK_LABELS: Record<string, string> = {
   onRunEnd: 'run 结束',
 }
 
+// 桌宠物种中文映射
+const PET_SPECIES_LABELS: Record<string, string> = {
+  guardian: '守护者',
+  fox: '灵狐',
+  owl: '夜枭',
+  dragon: '盘龙',
+  cat: '灵猫',
+}
+
+// 桌宠稀有度中文映射
+const PET_RARITY_LABELS: Record<string, string> = {
+  common: '普通',
+  uncommon: '精良',
+  rare: '稀有',
+  epic: '史诗',
+  legendary: '传说',
+}
+
+// 桌宠属性中文映射（附说明，语义绑定治理能力）
+const PET_STAT_LABELS: Record<string, string> = {
+  VIGILANCE: '警觉',
+  WISDOM: '智慧',
+  PATIENCE: '耐心',
+  EXECUTION: '执行',
+  CHAOS: '混沌',
+}
+
+// 桌宠属性配色
+const PET_STAT_COLORS: Record<string, string> = {
+  VIGILANCE: '#58D68D',
+  WISDOM: '#5DADE2',
+  PATIENCE: '#F7DC6F',
+  EXECUTION: '#AF7AC5',
+  CHAOS: '#F1948A',
+}
+
 export default function Settings() {
   const [serviceStatus, setServiceStatus] = useState<ServiceStatus>({
     running: false,
@@ -64,6 +114,10 @@ export default function Settings() {
   })
 
   const [currentUser, setCurrentUser] = useState<UserInfo | null>(null)
+
+  // 检查更新状态：idle | checking | available | up-to-date | downloaded | error
+  const [updateState, setUpdateState] = useState<'idle' | 'checking' | 'available' | 'up-to-date' | 'downloaded' | 'error'>('idle')
+  const [updateMsg, setUpdateMsg] = useState('')
 
   const [apiConfig, setApiConfig] = useState({
     endpoint: 'http://localhost:9092',
@@ -117,6 +171,36 @@ export default function Settings() {
   const [pluginMsg, setPluginMsg] = useState<string | null>(null)
   const [pluginStats, setPluginStats] = useState<PluginStatsData | null>(null)
 
+  // 插件市场（M3 插件源打通：浏览 / 安装 / 卸载 / 目录扫描）
+  const [marketPlugins, setMarketPlugins] = useState<MarketPlugin[]>([])
+  const [marketDir, setMarketDir] = useState('')
+  const [marketLoading, setMarketLoading] = useState(false)
+  const [marketMsg, setMarketMsg] = useState<string | null>(null)
+  const [marketAction, setMarketAction] = useState<string | null>(null)
+
+  // 治理桌宠（角色 + 属性面板）
+  const [petStats, setPetStats] = useState<PetStatsData | null>(null)
+  const [petStatsLoading, setPetStatsLoading] = useState(false)
+
+  // 用户自有 API 密钥（P1 消费控制：自带 Key 免平台配额）
+  const [userKeyStatus, setUserKeyStatus] = useState<UserKeyStatus | null>(null)
+  const [newUserKey, setNewUserKey] = useState('')
+  const [userKeySaving, setUserKeySaving] = useState(false)
+  const [userKeyMsg, setUserKeyMsg] = useState<string | null>(null)
+
+  // 消费额度预警配置（P1 消费控制：开关 / 阈值 / 通知方式）
+  const [quotaAlert, setQuotaAlert] = useState<QuotaAlertConfig | null>(null)
+  const [quotaAlertSaving, setQuotaAlertSaving] = useState(false)
+  const [quotaAlertMsg, setQuotaAlertMsg] = useState<string | null>(null)
+  // P1 账号互通：官网跳转
+  const [webJumping, setWebJumping] = useState<string | null>(null)
+  const [webJumpMsg, setWebJumpMsg] = useState<string | null>(null)
+
+  // 外观（P1 界面定制：主题切换 + 自定义背景）
+  const [theme, setTheme] = useState<ThemeName>(() => themeService.getTheme())
+  const [customBg, setCustomBg] = useState<CustomBg>(() => themeService.getCustomBg())
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     checkServiceStatus()
     fetchNodeMetrics()
@@ -127,6 +211,10 @@ export default function Settings() {
     loadPermissionConfig()
     loadPlugins()
     loadPluginStats()
+    loadMarketPlugins()
+    loadPetStats()
+    loadUserKeyStatus()
+    loadQuotaAlertConfig()
     const user = authService.getCurrentUser()
     if (user) {
       setCurrentUser(user)
@@ -138,6 +226,53 @@ export default function Settings() {
       clearInterval(metricsInterval)
     }
   }, [])
+
+  // 订阅自动更新事件（主进程推送给渲染进程）
+  useEffect(() => {
+    const electron = window.electronAPI
+    if (!electron?.onUpdateEvent) return
+    const off = electron.onUpdateEvent((type: string, payload?: any) => {
+      if (type === 'updater:checking') {
+        setUpdateState('checking')
+        setUpdateMsg('正在检查更新...')
+      } else if (type === 'updater:available') {
+        setUpdateState('available')
+        setUpdateMsg(payload?.version ? `发现新版本 v${payload.version}，正在后台下载...` : '发现新版本，正在后台下载...')
+      } else if (type === 'updater:not-available') {
+        setUpdateState('up-to-date')
+        setUpdateMsg('已是最新版本')
+      } else if (type === 'updater:downloaded') {
+        setUpdateState('downloaded')
+        setUpdateMsg(payload?.version ? `新版本 v${payload.version} 已下载完成，可在官方入口处重启安装` : '新版本已下载完成')
+      } else if (type === 'updater:error') {
+        setUpdateState('error')
+        setUpdateMsg(payload?.message || '检查更新失败')
+      }
+    })
+    return off
+  }, [])
+
+  // 手动触发检查更新
+  const handleCheckUpdate = async () => {
+    const electron = window.electronAPI
+    if (!electron?.checkForUpdates) {
+      setUpdateState('error')
+      setUpdateMsg('当前为开发环境，自动更新不可用')
+      return
+    }
+    setUpdateState('checking')
+    setUpdateMsg('正在检查更新...')
+    try {
+      const res = await electron.checkForUpdates()
+      if (res && res.success === false) {
+        setUpdateState('error')
+        setUpdateMsg(res.error || '检查更新失败')
+      }
+    } catch (e: any) {
+      setUpdateState('error')
+      setUpdateMsg(e?.message || '检查更新失败')
+    }
+  }
   
   const checkServiceStatus = async () => {
     try {
@@ -478,6 +613,202 @@ export default function Settings() {
     }
   }
 
+  // 插件市场（M3）：浏览市场目录插件
+  const loadMarketPlugins = async () => {
+    setMarketLoading(true)
+    try {
+      const api = (window as any).electronAPI
+      if (!api?.listMarketPlugins) return
+      const res = await api.listMarketPlugins()
+      if (res?.success) {
+        setMarketPlugins(res.data.plugins || [])
+        setMarketDir(res.data.marketDir || '')
+      }
+    } catch (error: any) {
+      console.error('[Settings] 加载插件市场失败:', error)
+    } finally {
+      setMarketLoading(false)
+    }
+  }
+
+  // 插件市场（M3）：扫描插件目录并注册（"放入插件目录的插件可被识别并启用"）
+  const handleScanInstalled = async () => {
+    setMarketMsg(null)
+    setMarketAction('scan')
+    try {
+      const api = (window as any).electronAPI
+      if (!api?.scanInstalledPlugins) {
+        setMarketMsg('当前环境不支持该操作')
+        return
+      }
+      const res = await api.scanInstalledPlugins()
+      if (res?.success) {
+        setMarketMsg(`已扫描插件目录，识别 ${res.data.plugins.length} 个插件，新加载 ${(res.data.loaded || []).length} 个`)
+      } else {
+        setMarketMsg(res?.error || '扫描失败')
+      }
+      await Promise.all([loadPlugins(), loadMarketPlugins()])
+    } catch (error: any) {
+      setMarketMsg(error?.message || '扫描失败')
+    } finally {
+      setMarketAction(null)
+    }
+  }
+
+  // 插件市场（M3）：从市场安装插件
+  const handleInstallMarket = async (pkgId: string) => {
+    setMarketMsg(null)
+    setMarketAction(pkgId)
+    try {
+      const api = (window as any).electronAPI
+      if (!api?.installMarketPlugin) {
+        setMarketMsg('当前环境不支持该操作')
+        return
+      }
+      const res = await api.installMarketPlugin(pkgId)
+      if (res?.success) {
+        setMarketMsg(`插件「${res.data.name || pkgId}」安装成功`)
+      } else {
+        setMarketMsg(res?.error || '安装失败')
+      }
+      await Promise.all([loadPlugins(), loadMarketPlugins()])
+    } catch (error: any) {
+      setMarketMsg(error?.message || '安装失败')
+    } finally {
+      setMarketAction(null)
+    }
+  }
+
+  // 插件市场（M3）：卸载插件（目录删除 + 从注册表移除）
+  const handleUninstallMarket = async (pkgId: string) => {
+    setMarketMsg(null)
+    setMarketAction(pkgId)
+    try {
+      const api = (window as any).electronAPI
+      if (!api?.uninstallPlugin) {
+        setMarketMsg('当前环境不支持该操作')
+        return
+      }
+      const res = await api.uninstallPlugin(pkgId)
+      if (res?.success) {
+        setMarketMsg(`插件「${pkgId}」已卸载`)
+      } else {
+        setMarketMsg(res?.error || '卸载失败')
+      }
+      await Promise.all([loadPlugins(), loadMarketPlugins()])
+    } catch (error: any) {
+      setMarketMsg(error?.message || '卸载失败')
+    } finally {
+      setMarketAction(null)
+    }
+  }
+
+  // 治理桌宠：加载角色 + 治理画像（get-pet-stats 通道）
+  const loadPetStats = async () => {
+    setPetStatsLoading(true)
+    try {
+      const api = (window as any).electronAPI
+      if (!api?.getPetStats) return
+      const res = await api.getPetStats()
+      if (res?.success && res.data) setPetStats(res.data)
+    } catch (error: any) {
+      console.error('[Settings] 加载治理桌宠角色失败:', error)
+    } finally {
+      setPetStatsLoading(false)
+    }
+  }
+
+  // 用户自有 API Key：加载状态（掩码 + 余额 + 今日用量）
+  const loadUserKeyStatus = async () => {
+    try {
+      const st = await apiKeyService.getStatus()
+      setUserKeyStatus(st)
+    } catch (error: any) {
+      console.error('[Settings] 加载 API Key 状态失败:', error)
+      setUserKeyStatus(null)
+    }
+  }
+
+  // 用户自有 API Key：保存（提交后自动验证，验证通过才存储）
+  const handleSaveUserKey = async () => {
+    const key = newUserKey.trim()
+    if (!key) {
+      setUserKeyMsg('请输入 API Key')
+      return
+    }
+    setUserKeySaving(true)
+    setUserKeyMsg(null)
+    try {
+      await apiKeyService.setKey(key)
+      setUserKeyMsg('API Key 已保存并通过验证，后续调用优先使用自有 Key，不消耗平台共享额度')
+      setNewUserKey('')
+      await loadUserKeyStatus()
+    } catch (error: any) {
+      setUserKeyMsg(error?.message || '保存 API Key 失败')
+    } finally {
+      setUserKeySaving(false)
+    }
+  }
+
+  // 用户自有 API Key：删除（回退到平台共享额度）
+  const handleDeleteUserKey = async () => {
+    setUserKeySaving(true)
+    setUserKeyMsg(null)
+    try {
+      await apiKeyService.deleteKey()
+      setUserKeyMsg('已删除自有 Key，将回退到平台共享额度')
+      await loadUserKeyStatus()
+    } catch (error: any) {
+      setUserKeyMsg(error?.message || '删除 API Key 失败')
+    } finally {
+      setUserKeySaving(false)
+    }
+  }
+
+  // 消费额度预警：加载配置（开关 / 阈值 / 通知方式）
+  const loadQuotaAlertConfig = async () => {
+    try {
+      const cfg = await apiKeyService.getQuotaAlertConfig()
+      setQuotaAlert(cfg)
+    } catch (error: any) {
+      console.error('[Settings] 加载消费预警配置失败:', error)
+      setQuotaAlert(null)
+    }
+  }
+
+  // 消费额度预警：切换通知方式（多选）
+  const toggleQuotaAlertNotify = (item: string) => {
+    setQuotaAlert((prev) => {
+      if (!prev) return prev
+      const has = prev.notify.includes(item)
+      return {
+        ...prev,
+        notify: has ? prev.notify.filter((n) => n !== item) : [...prev.notify, item],
+      }
+    })
+  }
+
+  // 消费额度预警：保存配置
+  const handleSaveQuotaAlert = async () => {
+    if (!quotaAlert) return
+    setQuotaAlertSaving(true)
+    setQuotaAlertMsg(null)
+    try {
+      const saved = await apiKeyService.saveQuotaAlertConfig({
+        enabled: quotaAlert.enabled,
+        warn_threshold: Number(quotaAlert.warn_threshold),
+        critical_threshold: Number(quotaAlert.critical_threshold),
+        notify: quotaAlert.notify,
+      })
+      setQuotaAlert(saved)
+      setQuotaAlertMsg('消费预警配置已保存，顶部额度条与通知推送将按新配置生效')
+    } catch (error: any) {
+      setQuotaAlertMsg(error?.message || '保存消费预警配置失败')
+    } finally {
+      setQuotaAlertSaving(false)
+    }
+  }
+
   // 性能概览：自洽性校验状态徽标（statsCheck 线上自动校验结果；check=null 时不显示）
   const renderStatsCheckBadge = () => {
     const check = pluginStats?.check
@@ -524,6 +855,38 @@ export default function Settings() {
     }
   }
 
+  // 外观：切换预设主题（立即生效并持久化）
+  const handleThemeChange = (t: ThemeName) => {
+    setTheme(t)
+    themeService.setTheme(t)
+    // P1-4 个性化数据跨端持久化：主题同步到后端
+    pushThemeToProfile().catch(() => {
+      // 同步失败静默，本地已生效
+    })
+  }
+
+  // 外观：设置自定义背景（立即生效并持久化）
+  const handleSetBg = (bg: CustomBg) => {
+    setCustomBg(bg)
+    themeService.setCustomBg(bg)
+    // P1-4 个性化数据跨端持久化：背景同步到后端
+    pushThemeToProfile().catch(() => {
+      // 同步失败静默，本地已生效
+    })
+  }
+
+  // 外观：上传背景图片（转 dataURL 持久化到 localStorage）
+  const handleBgImage = (file: File | undefined) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        handleSetBg({ type: 'image', value: reader.result })
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
   return (
     <div className="settings-page">
       {/* 用户信息 */}
@@ -559,6 +922,413 @@ export default function Settings() {
           </div>
         </section>
       )}
+
+      {/* 外观（P1 界面定制：主题切换 + 自定义背景） */}
+      <section className="settings-section">
+        <h2 className="section-title">外观</h2>
+
+        {/* 主题切换 */}
+        <div style={{ marginBottom: 20 }}>
+          <label className="form-label">主题</label>
+          <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+            {THEME_NAMES.map((t) => (
+              <button
+                key={t}
+                className="btn"
+                onClick={() => handleThemeChange(t)}
+                style={
+                  t === theme
+                    ? { background: 'var(--brand-primary)', color: '#fff', borderColor: 'var(--brand-primary)' }
+                    : undefined
+                }
+              >
+                {THEME_LABELS[t]}
+              </button>
+            ))}
+          </div>
+          <div className="form-hint" style={{ marginTop: 6 }}>主题即时生效并自动保存，下次启动自动恢复。</div>
+        </div>
+
+        {/* 自定义背景 */}
+        <div>
+          <label className="form-label">自定义背景</label>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+            {(['none', 'image', 'color', 'gradient', 'texture'] as CustomBgType[]).map((ty) => (
+              <button
+                key={ty}
+                className="btn btn-secondary"
+                onClick={() => {
+                  if (ty === 'image') {
+                    fileInputRef.current?.click()
+                  } else if (ty === 'none') {
+                    handleSetBg({ type: 'none', value: '' })
+                  } else if (ty === 'color') {
+                    handleSetBg({ type: 'color', value: COLOR_PRESETS[0] })
+                  } else if (ty === 'gradient') {
+                    handleSetBg({ type: 'gradient', value: GRADIENT_PRESETS[0].css })
+                  } else {
+                    handleSetBg({ type: 'texture', value: TEXTURE_PRESETS[0].key })
+                  }
+                }}
+                style={
+                  customBg.type === ty
+                    ? { background: 'var(--brand-primary)', color: '#fff', borderColor: 'var(--brand-primary)' }
+                    : undefined
+                }
+              >
+                {ty === 'none' ? '无' : ty === 'image' ? '图片' : ty === 'color' ? '纯色' : ty === 'gradient' ? '渐变' : '纹理'}
+              </button>
+            ))}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => handleBgImage(e.target.files?.[0])}
+            />
+          </div>
+
+          {/* 纯色预设 */}
+          {customBg.type === 'color' && (
+            <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+              {COLOR_PRESETS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => handleSetBg({ type: 'color', value: c })}
+                  title={c}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    background: c,
+                    border:
+                      customBg.value === c
+                        ? '2px solid var(--brand-primary)'
+                        : '1px solid var(--border-primary)',
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* 渐变预设 */}
+          {customBg.type === 'gradient' && (
+            <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+              {GRADIENT_PRESETS.map((g) => (
+                <button
+                  key={g.name}
+                  onClick={() => handleSetBg({ type: 'gradient', value: g.css })}
+                  title={g.name}
+                  style={{
+                    width: 64,
+                    height: 40,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    background: g.css,
+                    border:
+                      customBg.value === g.css
+                        ? '2px solid var(--brand-primary)'
+                        : '1px solid var(--border-primary)',
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* 纹理预设 */}
+          {customBg.type === 'texture' && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              {TEXTURE_PRESETS.map((t) => (
+                <button
+                  key={t.key}
+                  className="btn btn-secondary"
+                  onClick={() => handleSetBg({ type: 'texture', value: t.key })}
+                  style={
+                    customBg.value === t.key
+                      ? { background: 'var(--brand-primary)', color: '#fff', borderColor: 'var(--brand-primary)' }
+                      : undefined
+                  }
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 图片预览 */}
+          {customBg.type === 'image' && customBg.value && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>当前背景</div>
+              <img
+                src={customBg.value}
+                alt="背景预览"
+                style={{
+                  width: 240,
+                  height: 120,
+                  objectFit: 'cover',
+                  borderRadius: 8,
+                  border: '1px solid var(--border-primary)',
+                }}
+              />
+            </div>
+          )}
+
+          <div className="form-hint" style={{ marginTop: 8 }}>
+            背景显示在内容区底层，侧边栏与卡片保持原配色；图片仅保存在本机 localStorage。
+          </div>
+        </div>
+      </section>
+
+      {/* API 密钥（P1 消费控制：自带 Key 免平台配额） */}
+      <section className="settings-section">
+        <div className="section-header">
+          <h2 className="section-title">API 密钥</h2>
+          <span className={`status-badge ${userKeyStatus?.hasKey ? 'running' : 'stopped'}`}>
+            {userKeyStatus?.hasKey ? '已绑定自有 Key' : '使用平台共享额度'}
+          </span>
+        </div>
+
+        <p className="info-text" style={{ marginBottom: 12 }}>
+          填写你自己的 DeepSeek API Key 后，分析调用将优先使用自有 Key，不消耗平台共享额度。
+          密钥经加密存储，任何接口均不回显明文。
+        </p>
+
+        {userKeyStatus?.hasKey && (
+          <div className="form-group">
+            <label className="form-label">当前已绑定的 Key</label>
+            <div style={{
+              padding: '10px 12px',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: 6,
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}>
+              <strong style={{ fontFamily: 'monospace' }}>{userKeyStatus.masked}</strong>
+              {userKeyStatus.balance && (
+                <span className="tag tag-success">余额 {userKeyStatus.balance}</span>
+              )}
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                今日调用 {userKeyStatus.todayUsed} 次
+              </span>
+              {userKeyStatus.lastVerifiedOk ? (
+                <span className="tag tag-success">已验证</span>
+              ) : (
+                <span className="tag tag-warning">待验证</span>
+              )}
+              {userKeyStatus.name && (
+                <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{userKeyStatus.name}</span>
+              )}
+            </div>
+            <div className="form-hint">
+              {userKeyStatus.lastVerifiedAt
+                ? `最近验证：${new Date(userKeyStatus.lastVerifiedAt).toLocaleString()}`
+                : '保存时已自动验证密钥有效性'}
+            </div>
+          </div>
+        )}
+
+        <div className="form-group">
+          <label className="form-label">填入 / 更换 API Key</label>
+          <input
+            type="password"
+            className="form-input"
+            value={newUserKey}
+            onChange={(e) => setNewUserKey(e.target.value)}
+            placeholder="sk-xxxxxxxx"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <div className="form-hint">
+            保存前会调用 DeepSeek 官方余额接口验证；验证失败（余额为零 / 过期 / 密钥错误）将拒绝保存。
+          </div>
+        </div>
+
+        {userKeyMsg && (
+          <div
+            className={userKeyMsg.includes('失败') || userKeyMsg.includes('无效') || userKeyMsg.includes('请输入') ? 'notice-error' : 'notice-info'}
+            style={{ padding: 10, borderRadius: 6, marginBottom: 12, fontSize: 13 }}
+          >
+            {userKeyMsg}
+          </div>
+        )}
+
+        <div className="button-group">
+          <button
+            className="btn btn-primary"
+            onClick={handleSaveUserKey}
+            disabled={userKeySaving || !newUserKey.trim()}
+          >
+            {userKeySaving ? '验证并保存中...' : '验证并保存'}
+          </button>
+          {userKeyStatus?.hasKey && (
+            <button
+              className="btn btn-secondary"
+              onClick={handleDeleteUserKey}
+              disabled={userKeySaving}
+            >
+              删除自有 Key
+            </button>
+          )}
+        </div>
+      </section>
+
+      {/* 消费预警（P1 消费控制：开关 / 阈值 / 通知方式） */}
+      <section className="settings-section">
+        <div className="section-header">
+          <h2 className="section-title">消费预警</h2>
+          <span className={`status-badge ${quotaAlert?.enabled ? 'running' : 'stopped'}`}>
+            {quotaAlert?.enabled ? '预警已开启' : '预警已关闭'}
+          </span>
+        </div>
+
+        <p className="info-text" style={{ marginBottom: 12 }}>
+          平台共享额度使用率达到阈值时，顶部额度条变色并在升级瞬间推送预警（桌面弹窗 / 声音 / 邮件）。
+          关闭开关后不再推送。
+        </p>
+
+        {quotaAlert && (
+          <>
+            <div className="form-group">
+              <label className="form-label">预警开关</label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={quotaAlert.enabled}
+                  onChange={(e) => setQuotaAlert({ ...quotaAlert, enabled: e.target.checked })}
+                />
+                <span style={{ fontSize: 13 }}>启用消费额度预警推送</span>
+              </label>
+            </div>
+
+            <div className="form-group" style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <label className="form-label">预警阈值（%）</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  min={1}
+                  max={99}
+                  value={quotaAlert.warn_threshold}
+                  onChange={(e) =>
+                    setQuotaAlert({ ...quotaAlert, warn_threshold: Number(e.target.value) })
+                  }
+                />
+                <div className="form-hint">达到该使用率时额度条变黄并推送预警。</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <label className="form-label">临界阈值（%）</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  min={1}
+                  max={100}
+                  value={quotaAlert.critical_threshold}
+                  onChange={(e) =>
+                    setQuotaAlert({ ...quotaAlert, critical_threshold: Number(e.target.value) })
+                  }
+                />
+                <div className="form-hint">达到该使用率时额度条变红并推送临界告警。</div>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">通知方式</label>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                {[
+                  { key: 'desktop', label: '桌面弹窗' },
+                  { key: 'sound', label: '声音提示' },
+                  { key: 'email', label: '邮件' },
+                ].map((item) => (
+                  <label
+                    key={item.key}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={quotaAlert.notify.includes(item.key)}
+                      onChange={() => toggleQuotaAlertNotify(item.key)}
+                    />
+                    <span style={{ fontSize: 13 }}>{item.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {quotaAlertMsg && (
+              <div
+                className={quotaAlertMsg.includes('失败') ? 'notice-error' : 'notice-info'}
+                style={{ padding: 10, borderRadius: 6, marginBottom: 12, fontSize: 13 }}
+              >
+                {quotaAlertMsg}
+              </div>
+            )}
+
+            <div className="button-group">
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveQuotaAlert}
+                disabled={quotaAlertSaving}
+              >
+                {quotaAlertSaving ? '保存中...' : '保存预警配置'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {!quotaAlert && (
+          <div className="notice-warn" style={{ padding: 10, borderRadius: 6, fontSize: 13 }}>
+            无法加载消费预警配置，请确认后端服务与登录状态。
+          </div>
+        )}
+      </section>
+
+      {/* 官网入口（P1 账号互通一期：桌面端→官网跳转 + 登录态同步） */}
+      <section className="settings-section">
+        <div className="section-header">
+          <h2 className="section-title">官网入口</h2>
+          <span className="status-badge running">账号互通</span>
+        </div>
+
+        <p className="info-text" style={{ marginBottom: 12 }}>
+          从桌面端直达官网对应页面。已登录时自动携带一次性临时 token（5 分钟、用后即销毁），
+          打开官网后免登录；未登录则直接打开官网。
+        </p>
+
+        <div className="official-entry-grid">
+          {OFFICIAL_SITE_ENTRIES.map((entry) => (
+            <button
+              key={entry.key}
+              className="official-entry-card"
+              disabled={webJumping === entry.key}
+              onClick={async () => {
+                setWebJumpMsg(null)
+                setWebJumping(entry.key)
+                const res = await openInBrowser(entry.path, true)
+                setWebJumping(null)
+                if (!res.success) {
+                  setWebJumpMsg(`打开「${entry.label}」失败：${res.error || '未知错误'}`)
+                }
+              }}
+            >
+              <div className="official-entry-label">
+                {webJumping === entry.key ? '打开中...' : entry.label}
+              </div>
+              <div className="official-entry-desc">{entry.desc}</div>
+            </button>
+          ))}
+        </div>
+
+        {webJumpMsg && (
+          <div className="notice-error" style={{ padding: 10, borderRadius: 6, marginTop: 12, fontSize: 13 }}>
+            {webJumpMsg}
+          </div>
+        )}
+      </section>
 
       {/* 节点资源监控 */}
       <section className="settings-section">
@@ -604,14 +1374,10 @@ export default function Settings() {
         </div>
 
         {error && (
-          <div style={{
-            padding: 12,
-            background: '#FFF8E1',
-            border: '1px solid #FFE082',
-            borderRadius: 6,
-            marginBottom: 16,
-            fontSize: 13
-          }}>
+          <div
+            className="notice-warn"
+            style={{ padding: 12, borderRadius: 6, marginBottom: 16, fontSize: 13 }}
+          >
             ⚠️ {error} - 后台服务正在启动中，请稍候
           </div>
         )}
@@ -768,14 +1534,10 @@ export default function Settings() {
         </div>
 
         {apiMonMsg && (
-          <div style={{
-            padding: 10,
-            background: apiMonMsg.includes('无效') || apiMonMsg.includes('失败') ? '#FFF0F0' : '#F0F7FF',
-            border: `1px solid ${apiMonMsg.includes('无效') || apiMonMsg.includes('失败') ? '#FFC2C2' : '#BFD9FF'}`,
-            borderRadius: 6,
-            marginBottom: 12,
-            fontSize: 13
-          }}>
+          <div
+            className={apiMonMsg.includes('无效') || apiMonMsg.includes('失败') ? 'notice-error' : 'notice-info'}
+            style={{ padding: 10, borderRadius: 6, marginBottom: 12, fontSize: 13 }}
+          >
             {apiMonMsg}
           </div>
         )}
@@ -824,14 +1586,10 @@ export default function Settings() {
         </div>
 
         {govLogMsg && (
-          <div style={{
-            padding: 10,
-            background: govLogMsg.includes('失败') ? '#FFF0F0' : '#F0F7FF',
-            border: `1px solid ${govLogMsg.includes('失败') ? '#FFC2C2' : '#BFD9FF'}`,
-            borderRadius: 6,
-            marginBottom: 12,
-            fontSize: 13
-          }}>
+          <div
+            className={govLogMsg.includes('失败') ? 'notice-error' : 'notice-info'}
+            style={{ padding: 10, borderRadius: 6, marginBottom: 12, fontSize: 13 }}
+          >
             {govLogMsg}
           </div>
         )}
@@ -845,6 +1603,136 @@ export default function Settings() {
             {govLogSaving ? '保存中...' : '应用日志级别'}
           </button>
         </div>
+      </section>
+
+      {/* 治理桌宠：角色 + 属性面板（get-pet-stats 通道） */}
+      <section className="settings-section">
+        <div className="section-header">
+          <h2 className="section-title">治理桌宠</h2>
+          <span className={`status-badge ${petStats ? 'running' : 'stopped'}`}>
+            {petStatsLoading ? '加载中' : petStats ? `已孵化 ${petStats.character.name}` : '未初始化'}
+          </span>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={loadPetStats}
+            disabled={petStatsLoading}
+            aria-label="刷新桌宠"
+          >
+            {petStatsLoading ? '加载中...' : '刷新'}
+          </button>
+        </div>
+
+        <p className="info-text" style={{ marginBottom: 12 }}>
+          治理桌宠是 Agent 执行 / 安全告警 / AI 治理定级的人格化呈现。角色由本机指纹确定性生成，
+          属性（警觉/智慧/耐心/执行/混沌）绑定真实治理数据，治理表现越好角色越「成长」。
+        </p>
+
+        {petStats && (
+          <div style={{
+            padding: 12,
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+          }}>
+            {/* 角色头部 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <div style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 20,
+                fontWeight: 'bold',
+                color: '#fff',
+                flexShrink: 0,
+              }}>
+                {petStats.character.name.charAt(0)}
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <strong style={{ fontSize: 16 }}>{petStats.character.name}</strong>
+                  <span style={{ color: '#D4AF37', fontSize: 13 }}>{petStats.character.rarityStars}</span>
+                  <span className={`tag tag-${petStats.character.rarity === 'legendary' ? 'error' : petStats.character.rarity === 'epic' || petStats.character.rarity === 'rare' ? 'warning' : 'success'}`}>
+                    {PET_RARITY_LABELS[petStats.character.rarity] || petStats.character.rarity}
+                  </span>
+                  {petStats.character.shiny && (
+                    <span className="tag tag-warning">✨ 闪光</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
+                  {PET_SPECIES_LABELS[petStats.character.species] || petStats.character.species}
+                </div>
+              </div>
+            </div>
+
+            {/* 属性面板 */}
+            <div style={{ fontSize: 12, marginBottom: 12 }}>
+              {Object.entries(petStats.character.stats || {}).map(([key, value]) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ width: 48, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                    {PET_STAT_LABELS[key] || key}
+                  </span>
+                  <div style={{
+                    flex: 1,
+                    height: 8,
+                    borderRadius: 4,
+                    background: 'var(--bg-input, rgba(128,128,128,0.15))',
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      width: `${Math.min(100, Math.max(0, value))}%`,
+                      height: '100%',
+                      borderRadius: 4,
+                      background: PET_STAT_COLORS[key] || '#58D68D',
+                      transition: 'width 0.4s ease',
+                    }} />
+                  </div>
+                  <span style={{ width: 32, textAlign: 'right', fontWeight: 600 }}>{value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* 治理画像快照 */}
+            <div style={{
+              borderTop: '1px solid var(--border)',
+              paddingTop: 10,
+              fontSize: 12,
+              color: 'var(--text-secondary)',
+            }}>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                治理画像（属性绑定来源）
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {[
+                  ['治理轮次', petStats.profile.runs],
+                  ['成功动作', petStats.profile.succeeded],
+                  ['失败动作', petStats.profile.failed],
+                  ['告警', petStats.profile.alerts],
+                  ['工具调用', petStats.profile.tools],
+                  ['权限拒绝', petStats.profile.denied],
+                  ['四官复核', petStats.profile.verifyFlows],
+                ].map(([label, value]) => (
+                  <span key={label as string} style={{
+                    padding: '2px 8px',
+                    background: 'var(--bg-input, rgba(128,128,128,0.15))',
+                    borderRadius: 4,
+                  }}>
+                    {label} <strong style={{ color: 'var(--text-primary)' }}>{value}</strong>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!petStats && !petStatsLoading && (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
+            暂无桌宠数据
+          </div>
+        )}
       </section>
 
       {/* 插件管理 */}
@@ -939,14 +1827,10 @@ export default function Settings() {
         )}
 
         {pluginMsg && (
-          <div style={{
-            padding: 10,
-            background: pluginMsg.includes('失败') || pluginMsg.includes('不存在') ? '#FFF0F0' : '#F0F7FF',
-            border: `1px solid ${pluginMsg.includes('失败') || pluginMsg.includes('不存在') ? '#FFC2C2' : '#BFD9FF'}`,
-            borderRadius: 6,
-            marginBottom: 12,
-            fontSize: 13
-          }}>
+          <div
+            className={pluginMsg.includes('失败') || pluginMsg.includes('不存在') ? 'notice-error' : 'notice-info'}
+            style={{ padding: 10, borderRadius: 6, marginBottom: 12, fontSize: 13 }}
+          >
             {pluginMsg}
           </div>
         )}
@@ -982,15 +1866,7 @@ export default function Settings() {
               )}
 
               {plugin.error && (
-                <div style={{
-                  padding: 8,
-                  background: '#FFF0F0',
-                  border: '1px solid #FFC2C2',
-                  borderRadius: 6,
-                  marginBottom: 8,
-                  fontSize: 12,
-                  color: '#C62828'
-                }}>
+                <div className="notice-error" style={{ padding: 8, borderRadius: 6, marginBottom: 8, fontSize: 12 }}>
                   错误：{plugin.error}
                 </div>
               )}
@@ -1015,15 +1891,7 @@ export default function Settings() {
               )}
 
               {health?.tripped && (
-                <div style={{
-                  padding: 8,
-                  background: '#FFF0F0',
-                  border: '1px solid #FFC2C2',
-                  borderRadius: 6,
-                  marginBottom: 8,
-                  fontSize: 12,
-                  color: '#C62828'
-                }}>
+                <div className="notice-error" style={{ padding: 8, borderRadius: 6, marginBottom: 8, fontSize: 12 }}>
                   该插件钩子已触发熔断（连续异常达到阈值），已自动跳过其钩子执行。
                 </div>
               )}
@@ -1045,6 +1913,96 @@ export default function Settings() {
             </div>
           )
         })}
+      </section>
+
+      {/* 插件市场（M3 插件源打通） */}
+      <section className="settings-section">
+        <div className="section-header">
+          <h2 className="section-title">插件市场</h2>
+          <span className={`status-badge ${marketPlugins.length > 0 ? 'running' : 'stopped'}`}>
+            {marketLoading ? '加载中' : `市场 ${marketPlugins.length} 个`}
+          </span>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={loadMarketPlugins}
+            disabled={marketLoading}
+          >
+            {marketLoading ? '加载中...' : '刷新市场'}
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleScanInstalled}
+            disabled={marketAction === 'scan'}
+          >
+            {marketAction === 'scan' ? '扫描中...' : '扫描插件目录'}
+          </button>
+        </div>
+
+        <p className="info-text" style={{ marginBottom: 12 }}>
+          支持从插件目录加载社区插件（openclaw.plugin.json 清单 → 治理插件）。
+          市场插件放入 <code style={{ color: 'var(--text-secondary)' }}>{marketDir || 'plugins-market'}</code> 后即可浏览安装；
+          直接放入插件目录的插件经「扫描插件目录」识别后即可启用。
+        </p>
+
+        {marketMsg && (
+          <div
+            className={marketMsg.includes('失败') || marketMsg.includes('不存在') || marketMsg.includes('不支持') ? 'notice-error' : 'notice-info'}
+            style={{ padding: 10, borderRadius: 6, marginBottom: 12, fontSize: 13 }}
+          >
+            {marketMsg}
+          </div>
+        )}
+
+        {marketPlugins.length === 0 && !marketLoading ? (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
+            市场目录暂无插件，请将插件包放入市场目录后点击「刷新市场」
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {marketPlugins.map((mp) => {
+              const installed = plugins.some((p) => p.id === mp.id)
+              const busy = marketAction === mp.id
+              return (
+                <div key={mp.id} className="strategy-card">
+                  <div className="strategy-header">
+                    <div>
+                      <div className="strategy-name">{mp.name || mp.id}</div>
+                      <div className="strategy-meta">
+                        {mp.version && <span className="strategy-version">v{mp.version}</span>}
+                        {mp.author && <span className="strategy-type">作者 {mp.author}</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className={`status-badge ${installed ? 'running' : 'stopped'}`}>
+                        {installed ? '已安装' : '未安装'}
+                      </span>
+                      {installed ? (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleUninstallMarket(mp.id)}
+                          disabled={busy}
+                        >
+                          {busy ? '处理中...' : '卸载'}
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => handleInstallMarket(mp.id)}
+                          disabled={busy}
+                        >
+                          {busy ? '安装中...' : '安装'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {mp.description && (
+                    <div className="form-hint" style={{ marginBottom: 0 }}>{mp.description}</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       {/* 操作权限 */}
@@ -1075,15 +2033,10 @@ export default function Settings() {
             />
 
             {permissionMsg && (
-              <div style={{
-                padding: 10,
-                background: permissionMsg.includes('失败') ? '#FFF0F0' : '#F0F7FF',
-                border: `1px solid ${permissionMsg.includes('失败') ? '#FFC2C2' : '#BFD9FF'}`,
-                borderRadius: 6,
-                marginBottom: 12,
-                marginTop: 12,
-                fontSize: 13
-              }}>
+              <div
+                className={permissionMsg.includes('失败') ? 'notice-error' : 'notice-info'}
+                style={{ padding: 10, borderRadius: 6, marginBottom: 12, marginTop: 12, fontSize: 13 }}
+              >
                 {permissionMsg}
               </div>
             )}
@@ -1361,6 +2314,41 @@ export default function Settings() {
         <button className="btn btn-primary" style={{ marginTop: 16 }}>
           保存 LLM 配置
         </button>
+      </section>
+      
+      {/* 检查更新 */}
+      <section className="settings-section">
+        <h2 className="section-title">检查更新</h2>
+        <div className="info-row">
+          <span className="info-label">当前版本</span>
+          <code className="info-value">v2.0.0</code>
+        </div>
+        <p className="info-text" style={{
+          marginBottom: 0,
+          minHeight: 20,
+          color: updateState === 'error' ? '#F85149' : updateState === 'downloaded' ? '#3FB950' : 'var(--text-secondary)'
+        }}>
+          {updateState === 'idle'
+            ? '检查是否有新版本可用，新版本会在后台下载后提示重启安装'
+            : updateMsg || ''}
+        </p>
+        <div className="button-group" style={{ marginTop: 12 }}>
+          <button
+            className="btn btn-primary"
+            onClick={handleCheckUpdate}
+            disabled={updateState === 'checking'}
+          >
+            {updateState === 'checking' ? '检查中...' : '检查更新'}
+          </button>
+          {updateState === 'downloaded' && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => window.electronAPI?.quitAndInstallUpdate()}
+            >
+              立即重启安装
+            </button>
+          )}
+        </div>
       </section>
       
       {/* 数据管理 */}

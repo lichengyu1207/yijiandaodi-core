@@ -7,9 +7,9 @@ import {
   HttpRequestConfig,
   HttpResponse,
   HttpError,
-  ErrorType,
-  LogLevel
+  ErrorType
 } from './types/http.types'
+import type { CircuitBreakerConfig } from './circuit-breaker/circuit.types'
 
 /**
  * HTTP 客户端核心类
@@ -18,7 +18,7 @@ export class HttpClient {
   private client: AxiosInstance
   private requestLogger: RequestLogger
   private config: HttpClientConfig
-  private circuitBreaker: CircuitBreaker
+  private circuitBreaker: CircuitBreaker | undefined
 
   constructor(config: HttpClientConfig) {
     this.config = config
@@ -506,6 +506,7 @@ export class HttpClient {
   getCircuitBreakerStatus(): {
     state: string
     statistics: any
+    config: CircuitBreakerConfig
   } | null {
     if (!this.circuitBreaker) {
       return null
@@ -513,7 +514,8 @@ export class HttpClient {
 
     return {
       state: this.circuitBreaker.getState(),
-      statistics: this.circuitBreaker.getStatistics()
+      statistics: this.circuitBreaker.getStatistics(),
+      config: this.circuitBreaker.getConfig()
     }
   }
 

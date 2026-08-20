@@ -119,6 +119,13 @@
   padding: 18px;
 }
 
+.tool-icon {
+  font-size: 30px;
+  line-height: 1;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
 .tool-name {
   font-size: 15px;
   font-weight: 600;

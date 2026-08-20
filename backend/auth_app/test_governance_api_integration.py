@@ -9,7 +9,7 @@
 5. 数据验证和错误处理
 """
 
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
@@ -515,33 +515,7 @@ class GovernanceAPIIntegrationTestCase(TestCase):
     # ============================================================
     # 性能和并发测试
     # ============================================================
-    
-    def test_concurrent_snapshot_creation(self):
-        """测试并发创建快照"""
-        import threading
-        
-        self.authenticate()
-        
-        results = []
-        
-        def create_snapshot():
-            response = self.client.post('/api/v1/governance/health/take_snapshot/')
-            results.append(response.status_code)
-        
-        # 并发创建5个快照
-        threads = []
-        for _ in range(5):
-            t = threading.Thread(target=create_snapshot)
-            threads.append(t)
-            t.start()
-        
-        for t in threads:
-            t.join()
-        
-        # 验证所有快照都成功创建
-        success_count = sum(1 for code in results if code == status.HTTP_200_OK)
-        self.assertGreater(success_count, 0)
-    
+
     def test_large_dataset_performance(self):
         """测试大数据集性能"""
         # 创建100条合规性评分
@@ -621,3 +595,64 @@ class GovernanceAPIIntegrationTestCase(TestCase):
             response.data['dimension_scores']['behavior'],
             60  # 应该大于等于之前的平均值
         )
+
+
+class ConcurrentSnapshotTransactionTestCase(TransactionTestCase):
+    """并发创建健康度快照测试
+
+    必须使用 TransactionTestCase 而非 TestCase：
+
+    Django 的 TestCase 会把整个测试包裹在一个数据库事务中，
+    测试期间主线程持有 SQLite 写锁，导致子线程的数据库操作
+    全部阻塞失败（database is locked）。TransactionTestCase
+    不做事务包裹，因此允许子线程并发读写数据库。
+
+    注意：TransactionTestCase 每个测试后通过 TRUNCATE 清理数据，
+    会重置自增序列，运行相对较慢。
+    """
+
+    def setUp(self):
+        """测试准备（仅创建最小必要数据）"""
+        self.admin_user = User.objects.create_user(
+            username='admin',
+            email='admin@example.com',
+            password='admin123',
+            is_staff=True,
+            role='admin'
+        )
+
+    def test_concurrent_snapshot_creation(self):
+        """测试并发创建快照"""
+        import threading
+
+        results = []
+        errors = []
+
+        def create_snapshot():
+            try:
+                # 每个线程使用独立的 API 客户端，避免共享客户端的状态竞争
+                client = APIClient()
+                client.force_authenticate(user=self.admin_user)
+                response = client.post('/api/v1/governance/health/take_snapshot/')
+                results.append(response.status_code)
+            except Exception as e:  # pragma: no cover - 仅用于收集失败原因
+                errors.append(str(e))
+
+        # 并发创建5个快照
+        threads = []
+        for _ in range(5):
+            t = threading.Thread(target=create_snapshot)
+            threads.append(t)
+            t.start()
+
+        for t in threads:
+            t.join()
+
+        # 收集期间不应有未捕获异常
+        self.assertEqual(errors, [])
+
+        # 验证至少有快照成功创建（take_snapshot 内置锁冲突重试，
+        # 极端并发下允许部分失败，但必须保证整体可用）
+        success_count = sum(1 for code in results if code == status.HTTP_200_OK)
+        self.assertGreater(success_count, 0)
+        self.assertEqual(GovernanceHealth.objects.count(), success_count)

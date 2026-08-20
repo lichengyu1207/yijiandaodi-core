@@ -19,6 +19,21 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }))
 
+// Mock 认证服务：默认未登录，setupAccount/login 成功
+const { mockSetupAccount, mockLogin, mockIsAuthenticated } = vi.hoisted(() => ({
+  mockSetupAccount: vi.fn().mockResolvedValue({ success: true, data: { user: { username: 'admin' } } }),
+  mockLogin: vi.fn().mockResolvedValue({ success: true, data: { user: { username: 'admin' } } }),
+  mockIsAuthenticated: vi.fn(() => false),
+}))
+vi.mock('../services/authService', () => ({
+  authService: {
+    isAuthenticated: mockIsAuthenticated,
+    setupAccount: mockSetupAccount,
+    login: mockLogin,
+    getCurrentUser: vi.fn(() => null),
+  },
+}))
+
 /** 构造一套可控的 electronAPI mock */
 function createMockApi() {
   return {
@@ -47,7 +62,7 @@ async function waitLoaded() {
 /** 仅填写账号表单并点击「下一步」（不等待步骤切换） */
 function fillAndSubmitAccount() {
   fireEvent.change(screen.getByPlaceholderText('至少 3 个字符'), { target: { value: 'admin' } })
-  fireEvent.change(screen.getByPlaceholderText('至少 6 位'), { target: { value: 'secret123' } })
+  fireEvent.change(screen.getByPlaceholderText('至少 8 位'), { target: { value: 'secret123' } })
   fireEvent.change(screen.getByPlaceholderText('再次输入密码'), { target: { value: 'secret123' } })
   fireEvent.click(screen.getByRole('button', { name: /下一步/ }))
 }
@@ -207,7 +222,7 @@ describe('SetupWizard 错误处理', () => {
     await waitLoaded()
 
     fireEvent.change(screen.getByPlaceholderText('至少 3 个字符'), { target: { value: 'ab' } })
-    fireEvent.change(screen.getByPlaceholderText('至少 6 位'), { target: { value: 'secret123' } })
+    fireEvent.change(screen.getByPlaceholderText('至少 8 位'), { target: { value: 'secret123' } })
     fireEvent.change(screen.getByPlaceholderText('再次输入密码'), { target: { value: 'secret123' } })
     fireEvent.click(screen.getByRole('button', { name: /下一步/ }))
 
@@ -223,7 +238,7 @@ describe('SetupWizard 错误处理', () => {
     await waitLoaded()
 
     fireEvent.change(screen.getByPlaceholderText('至少 3 个字符'), { target: { value: 'admin' } })
-    fireEvent.change(screen.getByPlaceholderText('至少 6 位'), { target: { value: 'secret123' } })
+    fireEvent.change(screen.getByPlaceholderText('至少 8 位'), { target: { value: 'secret123' } })
     fireEvent.change(screen.getByPlaceholderText('再次输入密码'), { target: { value: 'different' } })
     fireEvent.click(screen.getByRole('button', { name: /下一步/ }))
 

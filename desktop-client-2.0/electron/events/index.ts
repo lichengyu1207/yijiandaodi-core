@@ -30,6 +30,8 @@ export {
   AGENT_EVENT_BUS_PRODUCTION_CONFIG,
   GOVERNANCE_LOGGER_PRODUCTION_CONFIG,
 } from './productionConfig'
+export { FileEventStore, NULL_STORE } from './eventStore'
+export type { EventStore, EventReplayOptions } from './eventStore'
 export { MonitorEventAdapter } from './monitorEventAdapter'
 export type {
   MonitorEventAdapterOptions,

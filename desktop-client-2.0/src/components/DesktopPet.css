@@ -1,4 +1,4 @@
-/* 一鉴到底桌宠样式 */
+/* 一鉴到底桌宠样式（融合 Claude Code 风格） */
 
 .desktop-pet {
   position: fixed;
@@ -6,168 +6,193 @@
   bottom: 20px;
   z-index: 9999;
   cursor: pointer;
-  transition: all 0.3s ease;
+  user-select: none;
 }
 
 .pet-container {
-  width: 140px;
-  height: 170px;
   position: relative;
+  width: 150px;
+  height: 190px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  background: transparent;
+  justify-content: flex-end;
 }
 
-/* PNG图片样式 */
-.pet-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  max-width: 140px;
-  max-height: 170px;
-  background: transparent;
-  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
-}
-
-/* 状态指示器 */
-.status-indicator {
+/* ===== 角色徽标 ===== */
+.badge {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-/* 气泡提示 */
-.bubble {
-  position: absolute;
-  bottom: 100%;
-  right: 50%;
-  transform: translateX(50%);
-  margin-bottom: 10px;
-  animation: fadeInUp 0.3s ease;
-}
-
-.bubble-content {
-  background: white;
-  padding: 10px 16px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  white-space: nowrap;
-  font-size: 14px;
-  color: #333;
-  position: relative;
-}
-
-.bubble-content::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
+  top: 2px;
   left: 50%;
   transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid white;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(2px);
+  white-space: nowrap;
+  z-index: 5;
+  transition: all .3s;
+}
+.badge .stars {
+  color: #FFD75E;
+  margin-right: 3px;
 }
 
-/* 动画效果 */
-
-/* 呼吸动画 */
-.idle .pet-image {
-  animation: breathe 3s ease-in-out infinite, float 4s ease-in-out infinite;
+/* ===== 角色属性面板（悬停显示） ===== */
+.stats {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.pet-container:hover .stats {
+  opacity: 1;
+}
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: #ddd;
+}
+.stat-label {
+  width: 28px;
+  text-align: right;
+  opacity: .8;
+}
+.stat-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.stat-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: #58D68D;
+  transition: width .5s;
+}
+.stat-value {
+  width: 22px;
+  font-size: 8px;
+  color: #fff;
 }
 
-/* 检测中动画 */
-.thinking .pet-image {
-  animation: breathe 2s ease-in-out infinite, think 2s ease-in-out infinite;
+/* ===== 桌宠主体（SVG） ===== */
+.pet-body {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 6px 16px rgba(0,0,0,0.35));
+}
+.pet-svg {
+  width: 100%;
+  height: 100%;
 }
 
-/* 警示动画 */
-.alert .pet-image {
-  animation: alert 0.5s ease-in-out infinite;
-  filter: drop-shadow(0 0 20px rgba(231, 76, 60, 0.8));
-}
-
-/* 呼吸效果 */
-@keyframes breathe {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-}
-
-/* 浮动效果 */
+/* ===== 帧动画 ===== */
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
-
-/* 思考效果 */
-@keyframes think {
-  0%, 100% {
-    transform: rotate(0deg);
-  }
-  25% {
-    transform: rotate(5deg);
-  }
-  75% {
-    transform: rotate(-5deg);
-  }
+@keyframes thinkPulse {
+  0%, 100% { transform: rotate(-4deg) translateY(0); }
+  50% { transform: rotate(4deg) translateY(-4px); }
 }
-
-/* 警示效果 */
-@keyframes alert {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-5px);
-  }
-  75% {
-    transform: translateX(5px);
-  }
+@keyframes alertShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
 }
-
-/* 指示灯脉冲 */
+@keyframes blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+@keyframes bubblePop {
+  0% { opacity: 0; transform: translateX(-50%) translateY(12px) scale(.9); }
+  12% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  82% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(.95); }
+}
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
-/* 气泡淡入 */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateX(50%) translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(50%) translateY(0);
-  }
+/* 情绪动画 */
+.desktop-pet.thinking .pet-body {
+  animation: thinkPulse 0.8s ease-in-out infinite;
+}
+.desktop-pet.red .pet-body {
+  animation: alertShake 0.5s linear infinite;
+}
+.eye {
+  transform-origin: center;
+  animation: blink 4s infinite;
 }
 
-/* 悬停效果 */
-.desktop-pet:hover .pet-image {
-  transform: scale(1.08);
+/* ===== 状态光环 ===== */
+.status-indicator {
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #58D68D;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  animation: pulse 2s ease-in-out infinite;
+  z-index: 5;
 }
 
-/* 点击效果 */
-.desktop-pet:active .pet-image {
-  transform: scale(0.95);
+/* ===== 气泡 ===== */
+.bubble {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 134px;
+  background: rgba(255,255,255,0.96);
+  color: #2E86C1;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+  white-space: normal;
+  z-index: 6;
+  pointer-events: none;
+  animation: bubblePop 3s ease-in-out forwards;
+}
+.bubble.tail::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  margin-left: -6px;
+  border: 6px solid transparent;
+  border-top-color: rgba(255,255,255,0.96);
+  border-bottom: 0;
+}
+
+/* ===== 悬停/点击效果 ===== */
+.desktop-pet:hover {
+  opacity: 0.95;
+}
+.desktop-pet:active {
+  transform: scale(0.96);
 }

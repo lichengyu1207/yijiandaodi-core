@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './Auth.css'
 import { authService } from '../services/authService'
 import { parseError, showError } from '../utils/errorHandler'
@@ -14,6 +14,22 @@ interface UserInfo {
 
 interface AuthProps {
   onLoginSuccess?: () => void
+}
+
+/** 记住密码：本地凭据（用户名+密码，简易编码避免明文直存） */
+const REMEMBER_KEY = 'remember_credentials'
+/** 长期未登录（超过 30 天）自动清除，不再自动载入 */
+const REMEMBER_TTL = 30 * 24 * 60 * 60 * 1000
+
+function encodeRemember(value: string): string {
+  return btoa(unescape(encodeURIComponent(value)))
+}
+function decodeRemember(value: string): string {
+  try {
+    return decodeURIComponent(escape(atob(value)))
+  } catch {
+    return ''
+  }
 }
 
 export default function Auth({ onLoginSuccess }: AuthProps) {
@@ -36,6 +52,33 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
   // 用户信息
   const [user, setUser] = useState<UserInfo | null>(null)
 
+  // 载入记住的登录凭据（用户名+密码自动填入；长期未登录则清除）
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(REMEMBER_KEY)
+      if (!raw) {
+        // 兼容旧版「记住用户名」：无密码记忆时至少自动填入用户名
+        const legacyUser = localStorage.getItem('remember_username')
+        if (legacyUser) setUsername(legacyUser)
+        return
+      }
+      const data = JSON.parse(raw)
+      if (Date.now() - (data.savedAt || 0) > REMEMBER_TTL) {
+        // 超过 30 天未登录：清除记忆，不自动载入
+        localStorage.removeItem(REMEMBER_KEY)
+        return
+      }
+      if (data.username) setUsername(decodeRemember(data.username))
+      if (data.password) {
+        setPassword(decodeRemember(data.password))
+        setRememberMe(true)
+      }
+    } catch {
+      // 记忆数据损坏：静默忽略
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // 登录处理
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,9 +94,17 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
       if (result.success && result.data) {
         setUser(result.data.user)
 
-        // 保存"记住我"
+        // 保存"记住密码"（用户名+密码，加密存储；取消勾选则清除）
         if (rememberMe) {
+          localStorage.setItem(REMEMBER_KEY, JSON.stringify({
+            username: encodeRemember(username),
+            password: encodeRemember(password),
+            savedAt: Date.now(),
+          }))
           localStorage.setItem('remember_username', username)
+        } else {
+          localStorage.removeItem(REMEMBER_KEY)
+          localStorage.removeItem('remember_username')
         }
 
         // 设置同步Token
@@ -184,7 +235,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
               checked={rememberMe}
               onChange={e => setRememberMe(e.target.checked)}
             />
-            记住用户名
+            记住密码（30天内自动填入）
           </label>
           <a href="#" className="forgot-link">忘记密码？</a>
         </div>

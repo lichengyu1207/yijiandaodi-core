@@ -476,7 +476,6 @@ export class LongTermMemoryApi {
       console.log(`[长期记忆轮询] 阶段2(数据获取)开始...`);
 
       // 获取长期记忆数据（不使用缓存）
-      const params = { limit: 50 }; // 限制获取最新50条
       const apiConfig = APIConfig.getInstance();
       const baseUrl = apiConfig.getBaseURL();
 
@@ -971,7 +970,7 @@ export class StrategicMemoryApi {
     console.log(`[策略记忆API] 阶段3(数据解析)耗时: ${phase3Duration}ms`);
     console.log(`[策略记忆API] 解析数据: ${results.length} 条`);
 
-    const activeCount = results.filter(s => s.is_active).length;
+    const activeCount = results.filter((s: any) => s.is_active).length;
     console.log(`[策略记忆API] 激活策略: ${activeCount} 条`);
 
     // ===== 总耗时统计 =====

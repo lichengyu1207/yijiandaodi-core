@@ -63,20 +63,73 @@ app.conf.beat_schedule = {
         'task': 'auth_app.tasks.cleanup_old_logs',
         'schedule': crontab(hour=2, minute=0),
     },
-    # 每10分钟检查Agent健康状态
-    'check-agent-health-every-10-min': {
-        'task': 'auth_app.tasks.check_agent_health',
-        'schedule': 600.0,  # 10分钟
+
+    # ============================================================
+    # 自监控定时任务 - Self-Audit Tasks
+    # ============================================================
+
+    # 高优先级：每15分钟检测准确率漂移
+    'check-accuracy-drift-every-15-min': {
+        'task': 'auth_app.self_audit_tasks.check_accuracy_drift_task',
+        'schedule': 900.0,  # 15分钟
     },
-    # 每小时聚合告警
-    'aggregate-alerts-hourly': {
-        'task': 'auth_app.tasks.aggregate_alerts',
+
+    # 高优先级：每15分钟检测响应时间异常
+    'check-response-time-anomaly-every-15-min': {
+        'task': 'auth_app.self_audit_tasks.check_response_time_anomaly_task',
+        'schedule': 900.0,  # 15分钟
+    },
+
+    # 中优先级：每小时检测误报率变化
+    'check-false-positive-rate-hourly': {
+        'task': 'auth_app.self_audit_tasks.check_false_positive_rate_task',
         'schedule': 3600.0,  # 1小时
     },
-    # 每天凌晨3点生成统计报告
-    'generate-daily-stats-report': {
-        'task': 'auth_app.tasks.generate_daily_stats',
-        'schedule': crontab(hour=3, minute=0),
+
+    # 中优先级：每小时权限使用审计
+    'audit-permission-usage-hourly': {
+        'task': 'auth_app.self_audit_tasks.audit_permission_usage_task',
+        'schedule': 3600.0,  # 1小时
+    },
+
+    # 低优先级：每天凌晨4点检测规则库时效性
+    'check-rule-freshness-daily': {
+        'task': 'auth_app.self_audit_tasks.check_rule_freshness_task',
+        'schedule': crontab(hour=4, minute=0),
+    },
+
+    # 综合检查：每小时运行所有自监控检查
+    'run-all-self-audit-checks-hourly': {
+        'task': 'auth_app.self_audit_tasks.run_all_self_audit_checks_task',
+        'schedule': 3600.0,  # 1小时
+    },
+
+    # 报告生成：每小时生成自审计报告
+    'generate-hourly-audit-report': {
+        'task': 'auth_app.self_audit_tasks.generate_audit_report_task',
+        'schedule': 3600.0,  # 1小时
+        'kwargs': {'report_type': 'hourly'},
+    },
+
+    # 报告生成：每天凌晨5点生成日报
+    'generate-daily-audit-report': {
+        'task': 'auth_app.self_audit_tasks.generate_audit_report_task',
+        'schedule': crontab(hour=5, minute=0),
+        'kwargs': {'report_type': 'daily'},
+    },
+
+    # 报告生成：每周一凌晨6点生成周报
+    'generate-weekly-audit-report': {
+        'task': 'auth_app.self_audit_tasks.generate_audit_report_task',
+        'schedule': crontab(day_of_week=1, hour=6, minute=0),
+        'kwargs': {'report_type': 'weekly'},
+    },
+
+    # 报告生成：每月1号凌晨7点生成月报
+    'generate-monthly-audit-report': {
+        'task': 'auth_app.self_audit_tasks.generate_audit_report_task',
+        'schedule': crontab(day_of_month=1, hour=7, minute=0),
+        'kwargs': {'report_type': 'monthly'},
     },
 }
 

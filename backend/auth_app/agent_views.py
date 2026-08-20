@@ -23,6 +23,9 @@ from .agent_serializers import (
 )
 from .rbac_permissions import HasPermission
 from content_app.deepseek_service import get_deepseek_client
+# P1-5 推理引擎统一接口（M2）：按 INFERENCE_PROVIDER 透明切换 deepseek/grok
+# P3 M4：INFERENCE_ROUTER['enabled'] 时启用「本地优先 + 过载回退」路由
+from content_app.inference import get_inference_provider, get_router
 # OpenRath 兼容适配层 — Session 一等公民多智能体运行时
 # https://github.com/Rath-Team/OpenRath  |  BSD-3-Clause  |  v1.2.1
 from .openrath_adapter import (
@@ -168,7 +171,11 @@ class AgentPublicViewSet(APIView):
     authentication_classes = []
     permission_classes = []
 
-    def get(self, request, action_name=None):
+    def get(self, request, action_name=None, session_id=None):
+        # 如果有session_id，则获取会话消息
+        if session_id:
+            return self.session_messages(request, session_id)
+
         if action_name == 'configs':
             return self.configs(request)
         if action_name == 'sessions':
@@ -370,18 +377,25 @@ class AgentPublicViewSet(APIView):
         latency_ms = 0
 
         try:
-            client = get_deepseek_client()
+            # P1-5 推理引擎统一接口：按 settings INFERENCE_PROVIDER 透明切换 deepseek/grok
+            # P3 M4：启用路由时走「本地优先 + 过载回退」
+            from django.conf import settings as django_settings
+            if django_settings.INFERENCE_ROUTER.get('enabled'):
+                provider = get_router()
+            else:
+                provider = get_inference_provider()
             start_time = time.time()
-            reply = client.simple_chat(
+            reply = provider.simple_complete(
                 user_message=user_message,
                 system_prompt=agent_config.system_prompt or default_system_prompt,
                 temperature=agent_config.temperature or 0.7,
-                history=history_messages
+                history=history_messages,
+                caller=f"user-{request.user.id}",
             )
             latency_ms = int((time.time() - start_time) * 1000)
-            model_used = getattr(client, 'model', 'deepseek-chat')
+            model_used = provider.name
         except Exception as e:
-            print(f'[DeepSeek Error] {e}')
+            print(f'[InferenceProvider Error] {e}')
 
         if not reply:
             analysis_content = ''
@@ -713,6 +727,45 @@ class AgentPublicViewSet(APIView):
             'success': True,
             'message': '[OpenRath] 会话列表获取成功',
             'data': result,
+        })
+
+    def session_messages(self, request, session_id):
+        """获取单个会话的完整消息历史"""
+        try:
+            session = AgentSession.objects.get(session_id=session_id)
+        except AgentSession.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': '会话不存在',
+                'data': None,
+            }, status=404)
+
+        # 获取该会话的所有消息
+        messages_qs = session.messages.all().order_by('created_at')
+
+        messages = []
+        for msg in messages_qs:
+            messages.append({
+                'id': str(msg.id),
+                'role': msg.role,
+                'content': msg.content,
+                'modelUsed': msg.model_used or '',
+                'latencyMs': msg.latency_ms,
+                'createdAt': msg.created_at.isoformat(),
+            })
+
+        return Response({
+            'success': True,
+            'message': '会话消息获取成功',
+            'data': {
+                'sessionId': session.session_id,
+                'title': session.title or '',
+                'status': session.status,
+                'messageCount': session.message_count,
+                'messages': messages,
+                'createdAt': session.created_at.isoformat(),
+                'updatedAt': session.updated_at.isoformat(),
+            },
         })
 
 

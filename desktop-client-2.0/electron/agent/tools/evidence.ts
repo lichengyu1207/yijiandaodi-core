@@ -2,7 +2,8 @@
  * agent/tools/evidence.ts — 内置治理工具：evidence.commit
  *
  * 五元组存证（subject/action/object/context/result）：
- *  - 优先写后端 LongTermMemory：POST /api/agent/memory/（链式哈希存证）；
+ *  - 优先写后端 LongTermMemory 链式哈希存证：POST /api/v1/memory/long-term/
+ *    （与「存证中心」读取的 /api/v1/memory/long-term/ 保持一致，实现写入/展示联动）；
  *  - 后端不可用时降级本地 storageService 记录（不静默失败）；
  *  - 写类工具：非只读 / 非并发安全，执行前必经 ToolBridge 的 canUseTool 权限钩子。
  *
@@ -99,18 +100,37 @@ export function createEvidenceTools(): GovTool[] {
           hasLocalSink: !!_localSink,
         })
 
+        // 风险等级：优先取上下文，非法值回退 'medium'
+        const rawRisk = (context as Record<string, unknown>).risk_level
+        const riskLevel = ['low', 'medium', 'high', 'critical'].includes(String(rawRisk))
+          ? String(rawRisk)
+          : 'medium'
+
         try {
           const data = await callBackendWithRetry('evidence.commit', async () => {
-            const res = await backendRequest('POST', '/api/agent/memory/', { content, metadata })
+            // 写入 LongTermMemory 链式哈希存证表（LongTermMemoryCreateSerializer 字段）
+            const res = await backendRequest('POST', '/api/v1/memory/long-term/', {
+              agent_id: ctx.agentId || 'desktop',
+              operation_type: action,
+              operation_content: content,
+              risk_level: riskLevel,
+              risk_score: typeof (context as Record<string, unknown>).risk_score === 'number'
+                ? (context as Record<string, unknown>).risk_score
+                : 0,
+              risk_tags: Array.isArray((context as Record<string, unknown>).risk_tags)
+                ? (context as Record<string, unknown>).risk_tags
+                : [],
+              decision: result,
+            })
             return parseBackendData(res, 'evidence.commit')
           })
 
-          const record = data as { id?: string; created_at?: string }
-          backendLog('info', 'evidence.commit 完成（后端）', { id: record.id, action })
+          const record = data as { id?: string; timestamp?: string }
+          backendLog('info', 'evidence.commit 完成（后端 LongTermMemory）', { id: record.id, action, chain_index: (record as any).chain_index })
           backendLog('trace', 'evidence.commit 后端存证成功', { id: record.id, action, object })
 
           return {
-            output: { backend: true, id: record.id, created_at: record.created_at, content, metadata },
+            output: { backend: true, id: record.id, created_at: record.timestamp, content, metadata },
             content: `五元组已存证（后端 LongTermMemory）: ${content}\n存证ID: ${record.id ?? '未知'}`,
           }
         } catch (e) {

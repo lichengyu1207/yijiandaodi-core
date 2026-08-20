@@ -3,6 +3,8 @@ import { authService } from '../services/authService'
 import { ShortTermMemoryApi, ShortTermMemory } from '../services/memoryApi'
 import MemoryStatCard from '../components/MemoryStatCard'
 import RiskDistributionChart from '../components/RiskDistributionChart'
+import DateRangePicker, { DateRangeValue } from '../components/DateRangePicker'
+import { statsService, RegionStatItem } from '../services/statsService'
 
 interface AuditRecord {
   id: number
@@ -51,6 +53,15 @@ export default function Dashboard() {
     isSyncing: false,
     lastSyncTime: new Date()
   });
+
+  // ===== P1-1 消费统计：时间范围 + 区域维度 =====
+  const [range, setRange] = useState<DateRangeValue>(() => {
+    const today = new Date()
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return { label: '近7天', start_date: fmt(new Date(today.getTime() - 6 * 864e5)), end_date: fmt(today) }
+  })
+  const [regions, setRegions] = useState<RegionStatItem[]>([])
+  const [regionsLoading, setRegionsLoading] = useState(false)
 
   // 获取当前用户信息
   useEffect(() => {
@@ -177,6 +188,23 @@ export default function Dashboard() {
     };
   }, [memories]);
   
+  // ===== P1-1 消费统计：时间范围变化时拉取区域维度数据 =====
+  useEffect(() => {
+    let cancelled = false
+    setRegionsLoading(true)
+    statsService.getByRegion({ start_date: range.start_date, end_date: range.end_date })
+      .then((res) => {
+        if (!cancelled) setRegions(res.data?.items ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setRegions([])
+      })
+      .finally(() => {
+        if (!cancelled) setRegionsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [range.start_date, range.end_date])
+
   // 从本地IPC或沙箱API获取记录
   useEffect(() => {
     const fetchRecords = async () => {
@@ -295,7 +323,7 @@ export default function Dashboard() {
   }
   
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* 用户信息卡片 */}
       {currentUser && (
         <div className="card" style={{ padding: 20 }}>
@@ -384,9 +412,84 @@ export default function Dashboard() {
       {memoryStats.total > 0 && (
         <RiskDistributionChart stats={memoryStats} />
       )}
-      
+
+      {/* P1-1 消费统计：时间范围筛选 + 区域维度统计 */}
+      <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: 0, border: 'none' }}>
+          <div className="card-title">消费统计（区域维度）</div>
+          <DateRangePicker value={range} onChange={setRange} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: 'var(--text-primary)' }}>{regions.reduce((s, r) => s + r.count, 0)}</div>
+            <div className="stat-label">API 调用次数</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: 'var(--brand-primary)' }}>{regions.filter(r => r.count > 0).length} 个</div>
+            <div className="stat-label">活跃区域</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: 'var(--status-warning)' }}>
+              {(() => { const c = regions.reduce((s, r) => s + r.count, 0); return c ? Math.round(regions.reduce((s, r) => s + r.avg * r.count, 0) / c) + 'ms' : '0ms' })()}
+            </div>
+            <div className="stat-label">平均耗时</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: 'var(--status-error)' }}>
+              {(() => { const c = regions.reduce((s, r) => s + r.count, 0); return c ? ((regions.reduce((s, r) => s + r.error_count, 0) / c) * 100).toFixed(2) + '%' : '0%' })()}
+            </div>
+            <div className="stat-label">失败率</div>
+          </div>
+        </div>
+
+        {regionsLoading ? (
+          <div style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>加载中...</div>
+        ) : regions.length === 0 || regions.every(r => r.count === 0) ? (
+          <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-tertiary)', fontSize: 13 }}>
+            暂无 API 调用数据，通过 API Key 发起调用后将在此展示区域分布
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>区域调用占比（{range.label}）</div>
+            {regions.filter(r => r.count > 0).map((r) => (
+              <div key={r.region} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                <span style={{ width: 48, fontSize: 12, color: 'var(--text-secondary)' }}>{r.label}</span>
+                <div style={{ flex: 1, height: 10, borderRadius: 5, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.max(r.share, 3)}%`, height: '100%', borderRadius: 5, background: 'var(--brand-primary)' }} />
+                </div>
+                <span style={{ width: 56, fontSize: 12, textAlign: 'right', color: 'var(--text-primary)' }}>{r.share}%</span>
+              </div>
+            ))}
+
+            <div style={{ marginTop: 20, border: '1px solid var(--border-primary)', borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', background: 'var(--bg-tertiary)', padding: '8px 12px', fontSize: 12, color: 'var(--text-tertiary)' }}>
+                <div>区域</div>
+                <div style={{ textAlign: 'right' }}>调用次数</div>
+                <div style={{ textAlign: 'right' }}>平均耗时</div>
+                <div style={{ textAlign: 'right' }}>失败率</div>
+                <div style={{ textAlign: 'right' }}>占比</div>
+              </div>
+              {regions.map((r, i) => (
+                <div key={r.region} style={{
+                  display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
+                  padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)',
+                  borderTop: i > 0 ? '1px solid var(--border-secondary)' : 'none'
+                }}>
+                  <div>{r.label}</div>
+                  <div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>{r.count}</div>
+                  <div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>{r.avg ? Math.round(r.avg) + 'ms' : '—'}</div>
+                  <div style={{ textAlign: 'right', color: r.error_rate > 0 ? 'var(--status-error)' : 'var(--status-success)' }}>{r.error_rate ? r.error_rate + '%' : '0%'}</div>
+                  <div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>{r.share}%</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* 筛选和审计流 */}
-      <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="card" style={{ height: 440, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div className="card-header">
           <div className="card-title">实时审计流</div>
           <div style={{ display: 'flex', gap: 8 }}>

@@ -79,6 +79,11 @@ export const authApi = {
     return request.get('/auth/userinfo/');
   },
 
+  // P1 账号互通：桌面端一次性临时 token 兑换正式登录态
+  exchangeDesktopLogin: (token: string): Promise<LoginResult> => {
+    return request.post('/auth/desktop-login/exchange/', { token });
+  },
+
   getSystemStatus: (): Promise<SystemStatus> => {
     return request.get('/auth/system-status/');
   },

@@ -17,7 +17,7 @@
  * 创建时间：2026-08-12
  */
 
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { BrowserWindow, dialog } from 'electron'
 import * as chokidar from 'chokidar'
 import * as crypto from 'crypto'
 import * as fs from 'fs'

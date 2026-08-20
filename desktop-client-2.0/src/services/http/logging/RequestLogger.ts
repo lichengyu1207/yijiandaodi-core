@@ -10,6 +10,11 @@ import {
 import { LogConfig, LogLevel } from '../types/http.types'
 
 /**
+ * 携带请求元数据的 axios 配置（metadata 用于跨拦截器传递计时信息）
+ */
+type AxiosConfigWithMetadata = AxiosRequestConfig & { metadata?: RequestMetadata }
+
+/**
  * 请求日志记录器
  */
 export class RequestLogger {
@@ -67,7 +72,9 @@ export class RequestLogger {
     }
 
     // 存储请求元数据（用于后续计算耗时）
-    config.metadata = metadata
+    // 注意：不能写成 `(config as ...).metadata = ...`（以 ( 开头的语句会与上行对象字面量触发 ASI 陷阱）
+    const requestConfig = config as AxiosConfigWithMetadata
+    requestConfig.metadata = metadata
 
     // 记录请求日志
     const logEntry: RequestLog = {
@@ -91,7 +98,7 @@ export class RequestLogger {
   logResponse(response: AxiosResponse): void {
     if (!this.config.enabled) return
 
-    const metadata = response.config.metadata as RequestMetadata
+    const metadata = (response.config as AxiosConfigWithMetadata).metadata as RequestMetadata
     if (!metadata) return
 
     const endTime = Date.now()
@@ -132,7 +139,7 @@ export class RequestLogger {
   logError(error: AxiosError): void {
     if (!this.config.enabled) return
 
-    const metadata = error.config?.metadata as RequestMetadata
+    const metadata = (error.config as AxiosConfigWithMetadata | undefined)?.metadata as RequestMetadata | undefined
     if (!metadata) return
 
     const endTime = Date.now()
@@ -276,8 +283,8 @@ export class RequestLogger {
   private calculateResponseSize(response: AxiosResponse): number {
     try {
       const contentLength = response.headers?.['content-length']
-      if (contentLength) {
-        return parseInt(contentLength, 10)
+      if (typeof contentLength === 'string' || typeof contentLength === 'number') {
+        return parseInt(String(contentLength), 10)
       }
 
       // 如果没有content-length，估算大小

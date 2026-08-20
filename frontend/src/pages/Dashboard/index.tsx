@@ -28,14 +28,17 @@ import {
   getStatsSkills,
   getStatsAreas,
   getStatsRevenue,
+  getStatsByRegion,
   refreshStats,
   type OverviewSummary,
   type ChartDataPoint,
   type SkillStatItem,
   type AreaStatItem,
+  type RegionStatItem,
   type RevenueSummary,
   type PackageBreakdown,
 } from '@/api/statsApi';
+import DateRangePicker, { type DateRangeValue } from '@/components/DateRangePicker';
 
 const formatNum = (n: number) => {
   if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
@@ -59,22 +62,33 @@ const Dashboard: React.FC = () => {
   const [areas, setAreas] = useState<AreaStatItem[]>([]);
   const [revenueSummary, setRevenueSummary] = useState<RevenueSummary | null>(null);
   const [packageBreakdown, setPackageBreakdown] = useState<PackageBreakdown | null>(null);
-  const [activeTab, setActiveTab] = useState<'platform' | 'skills' | 'areas' | 'revenue'>('platform');
+  const [regions, setRegions] = useState<RegionStatItem[]>([]);
+  const [activeTab, setActiveTab] = useState<'platform' | 'skills' | 'areas' | 'revenue' | 'region'>('platform');
   const [skillSort, setSkillSort] = useState('clicks');
-  const [daysRange, setDaysRange] = useState(7);
+
+  const fmtD = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const [range, setRange] = useState<DateRangeValue>(() => ({
+    label: '近7天',
+    start_date: fmtD(new Date(Date.now() - 6 * 864e5)),
+    end_date: fmtD(new Date()),
+  }));
+  const daysRange = Math.max(1, Math.round((new Date(range.end_date).getTime() - new Date(range.start_date).getTime()) / 864e5) + 1);
 
   useEffect(() => {
     loadAllData();
-  }, [daysRange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range.start_date, range.end_date]);
 
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [ovRes, skRes, arRes, revRes] = await Promise.allSettled([
-        getStatsOverview(daysRange),
-        getStatsSkills({ days: daysRange, limit: 50 }),
-        getStatsAreas(daysRange),
-        getStatsRevenue(daysRange),
+      const rangeParams = { start_date: range.start_date, end_date: range.end_date };
+      const [ovRes, skRes, arRes, revRes, regRes] = await Promise.allSettled([
+        getStatsOverview(rangeParams),
+        getStatsSkills({ ...rangeParams, limit: 50 }),
+        getStatsAreas(rangeParams),
+        getStatsRevenue(rangeParams),
+        getStatsByRegion(rangeParams),
       ]);
 
       if (ovRes.status === 'fulfilled' && ovRes.value.success) {
@@ -90,6 +104,9 @@ const Dashboard: React.FC = () => {
       if (revRes.status === 'fulfilled' && revRes.value.success) {
         setRevenueSummary(revRes.value.data.summary);
         setPackageBreakdown(revRes.value.data.package_breakdown);
+      }
+      if (regRes.status === 'fulfilled' && regRes.value.success) {
+        setRegions(regRes.value.data.items || []);
       }
     } catch (e) {}
     setLoading(false);
@@ -135,25 +152,8 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {[7, 14, 30].map(d => (
-            <button
-              key={d}
-              onClick={() => setDaysRange(d)}
-              style={{
-                padding: '5px 14px',
-                borderRadius: 6,
-                border: daysRange === d ? 'none' : '1px solid #E5E6EB',
-                background: daysRange === d ? '#165DFF' : '#FFF',
-                color: daysRange === d ? '#FFF' : '#4E5969',
-                fontSize: 12,
-                fontWeight: daysRange === d ? 600 : 400,
-                cursor: 'pointer',
-              }}
-            >
-              {d}天
-            </button>
-          ))}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <DateRangePicker value={range} onChange={setRange} />
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -187,6 +187,7 @@ const Dashboard: React.FC = () => {
           { key: 'platform', label: '平台总览', icon: BarChart3 },
           { key: 'skills', label: '技能统计', icon: Zap },
           { key: 'areas', label: '区域点击', icon: Eye },
+          { key: 'region', label: '区域消费', icon: PieChart },
           { key: 'revenue', label: '营收分析', icon: DollarSign },
         ] as const).map(tab => (
           <button
@@ -287,7 +288,7 @@ const Dashboard: React.FC = () => {
                 marginBottom: 24,
               }}>
                 <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 600, color: '#1D2129' }}>
-                  时间趋势 (近{daysRange}天)
+                  时间趋势 ({range.label})
                 </h3>
                 {chartData.length > 0 ? (
                   <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 200, paddingTop: 20 }}>
@@ -708,6 +709,169 @@ const Dashboard: React.FC = () => {
                     </div>
                   );
                 })}
+              </div>
+            </>
+          )}
+
+          {/* ===== TAB 3.5: Region Consumption ===== */}
+          {activeTab === 'region' && (
+            <>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 16,
+                marginBottom: 24,
+              }}>
+                {[
+                  {
+                    label: '调用次数',
+                    value: formatNum(regions.reduce((s, r) => s + r.count, 0)),
+                    icon: PieChart,
+                    color: '#165DFF',
+                    bg: '#E8F3FF',
+                  },
+                  {
+                    label: '平均耗时',
+                    value: (() => {
+                      const c = regions.reduce((s, r) => s + r.count, 0);
+                      return c ? Math.round(regions.reduce((s, r) => s + r.avg * r.count, 0) / c) + 'ms' : '0ms';
+                    })(),
+                    icon: Activity,
+                    color: '#00B42A',
+                    bg: '#E8FFEA',
+                  },
+                  {
+                    label: '失败率',
+                    value: (() => {
+                      const c = regions.reduce((s, r) => s + r.count, 0);
+                      return c ? ((regions.reduce((s, r) => s + r.error_count, 0) / c) * 100).toFixed(2) + '%' : '0%';
+                    })(),
+                    icon: Target,
+                    color: '#F53F3F',
+                    bg: '#FFECE8',
+                  },
+                ].map((kpi, i) => (
+                  <div key={i} style={{
+                    padding: '18px 20px',
+                    borderRadius: 10,
+                    background: '#FFF',
+                    border: '1px solid #E5E6EB',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                      <div style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 8,
+                        background: kpi.bg,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <kpi.icon size={17} style={{ color: kpi.color }} />
+                      </div>
+                      <span style={{ fontSize: 12, color: '#86909C' }}>{kpi.label}</span>
+                    </div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#1D2129' }}>{kpi.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{
+                background: '#FFF',
+                borderRadius: 10,
+                border: '1px solid #E5E6EB',
+                padding: '20px 24px',
+                marginBottom: 24,
+              }}>
+                <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 600, color: '#1D2129' }}>
+                  区域调用占比 ({range.label})
+                </h3>
+                {regions.length === 0 || regions.every(r => r.count === 0) ? (
+                  <div style={{ textAlign: 'center', padding: 30, color: '#C9CDD4', fontSize: 13 }}>
+                    暂无 API 调用数据，通过 API Key 发起调用后将在此展示区域分布
+                  </div>
+                ) : (
+                  regions.map((r, i) => {
+                    const colors = ['#165DFF', '#00B42A', '#F5A623', '#722ED1'];
+                    return (
+                      <div key={r.region} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                        <span style={{ fontSize: 12, color: '#4E5969', width: 80, textAlign: 'right', flexShrink: 0 }}>{r.label}</span>
+                        <div style={{ flex: 1, height: 20, borderRadius: 4, background: '#F2F3F5', overflow: 'hidden', minWidth: 0 }}>
+                          <div style={{
+                            width: Math.max(r.share, r.count > 0 ? 4 : 0) + '%',
+                            height: '100%',
+                            borderRadius: 4,
+                            background: colors[i % colors.length],
+                            transition: 'width 0.5s ease-out',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                            paddingRight: 8,
+                            minWidth: r.count > 0 ? 28 : 0,
+                          }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#FFF' }}>{r.count}</span>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 12, color: '#86909C', width: 56, flexShrink: 0 }}>{r.share.toFixed(1)}%</span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div style={{
+                background: '#FFF',
+                borderRadius: 10,
+                border: '1px solid #E5E6EB',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 90px 90px 90px 90px 80px',
+                  padding: '12px 16px',
+                  background: '#F7F8FA',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#4E5969',
+                  borderBottom: '1px solid #E5E6EB',
+                }}>
+                  <div>区域</div>
+                  <div style={{ textAlign: 'right' }}>调用次数</div>
+                  <div style={{ textAlign: 'right' }}>平均耗时</div>
+                  <div style={{ textAlign: 'right' }}>失败数</div>
+                  <div style={{ textAlign: 'right' }}>失败率</div>
+                  <div style={{ textAlign: 'right' }}>占比</div>
+                </div>
+                {regions.length > 0 ? regions.map((r, i) => (
+                  <div key={r.region} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 90px 90px 90px 90px 80px',
+                    padding: '12px 16px',
+                    borderBottom: i < regions.length - 1 ? '1px solid #F2F3F5' : 'none',
+                    fontSize: 13,
+                    alignItems: 'center',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 600, color: '#1D2129' }}>{r.label}</span>
+                      <span style={{ fontSize: 11, color: '#C9CDD4' }}>{r.region}</span>
+                    </div>
+                    <div style={{ textAlign: 'right', fontWeight: 600, color: '#1D2129' }}>{formatNum(r.count)}</div>
+                    <div style={{ textAlign: 'right', color: '#4E5969' }}>{r.count ? r.avg.toFixed(1) + 'ms' : '-'}</div>
+                    <div style={{ textAlign: 'right', color: r.error_count > 0 ? '#F53F3F' : '#00B42A' }}>{r.error_count}</div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: r.error_rate >= 10 ? '#F53F3F' : r.error_rate >= 3 ? '#F5A623' : '#00B42A',
+                      }}>
+                        {r.count ? r.error_rate.toFixed(2) + '%' : '-'}
+                      </span>
+                    </div>
+                    <div style={{ textAlign: 'right', color: '#86909C' }}>{r.share.toFixed(1)}%</div>
+                  </div>
+                )) : (
+                  <div style={{ textAlign: 'center', padding: 40, color: '#C9CDD4', fontSize: 13 }}>暂无数据</div>
+                )}
               </div>
             </>
           )}

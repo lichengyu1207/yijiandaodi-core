@@ -28,12 +28,67 @@ config.env
 *.pem
 *.key
 *.p12
+.secret_key
+backend/.secret_key
 *.pfx
+*.crt
+*.cer
+*.der
+*.jks
+*.p8
+
+# Python 缓存 / 虚拟环境
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# 数据库 / 备份（含用户敏感数据，禁止入库）
+*.sqlite3
+*.sqlite
+*.db
+db.sqlite3
+backend/db.sqlite3
+backups/
+*.bak
+
+# 构建产物 / 打包输出（含真实密钥，禁止入库）
+desktop-client-2.0/release-new/
+desktop-client-2.0/release-new-2/
+desktop-client-2.0/release-new-3/
+desktop-client-2.0/dist/
+desktop-client-2.0/dist-electron/
+desktop-client-2.0/.electron-dev-userdata/
+backend/dist/
+backend/build/
+*.exe
+*.7z
+*.zip
+*.msi
+
+# 第三方源码 / 工具目录（勿入库）
+grok/
+openclaw/
+claude-code-main/
+deepseek-harness-master/
+openclaw-main.zip
+deepseek-harness-master.zip
+Redis/
+esp32_rgb_controller/.pio/
+security-knowledge-base/AboutSecurity-master/Dic/
+security-knowledge-base/AboutSecurity-master/Vuln/
+security-knowledge-base/AboutSecurity-master/skills/
+download-guide.html
 
 # 桌面端运行日志 / 测试产物 / 构建缓存
 desktop-client-2.0/logs/
 desktop-client-2.0/agent-tests.json
 desktop-client-2.0/*.tsbuildinfo
+backend/logs/
+backend/*.out.txt
 
 # IDE
 .vscode/
@@ -48,6 +103,7 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+*.tsbuildinfo
 
 # Temporary files
 *.tmp
@@ -56,3 +112,15 @@ npm-debug.log*
 # Test results
 test-results/
 test-reports/
+*.tsbuildinfo
+
+# 测试产物 / 报告（可能含 API Key 样本）
+admin_api_verification.json
+auth_test_result.json
+apikey_test_report_*.json
+tools/apikey_test_*.json
+data/test_500_*.json
+data/test_500_scenarios.db
+test_*.json
+*_verification.json
+*_verification_result.json

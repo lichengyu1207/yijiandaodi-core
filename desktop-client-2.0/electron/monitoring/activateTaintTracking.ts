@@ -8,7 +8,6 @@
 
 import { taintTracker } from './taintTracking'
 import { logger } from '../services/loggerService'
-import { proactiveAlerter } from './proactiveAlerter'
 
 /**
  * 激活污点追踪系统（简化版）

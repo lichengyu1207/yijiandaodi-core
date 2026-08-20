@@ -10,11 +10,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PermissionList, { PERMISSION_GROUPS } from '../components/PermissionList'
+import { authService } from '../services/authService'
 import './SetupWizard.css'
 
 interface SetupWizardProps {
   /** 完成全部引导后的回调 */
   onComplete?: () => void
+  /** 设置账号并自动登录成功后的回调（首次运行场景：让 App 进入已登录状态） */
+  onLoginSuccess?: () => void
+  /** 本地已存在账号（已登录场景）：跳过「设置账号密码」步骤，直接进入权限/网络引导 */
+  hasAccount?: boolean
 }
 
 type Step = 'account' | 'permission' | 'network' | 'done'
@@ -31,21 +36,24 @@ interface SetupError {
   detail?: string
 }
 
-const STEPS: Array<{ key: Step; label: string }> = [
+const STEPS_BASE: Array<{ key: Step; label: string }> = [
   { key: 'account', label: '设置账号' },
   { key: 'permission', label: '允许权限' },
   { key: 'network', label: '允许网络' },
 ]
 
-export default function SetupWizard({ onComplete }: SetupWizardProps) {
+export default function SetupWizard({ onComplete, onLoginSuccess, hasAccount }: SetupWizardProps) {
   const navigate = useNavigate()
   const api = (window as any).electronAPI
 
   // 步骤状态
-  const [step, setStep] = useState<Step>('account')
+  const [step, setStep] = useState<Step>(hasAccount ? 'permission' : 'account')
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<SetupError | null>(null)
+
+  // 已有账号时跳过「设置账号」步骤
+  const STEPS = hasAccount ? STEPS_BASE.slice(1) : STEPS_BASE
 
   // 账号表单
   const [username, setUsername] = useState('')
@@ -114,18 +122,24 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
     })
   }
 
-  /** 第 1 步：提交账号密码 */
+  /** 第 1 步：提交账号密码（注册到后端数据库 + 本地记录 + 自动登录） */
   const submitAccount = async () => {
     setError(null)
+    // 已存在本地账号（已登录场景）：跳过账号设置，直接进入权限步骤
+    if (hasAccount) {
+      console.log('[SetupWizard] 检测到已存在账号，跳过「设置账号密码」步骤')
+      setStep('permission')
+      return
+    }
     console.log('[SetupWizard] 提交账号密码', { username: username.trim(), passwordLen: password.length })
     if (username.trim().length < 3) {
       console.warn('[SetupWizard] 校验失败：用户名过短', { username: username.trim() })
       setInputError('账号至少需要 3 个字符，请检查后重新输入。')
       return
     }
-    if (!password || password.length < 6) {
+    if (!password || password.length < 8) {
       console.warn('[SetupWizard] 校验失败：密码过短', { passwordLen: password.length })
-      setInputError('密码至少需要 6 位，请检查后重新输入。')
+      setInputError('密码至少需要 8 位，请检查后重新输入。')
       return
     }
     if (password !== passwordConfirm) {
@@ -133,27 +147,56 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
       setInputError('两次输入的密码不一致，请重新确认。')
       return
     }
-    // 非 Electron 环境直接跳过
-    if (!api?.registerLocalAuth) {
-      console.log('[SetupWizard] 非 Electron 环境，跳过注册，进入权限步骤')
-      setStep('permission')
-      return
-    }
+    // 非 Electron 环境：仍可注册后端并自动登录（浏览器开发预览场景）
+    const hasIpc = !!api?.registerLocalAuth
     setSaving(true)
     try {
-      console.log('[SetupWizard] 调用 IPC registerLocalAuth 开始')
-      const res = await api.registerLocalAuth({ username: username.trim(), password })
-      console.log('[SetupWizard] 调用 IPC registerLocalAuth 返回', { success: res?.success, error: res?.error })
-      if (!res?.success) {
-        console.warn('[SetupWizard] 注册失败', { error: res?.error })
-        setSystemError('保存账号', '账号保存失败，未能写入本地数据库。', res?.error)
-        setSaving(false)
-        return
+      // 1) 本地记录（Electron 场景）：保存进入本地数据库的账号（setupCompleted 暂为 false，全部完成后置位）
+      if (hasIpc) {
+        try {
+          console.log('[SetupWizard] 调用 IPC registerLocalAuth 开始')
+          const localRes = await api.registerLocalAuth({ username: username.trim(), password })
+          console.log('[SetupWizard] 调用 IPC registerLocalAuth 返回', { success: localRes?.success, error: localRes?.error })
+          if (!localRes?.success) {
+            console.warn('[SetupWizard] 本地账号保存失败', { error: localRes?.error })
+            setSystemError('保存账号', '账号保存失败，未能写入本地数据库。', localRes?.error)
+            return
+          }
+        } catch (e: any) {
+          setSystemError('保存账号', '账号保存未完成，可能是应用进程无响应。', e)
+          return
+        }
+      } else {
+        console.log('[SetupWizard] 非 Electron 环境，跳过本地账号记录')
       }
-      console.log('[SetupWizard] 注册成功，进入权限步骤')
+
+      // 2) 注册到后端数据库并自动登录（登录态持久化：refresh token 30 天）
+      //    已登录（中断续跑场景）则跳过；已注册（用户名占用）则回退为直接登录
+      if (!authService.isAuthenticated()) {
+        console.log('[SetupWizard] 调用后端 setupAccount 注册+自动登录 开始')
+        try {
+          await authService.setupAccount(username.trim(), password)
+        } catch (regErr: any) {
+          const msg = String(regErr?.message || regErr?.error || '')
+          // 用户名已存在 → 说明此前已注册成功但未完成引导，回退直接登录继续
+          if (/已注册|已被注册|username.*exist|unique/i.test(msg)) {
+            console.log('[SetupWizard] 账号已注册，回退直接登录', { msg })
+            await authService.login({ username: username.trim(), password })
+          } else {
+            throw regErr
+          }
+        }
+        console.log('[SetupWizard] 后端注册+自动登录成功')
+        onLoginSuccess?.()
+      } else {
+        console.log('[SetupWizard] 已处于登录状态，跳过注册（中断续跑）')
+        onLoginSuccess?.()
+      }
+
+      console.log('[SetupWizard] 账号设置完成，进入权限步骤')
       setStep('permission')
     } catch (e: any) {
-      setSystemError('保存账号', '账号保存未完成，可能是应用进程无响应。', e)
+      setSystemError('注册账号', '账号注册/登录未完成，请确认后端服务已启动后重试。', e?.message || e)
     } finally {
       setSaving(false)
     }
@@ -316,42 +359,53 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
         {/* 第 1 步：设置账号密码 */}
         {step === 'account' && (
           <div className="setup-step-body">
-            <h2>设置账号密码</h2>
-            <p className="setup-desc">
-              为您的本地数据库设置一个账号和密码。该账号用于进入本地的存证、监控与审计数据，
-              请务必牢记。
-            </p>
-            <div className="form-group">
-              <label className="form-label">账号（用户名）</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="至少 3 个字符"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">密码</label>
-              <input
-                type="password"
-                className="form-input"
-                placeholder="至少 6 位"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">确认密码</label>
-              <input
-                type="password"
-                className="form-input"
-                placeholder="再次输入密码"
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') submitAccount() }}
-              />
-            </div>
+            {hasAccount ? (
+              <>
+                <h2>账号已就绪</h2>
+                <p className="setup-desc">
+                  检测到本地已存在账号，无需重复设置密码，可直接进行后续的权限与网络设置。
+                </p>
+              </>
+            ) : (
+              <>
+                <h2>设置账号密码</h2>
+                <p className="setup-desc">
+                  设置您的账号和密码。确认后会自动创建账号并登录，进入本地的存证、监控与审计数据。
+                  请务必牢记，之后可凭该账号直接登录。
+                </p>
+                <div className="form-group">
+                  <label className="form-label">账号（用户名）</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="至少 3 个字符"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">密码</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    placeholder="至少 8 位"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">确认密码</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    placeholder="再次输入密码"
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') submitAccount() }}
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -425,7 +479,7 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
         )}
 
         <div className="setup-wizard-actions">
-          {step !== 'account' && step !== 'done' && (
+          {stepIndex > 0 && step !== 'done' && (
             <button
               type="button"
               className="btn btn-secondary"

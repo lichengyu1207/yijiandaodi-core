@@ -2,14 +2,23 @@ from django.urls import path, include
 from . import views
 from .grammar_views import GrammarCheckView, GrammarImproveView, GrammarStyleView
 from .tip_views import CreateTipView, MyGivenTipsView, MyReceivedTipsView, PublicTipWallView, CancelTipView
+from .realname_views import verify_realname, verify_status
 
 app_name = 'auth'
 
 urlpatterns = [
     path('login/', views.LoginView.as_view(), name='login'),
     path('register/', views.RegisterView.as_view(), name='register'),
+    path('setup-status/', views.SetupStatusView.as_view(), name='setup-status'),
+    path('verify/', views.VerifyTokenView.as_view(), name='verify'),
+    path('refresh/', views.RefreshTokenView.as_view(), name='refresh'),
+    # P1 账号互通：桌面端→官网 一次性临时 token（5 分钟、用后销毁）
+    path('desktop-login-token/', views.DesktopLoginTokenView.as_view(), name='desktop-login-token'),
+    path('desktop-login/exchange/', views.ExchangeDesktopTokenView.as_view(), name='desktop-login-exchange'),
     path('userinfo/', views.UserInfoView.as_view(), name='userinfo'),
     path('logout/', views.LogoutView.as_view(), name='logout'),
+    path('realname/verify/', verify_realname, name='realname-verify'),
+    path('realname/status/', verify_status, name='realname-status'),
     path('change-password/', views.ChangePasswordView.as_view(), name='change-password'),
     path('delete-account/', views.DeleteAccountView.as_view(), name='delete-account'),
     path('system-status/', views.SystemStatusView.as_view(), name='system-status'),
@@ -88,6 +97,12 @@ urlpatterns = [
 
     # Agent配置API路由
     path('agent/', include('auth_app.agent_urls')),
+
+    # Agent身份认证API路由（身份可信层）
+    path('agent/', include('auth_app.agent_identity_urls')),
+
+    # 海马体记忆系统API路由（三层记忆模型）
+    path('memory/', include('auth_app.memory_urls')),
 
     # 常态化巡检API路由（核心功能）
     path('patrol/', include('auth_app.patrol_urls')),

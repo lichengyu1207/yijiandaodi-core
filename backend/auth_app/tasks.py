@@ -536,3 +536,81 @@ def get_table_sizes_task() -> dict:
             'error_type': type(e).__name__,
             'traceback': traceback_str,
         }
+
+
+@shared_task
+def cleanup_expired_tokens() -> dict:
+    """清理已过期的 JWT 黑名单记录（OutstandingToken），防止 token 表无限增长。"""
+    from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+    cutoff = timezone.now()
+    deleted_count = 0
+    try:
+        # 分批删除过期 token，避免一次性加载全部 id 占满内存
+        batch_size = 5000
+        while True:
+            ids = list(
+                OutstandingToken.objects.filter(expires_at__lt=cutoff)
+                .values_list('pk', flat=True)[:batch_size]
+            )
+            if not ids:
+                break
+            deleted_count += OutstandingToken.objects.filter(pk__in=ids).delete()[0]
+
+        logger.info("清理过期Token完成", **{'deleted_count': deleted_count})
+        return {'success': True, 'deleted_count': deleted_count}
+    except Exception as e:
+        logger.error(
+            "清理过期Token失败",
+            **{'error': str(e), 'error_type': type(e).__name__},
+        )
+        return {'success': False, 'error': str(e), 'deleted_count': deleted_count}
+
+
+@shared_task
+def cleanup_expired_sessions() -> dict:
+    """清理已过期的 Django Session，防止 session 表无限增长。"""
+    from django.contrib.sessions.models import Session
+
+    cutoff = timezone.now()
+    deleted_count = 0
+    try:
+        batch_size = 5000
+        while True:
+            ids = list(
+                Session.objects.filter(expire_date__lt=cutoff)
+                .values_list('pk', flat=True)[:batch_size]
+            )
+            if not ids:
+                break
+            deleted_count += Session.objects.filter(pk__in=ids).delete()[0]
+
+        logger.info("清理过期会话完成", **{'deleted_count': deleted_count})
+        return {'success': True, 'deleted_count': deleted_count}
+    except Exception as e:
+        logger.error(
+            "清理过期会话失败",
+            **{'error': str(e), 'error_type': type(e).__name__},
+        )
+        return {'success': False, 'error': str(e), 'deleted_count': deleted_count}
+
+
+@shared_task
+def cleanup_old_logs() -> dict:
+    """统一数据保留清理（每天凌晨 2 点）。
+
+    按《数据安全法》《网络安全法》合规保留期分批删除过期日志与统计快照，
+    保留期见 settings.DATA_RETENTION_DAYS。
+    """
+    from .data_cleanup_service import DataCleanupService
+
+    try:
+        deleted_by_table = DataCleanupService.run_all_cleanup()
+        logger.info("统一数据保留清理完成", **{'deleted_by_table': deleted_by_table})
+        return {'success': True, 'deleted_by_table': deleted_by_table}
+    except Exception as e:
+        logger.error(
+            "统一数据保留清理失败",
+            **{'error': str(e), 'error_type': type(e).__name__},
+        )
+        return {'success': False, 'error': str(e)}

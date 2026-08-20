@@ -70,6 +70,11 @@ class UserProfile(models.Model):
 
     conversion_count = models.PositiveIntegerField('付费转化次数', default=0)
 
+    # P1-4 个性化数据持久化（主题 / 布局 / 收藏）：跨端（桌面端/官网）登录态互通
+    theme = models.CharField('个性化主题', max_length=32, blank=True, default='')
+    layout = models.JSONField('界面布局偏好', default=dict, blank=True)
+    favorites = models.JSONField('收藏列表', default=list, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

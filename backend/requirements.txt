@@ -7,6 +7,7 @@
 Django==4.2.16
 djangorestframework==3.14.0
 djangorestframework-simplejwt==5.3.1
+django-filter==26.1               # DRF 过滤后端（file_watch 等视图的 DjangoFilterBackend）
 
 # --- 数据库 ---
 psycopg2-binary==2.9.9          # PostgreSQL 驱动（生产环境）

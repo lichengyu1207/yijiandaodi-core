@@ -2,6 +2,33 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 
+# 导入Agent身份可信层模型
+from .agent_identity_models import (
+    AgentIdentity,
+    AgentPermission,
+    AgentAuthenticationLog,
+    AgentAuthSession
+)
+
+# 导入合规治理层模型
+from .governance_models import (
+    AgentComplianceScore,
+    GovernanceHealth,
+    StrategyVersion
+)
+
+# 导入自监控模型
+from .self_audit_models import (
+    PerformanceDriftRecord,
+    AgentPermissionAuditLog,
+    RuleFreshnessCheck,
+    SelfAuditReport
+)
+
+# 导入被懒引用但未注册的模型，确保 FK 关联目标可用
+from .behavior_models import BehaviorBaseline
+from .memory_models import StrategicMemory
+
 
 class UserManager(BaseUserManager):
     def create_user(self, username, email=None, password=None, **extra_fields):
@@ -123,3 +150,5 @@ from .stats_models import DailyPlatformStats, SkillDailyStats, AreaClickStats, R
 from .abtest_models import ABTestExperiment, ABTestAssignment, ABTestEvent, PromoCardScheduleRule, PromoCardImpressionLog
 from .enterprise_models import EnterpriseAccount, EnterpriseMember, EnterpriseAPIKey, EnterpriseBatchRecharge, EnterpriseUsageLog, SoftwareCopyrightApplication
 from .tip_models import TipRecord
+from .user_provider_key_models import UserProviderKey
+from .billing_models import APICallLog  # P1-2 计费落库

@@ -20,7 +20,7 @@ import type { AgentEventBus, AgentEventEnvelope, RiskEventData } from '../events
 import type { GovernanceLoggerLike } from '../events/governanceLogger'
 import type { PluginHooksHost, AlertPayload } from './hooks/types'
 import { ToolBridge } from './toolBridge'
-import { Planner } from './planner'
+import { Planner, PERCEPTION_STREAMS } from './planner'
 import { ToolError } from './types'
 
 /** 治理引擎构造依赖 */
@@ -86,16 +86,6 @@ export class GovernanceEngine {
     hooks?: PluginHooksHost
   }
 
-  /** 已订阅的感知流 */
-  private static readonly PERCEPTION_STREAMS = [
-    'file',
-    'process',
-    'network',
-    'clipboard',
-    'api_call',
-    'resource',
-  ] as const
-
   private unsubscribers: Array<() => void> = []
   private started = false
 
@@ -128,13 +118,13 @@ export class GovernanceEngine {
   /** 订阅感知流（幂等；重复调用先 stop 再重新订阅） */
   start(): void {
     if (this.started) return
-    for (const stream of GovernanceEngine.PERCEPTION_STREAMS) {
+    for (const stream of PERCEPTION_STREAMS) {
       const unsubscribe = this.deps.bus.subscribe(stream, (env) => this.handleEvent(env))
       this.unsubscribers.push(unsubscribe)
     }
     this.started = true
     this.log.info('[治理引擎] 已订阅感知流', { module: 'GovernanceEngine', function: 'start' }, {
-      streams: [...GovernanceEngine.PERCEPTION_STREAMS],
+      streams: [...PERCEPTION_STREAMS],
     })
   }
 

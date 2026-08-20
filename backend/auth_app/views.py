@@ -63,6 +63,23 @@ class SystemStatusView(APIView):
         })
 
 
+class SetupStatusView(APIView):
+    """首次运行探测：是否已有用户（桌面端据此决定进入「设置账号」引导还是「登录」页）"""
+    permission_classes = []
+
+    def get(self, request):
+        has_users = User.objects.exists()
+        has_superuser = User.objects.filter(is_superuser=True).exists()
+        return Response({
+            'success': True,
+            'data': {
+                'is_initialized': has_users,
+                'has_users': has_users,
+                'has_superuser': has_superuser,
+            }
+        })
+
+
 class LoginView(APIView):
     permission_classes = []
 
@@ -119,7 +136,7 @@ class LoginView(APIView):
             response.set_cookie(
                 key='refresh_token',
                 value=refresh_token,
-                max_age=604800,        # 7 天
+                max_age=2592000,       # 30 天（桌面端登录态持久化，配合 REFRESH_TOKEN_LIFETIME）
                 httponly=True,
                 secure=False,
                 samesite='Lax',
@@ -247,6 +264,167 @@ class UserInfoView(APIView):
         })
 
 
+DESKTOP_LOGIN_TOKEN_TTL = 300  # 5 分钟
+
+
+class DesktopLoginTokenView(APIView):
+    """桌面端→官网登录态同步（P1 账号互通一期）
+
+    登录用户请求一次性临时 token（5 分钟、用后即销毁），
+    桌面端将其拼到官网 URL 后经 shell.openExternal 打开，
+    官网前端用该 token 兑换正式 JWT（见 ExchangeDesktopTokenView）。
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        token = secrets.token_urlsafe(32)
+        cache_key = f'desktop_login_token:{token}'
+        cache.set(cache_key, request.user.id, timeout=DESKTOP_LOGIN_TOKEN_TTL)
+        return Response({
+            'success': True,
+            'message': '临时登录 token 已生成',
+            'data': {
+                'token': token,
+                'expires_in': DESKTOP_LOGIN_TOKEN_TTL,
+            }
+        })
+
+
+class ExchangeDesktopTokenView(APIView):
+    """官网前端用一次性临时 token 兑换正式登录态（用后即销毁）"""
+    permission_classes = []
+
+    def post(self, request):
+        token = (request.data.get('token') or '').strip()
+        if not token:
+            return Response({
+                'success': False,
+                'message': '缺少临时登录 token'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        cache_key = f'desktop_login_token:{token}'
+        user_id = cache.get(cache_key)
+        if not user_id:
+            return Response({
+                'success': False,
+                'message': '临时登录 token 无效或已过期'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        # 一次性：用后立即销毁，防止重放
+        cache.delete(cache_key)
+
+        user = User.objects.filter(id=user_id, is_active=True).first()
+        if not user:
+            return Response({
+                'success': False,
+                'message': '账号不存在或已停用'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        ip_address = _get_client_ip(request)
+        LoginLog.objects.create(
+            user=user,
+            ip_address=ip_address,
+            user_agent=_get_client_user_agent(request),
+            status='desktop_sync'
+        )
+
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+
+        response = Response({
+            'success': True,
+            'message': '登录成功',
+            'data': {
+                'token': access_token,
+                'refresh_token': refresh_token,
+                'user': UserInfoSerializer(user).data,
+                'expires_in': 7200,
+            }
+        }, status=status.HTTP_200_OK)
+
+        # 与 LoginView 一致的 httpOnly Cookie 双保险
+        response.set_cookie(
+            key='access_token',
+            value=access_token,
+            max_age=7200,
+            httponly=True,
+            secure=False,
+            samesite='Lax',
+            path='/',
+        )
+        response.set_cookie(
+            key='refresh_token',
+            value=refresh_token,
+            max_age=2592000,
+            httponly=True,
+            secure=False,
+            samesite='Lax',
+            path='/',
+        )
+        return response
+
+
+class VerifyTokenView(APIView):
+    """校验 Access Token 是否有效（供桌面端 validateToken 调用）"""
+    permission_classes = []
+
+    def get(self, request):
+        from rest_framework_simplejwt.authentication import JWTAuthentication
+        auth = JWTAuthentication()
+        raw = request.headers.get('Authorization', '')
+        try:
+            if raw.lower().startswith('bearer '):
+                raw = raw[7:].strip()
+            validated_token = auth.get_validated_token(raw)
+            user = auth.get_user(validated_token)
+            return Response({
+                'success': True,
+                'valid': True,
+                'data': UserInfoSerializer(user).data
+            })
+        except Exception:
+            return Response({
+                'success': False,
+                'valid': False
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class RefreshTokenView(APIView):
+    """刷新 Access Token（供桌面端 refreshToken 调用）"""
+    permission_classes = []
+
+    def post(self, request):
+        refresh_token = request.data.get('refresh', '')
+        try:
+            refresh = RefreshToken(refresh_token)
+            access_token = str(refresh.access_token)
+
+            # ROTATE_REFRESH_TOKENS=True 轮换逻辑（与 simplejwt TokenRefreshSerializer 一致）：
+            # 1) 拉黑旧的 refresh token；2) 基于原对象签发新的 refresh token 返回给客户端
+            try:
+                refresh.blacklist()
+            except AttributeError:
+                # 未启用 blacklist app 时忽略
+                pass
+            refresh.set_jti()
+            refresh.set_exp()
+            refresh.set_iat()
+            new_refresh_token = str(refresh)
+
+            return Response({
+                'success': True,
+                'access': access_token,
+                'refresh': new_refresh_token,
+                'expires_in': 7200,
+            })
+        except Exception:
+            return Response({
+                'success': False,
+                'message': '无效的 refresh token'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -256,6 +434,8 @@ class LogoutView(APIView):
             if auth_header and auth_header.startswith('Bearer '):
                 token_string = auth_header.split(' ')[1]
 
+                # 说明：simplejwt 的 token_blacklist 仅支持吊销 RefreshToken，
+                # AccessToken 为无状态短令牌，不受拉黑管理。这里保留自定义黑名单记录用于审计。
                 BlacklistedToken.objects.create(
                     token=token_string,
                     user=request.user,

@@ -65,10 +65,14 @@ const HealthDashboard: React.FC = () => {
         const result = await (window as any).electronAPI.getHealthMetrics()
         if (disposed) return
 
-        if (result) {
-          setMetrics(result)
-          setLastUpdate(new Date(result.timestamp || Date.now()).toLocaleTimeString())
+        // 兼容主进程 { success, data } 包装结构：取 data 作为指标数据
+        const payload = result?.data ?? result
+        if (payload && typeof payload === 'object' && 'overallHealth' in payload) {
+          setMetrics(payload)
+          setLastUpdate(new Date(payload.timestamp || Date.now()).toLocaleTimeString())
           setError(null)
+        } else if (result && result.success === false) {
+          setError(result.error || '未获取到健康度数据')
         } else {
           setError('未获取到健康度数据')
         }

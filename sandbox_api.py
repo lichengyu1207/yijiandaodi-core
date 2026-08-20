@@ -27,6 +27,15 @@ from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
+# Windows 控制台默认 GBK(cp936)，无法编码 ✓/✗ 及部分中文，会导致 print 抛
+# UnicodeEncodeError 使服务崩溃。统一将 stdout/stderr 重配为 UTF-8。
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 # 导入本地数据存储
 from local_data_store import local_store
 
@@ -80,7 +89,7 @@ except ImportError as e:
 
 # 配置
 API_PORT = int(os.environ.get('SANDBOX_PORT', 9092))
-DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', 'sk-8cb2fc0743684a58812d5d00fe0a4e68')
+DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 
 # 全局实例
 sandbox: MiniSandbox = None

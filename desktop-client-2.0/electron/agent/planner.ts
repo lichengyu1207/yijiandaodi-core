@@ -22,8 +22,11 @@ import { DEFAULT_BACKOFF } from './retryWithBackoff'
 // 类型定义
 // ============================================================================
 
-/** 事件流名称的收敛类型：感知流（RulePlanner 只路由感知流，不路由 tool/assistant 等治理流） */
-export type PerceptionStream = 'file' | 'process' | 'network' | 'clipboard' | 'api_call' | 'resource'
+/** 感知流白名单（单一事实来源：RulePlanner 只路由感知流，不路由 tool/assistant 等治理流） */
+export const PERCEPTION_STREAMS = ['file', 'process', 'network', 'clipboard', 'api_call', 'resource'] as const
+
+/** 事件流名称的收敛类型：感知流 */
+export type PerceptionStream = (typeof PERCEPTION_STREAMS)[number]
 
 /** 规划产出：一个待执行的工具动作（对齐 Claude tool_use / Grok client_function） */
 export interface AgentAction {
@@ -62,14 +65,7 @@ export interface RulePlannerConfig {
 
 /** 判断事件流是否为感知流（仅感知流可触发规划） */
 export function isPerceptionStream(stream: string): stream is PerceptionStream {
-  return (
-    stream === 'file' ||
-    stream === 'process' ||
-    stream === 'network' ||
-    stream === 'clipboard' ||
-    stream === 'api_call' ||
-    stream === 'resource'
-  )
+  return (PERCEPTION_STREAMS as readonly string[]).includes(stream)
 }
 
 // ============================================================================
@@ -332,17 +328,7 @@ export class RulePlanner implements Planner {
           sessionId: proc.sessionId ?? common.sessionId,
         }
       }
-      case 'network': {
-        const apiCall = data.apiCall ?? {}
-        return {
-          action: 'api_call_verify',
-          subject: 'governance_agent',
-          object: apiCall.url ?? '',
-          result: `verify(${data.severity ?? 'unknown'})`,
-          context: { method: apiCall.method, target: apiCall.target, riskScore: data.riskScore },
-          ...common,
-        }
-      }
+      case 'network':
       case 'api_call': {
         const apiCall = data.apiCall ?? {}
         return {

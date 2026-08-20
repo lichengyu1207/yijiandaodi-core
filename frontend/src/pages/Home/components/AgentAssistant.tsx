@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal, Input, Button, message } from 'antd';
-import { Eye, CheckCircle, Lock, Gavel, Send, X } from 'lucide-react';
+import { Modal, Input, Button, message, Spin } from 'antd';
+import { Eye, CheckCircle, Lock, Gavel, Send, X, History, MessageSquare } from 'lucide-react';
 import type { AgentConfig } from './AgentRoles';
-import { agentApi, type ChatResponse } from '@/api/agentApi';
+import { agentApi, type ChatResponse, type SessionItem } from '@/api/agentApi';
 
 const { TextArea } = Input;
 
@@ -108,27 +108,82 @@ const AgentAssistant: React.FC<AgentAssistantProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
   const [sessionIds, setSessionIds] = useState<Record<string, string>>({});
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const currentAgent = agents.find((a) => a.id === activeId) || agents[0];
 
-  useEffect(() => {
-    if (open && activeId) {
-      const agent = agents.find((a) => a.id === activeId);
-      if (agent) {
-        setMessages([
-          {
-            id: `welcome-${Date.now()}`,
-            role: 'system',
-            content: `${agent.name}已就绪，请输入待检测内容`,
-            timestamp: new Date(),
-            agentId: agent.id,
-          },
-        ]);
+  // 加载历史会话列表
+  const loadSessions = async () => {
+    try {
+      setLoadingHistory(true);
+      const res = await agentApi.getSessions(20);
+      if (res.success && res.data) {
+        setSessions(res.data);
       }
+    } catch (err) {
+      console.error('加载历史会话失败:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // 加载特定会话的消息历史
+  const loadSessionMessages = async (sessionId: string) => {
+    try {
+      setLoadingHistory(true);
+      const res = await agentApi.getSessionMessages(sessionId);
+      if (res.success && res.data) {
+        // 将API返回的消息转换为组件消息格式
+        const loadedMessages: Message[] = res.data.messages.map(msg => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.createdAt),
+          agentId: activeId,
+        }));
+
+        setMessages(loadedMessages);
+        setSessionIds({ [activeId]: sessionId });
+        message.success(`已加载历史对话：${res.data.title || '未命名会话'}`);
+      }
+    } catch (err) {
+      console.error('加载会话消息失败:', err);
+      message.error('加载失败');
+    } finally {
+      setLoadingHistory(false);
+      setShowHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      // 打开时加载历史会话列表
+      loadSessions();
+      // 清空消息，等待用户选择历史或开始新对话
+      setMessages([]);
       setInputValue('');
     }
-  }, [open, activeId]);
+  }, [open]);
+
+  // 开始新对话
+  const startNewChat = () => {
+    const agent = agents.find((a) => a.id === activeId);
+    if (agent) {
+      setMessages([
+        {
+          id: `welcome-${Date.now()}`,
+          role: 'system',
+          content: `${agent.name}已就绪，请输入待检测内容`,
+          timestamp: new Date(),
+          agentId: agent.id,
+        },
+      ]);
+      setSessionIds({});
+    }
+  };
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -273,6 +328,45 @@ const AgentAssistant: React.FC<AgentAssistantProps> = ({
               </div>
             );
           })}
+
+          {/* 历史会话列表 */}
+          <div style={{ ...styles.sidebarTitle, marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>历史会话</span>
+            <History size={14} />
+          </div>
+          {loadingHistory ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <Spin size="small" />
+            </div>
+          ) : sessions.length > 0 ? (
+            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              {sessions.slice(0, 5).map((session) => (
+                <div
+                  key={session.session_id}
+                  style={styles.historyItem}
+                  onClick={() => loadSessionMessages(session.session_id)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FFFFFF';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <MessageSquare size={14} color="#64748B" />
+                  <div style={styles.historyText}>
+                    <div style={styles.historyTitle}>{session.title || '未命名会话'}</div>
+                    <div style={styles.historyTime}>
+                      {new Date(session.created_at).toLocaleDateString('zh-CN')}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ padding: '12px', fontSize: 12, color: '#94A3B8' }}>
+              暂无历史记录
+            </div>
+          )}
         </div>
 
         <div style={styles.mainArea}>
@@ -308,6 +402,23 @@ const AgentAssistant: React.FC<AgentAssistantProps> = ({
           </div>
 
           <div style={styles.messageArea} ref={messagesEndRef}>
+            {messages.length === 0 && !sending && (
+              <div style={styles.emptyState}>
+                <div style={styles.emptyIcon}>💬</div>
+                <div style={styles.emptyTitle}>选择历史会话或开始新对话</div>
+                <div style={styles.emptyDesc}>
+                  从左侧选择历史会话继续对话，或点击下方按钮开始新对话
+                </div>
+                <Button
+                  type="primary"
+                  icon={<MessageSquare size={14} />}
+                  onClick={startNewChat}
+                  style={{ marginTop: 16 }}
+                >
+                  开始新对话
+                </Button>
+              </div>
+            )}
             {messages.map((msg) => {
               if (msg.role === 'system') {
                 return (
@@ -438,6 +549,33 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '50%',
     flexShrink: 0,
   },
+  historyItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '10px 12px',
+    borderRadius: 6,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    marginBottom: 4,
+  },
+  historyText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  historyTitle: {
+    fontSize: 13,
+    fontWeight: 500,
+    color: '#334155',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  historyTime: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
   mainArea: {
     flex: 1,
     display: 'flex',
@@ -511,6 +649,31 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 12,
+  },
+  emptyState: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px 20px',
+    textAlign: 'center',
+  },
+  emptyIcon: {
+    fontSize: '48px',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: '16px',
+    fontWeight: 600,
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  emptyDesc: {
+    fontSize: '14px',
+    color: '#64748B',
+    maxWidth: '300px',
+    lineHeight: 1.6,
   },
   systemMsgWrap: {
     display: 'flex',

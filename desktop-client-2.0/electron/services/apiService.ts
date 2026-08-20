@@ -4,6 +4,7 @@
 
 import { spawn, ChildProcess } from 'child_process'
 import path from 'path'
+import fs from 'fs'
 import { app } from 'electron'
 import { logger } from './loggerService'
 
@@ -14,13 +15,14 @@ export class ApiService {
     const isDev = !app.isPackaged
 
     if (isDev) {
-      // 开发环境：直接启动 Python 服务
-      const backendPath = 'C:\\MsSafeData\\Desktop\\yijiandaodi\\sandbox_api.py'
+      // 开发环境：直接启动 Python 服务（相对仓库根解析，不写死绝对路径）
+      const repoRoot = path.resolve(process.cwd(), '..')
+      const backendPath = path.join(repoRoot, 'sandbox_api.py')
 
       logger.info('启动后台服务:', { module: 'ApiService' }, { path: backendPath })
 
       this.apiProcess = spawn('python', [backendPath], {
-        cwd: 'C:\\MsSafeData\\Desktop\\yijiandaodi',
+        cwd: repoRoot,
         stdio: 'pipe',
         detached: true
       })
@@ -37,14 +39,35 @@ export class ApiService {
         logger.info(`API 服务退出: ${code}`, { module: 'ApiService' })
       })
     } else {
-      // 生产环境：启动打包后的服务
-      const backendPath = path.join(path.dirname(__dirname), 'backend')
-      const pythonExe = path.join(backendPath, 'python', 'python.exe')
+      // 生产环境：spawn 打包资源中的 sandbox-api.exe（PyInstaller，零 Python 依赖）
+      const sandboxExe = path.join(process.resourcesPath, 'backend', 'sandbox-api', 'sandbox-api.exe')
 
-      this.apiProcess = spawn(pythonExe, ['sandbox_api.py'], {
-        cwd: backendPath,
+      if (!fs.existsSync(sandboxExe)) {
+        logger.warn('[ApiService] 打包资源中未找到 sandbox-api.exe，跳过沙箱服务', {
+          module: 'ApiService',
+          sandboxExe,
+        })
+        return
+      }
+
+      logger.info('启动打包沙箱服务:', { module: 'ApiService' }, { path: sandboxExe })
+
+      this.apiProcess = spawn(sandboxExe, [], {
+        cwd: path.dirname(path.dirname(sandboxExe)),
         stdio: 'pipe',
         detached: true
+      })
+
+      this.apiProcess.stdout?.on('data', (data) => {
+        logger.info(`[API] ${data}`, { module: 'ApiService' })
+      })
+
+      this.apiProcess.stderr?.on('data', (data) => {
+        logger.error(`[API Error] ${data}`, { module: 'ApiService' })
+      })
+
+      this.apiProcess.on('close', (code) => {
+        logger.info(`API 服务退出: ${code}`, { module: 'ApiService' })
       })
 
       this.apiProcess.unref()

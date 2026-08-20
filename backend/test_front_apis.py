@@ -6,10 +6,6 @@ import json
 import sys
 import io
 
-# 设置标准输出编码为 UTF-8
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
-
 BASE_URL = "http://127.0.0.1:8000"
 
 def test_api(name, url, method='GET', data=None, expected_status=200):
@@ -59,6 +55,10 @@ def test_api(name, url, method='GET', data=None, expected_status=200):
         return False
 
 def main():
+    # 设置标准输出编码为 UTF-8
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
     print("=" * 70)
     print("🧪 前台 API 测试 - 验证所有接口是否正常（非429/404）")
     print("=" * 70)

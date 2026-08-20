@@ -15,7 +15,6 @@ import { createFileWatchService, FileWatchService } from './FileWatchService'
  */
 class FileWatchIntegrationExample {
   private fileWatchService: FileWatchService | null = null
-  private mainWindow: BrowserWindow | null = null
   
   /**
    * 应用启动时调用
@@ -40,8 +39,6 @@ class FileWatchIntegrationExample {
    * 窗口创建时调用
    */
   onWindowCreated(window: BrowserWindow): void {
-    this.mainWindow = window
-    
     if (this.fileWatchService) {
       this.fileWatchService.setMainWindow(window)
     }
@@ -63,7 +60,7 @@ class FileWatchIntegrationExample {
     })
     
     // 创建监控配置
-    ipcMain.handle('file-watch:create-config', async (event, configData) => {
+    ipcMain.handle('file-watch:create-config', async (_event, configData) => {
       if (this.fileWatchService) {
         return await this.fileWatchService.createConfig(configData)
       }
@@ -71,7 +68,7 @@ class FileWatchIntegrationExample {
     })
     
     // 更新监控配置
-    ipcMain.handle('file-watch:update-config', async (event, configId, configData) => {
+    ipcMain.handle('file-watch:update-config', async (_event, configId, configData) => {
       if (this.fileWatchService) {
         return await this.fileWatchService.updateConfig(configId, configData)
       }
@@ -79,7 +76,7 @@ class FileWatchIntegrationExample {
     })
     
     // 删除监控配置
-    ipcMain.handle('file-watch:delete-config', async (event, configId) => {
+    ipcMain.handle('file-watch:delete-config', async (_event, configId) => {
       if (this.fileWatchService) {
         return await this.fileWatchService.deleteConfig(configId)
       }
@@ -87,7 +84,7 @@ class FileWatchIntegrationExample {
     })
     
     // 激活监控
-    ipcMain.handle('file-watch:activate', async (event, configId) => {
+    ipcMain.handle('file-watch:activate', async (_event, configId) => {
       if (this.fileWatchService) {
         return await this.fileWatchService.activateWatch(configId)
       }
@@ -95,7 +92,7 @@ class FileWatchIntegrationExample {
     })
     
     // 停止监控
-    ipcMain.handle('file-watch:deactivate', async (event, configId) => {
+    ipcMain.handle('file-watch:deactivate', async (_event, configId) => {
       if (this.fileWatchService) {
         return await this.fileWatchService.deactivateWatch(configId)
       }
@@ -112,7 +109,7 @@ class FileWatchIntegrationExample {
     })
     
     // 手动触发文件校验
-    ipcMain.handle('file-watch:verify-file', async (event, filePath) => {
+    ipcMain.handle('file-watch:verify-file', async (_event, filePath) => {
       if (this.fileWatchService) {
         return await this.fileWatchService.verifyFile(filePath)
       }

@@ -1,4 +1,4 @@
-import { CircuitStateType, CircuitBreakerConfig, FallbackContext, RequestResult } from './circuit.types'
+import { CircuitStateType, CircuitBreakerConfig, FallbackContext, RequestResult, CircuitStatisticsSnapshot } from './circuit.types'
 import { CircuitState } from './CircuitState'
 import { FailureDetector } from './FailureDetector'
 import { RecoveryTracker } from './RecoveryTracker'
@@ -15,7 +15,6 @@ export class CircuitBreaker {
   private failureDetector: FailureDetector
   private recoveryTracker: RecoveryTracker
   private statistics: CircuitStatistics
-  private lastStateChangeTime: number = Date.now()
   private openStartTime: number = 0
 
   constructor(serviceName: string, config: CircuitBreakerConfig) {
@@ -188,7 +187,7 @@ export class CircuitBreaker {
       newCallCount: this.recoveryTracker.getCurrentCalls()
     })
 
-    return this.execute(() => Promise.resolve(), requestId, method, url, config)
+    return this.execute<T>(async () => Promise.resolve() as unknown as T, requestId, method, url, config)
   }
 
   /**
@@ -370,7 +369,6 @@ export class CircuitBreaker {
 
     this.state.setState(CircuitStateType.OPEN)
     this.openStartTime = Date.now()
-    this.lastStateChangeTime = Date.now()
 
     const snapshot = this.statistics.getSnapshot()
 
@@ -397,7 +395,6 @@ export class CircuitBreaker {
     const previousState = this.state.getState()
 
     this.state.setState(CircuitStateType.HALF_OPEN)
-    this.lastStateChangeTime = Date.now()
 
     console.log(`[CircuitBreaker] [${this.serviceName}] [状态转换] 熔断器进入半打开状态`, {
       previousState,
@@ -417,7 +414,6 @@ export class CircuitBreaker {
     const previousState = this.state.getState()
 
     this.state.setState(CircuitStateType.CLOSED)
-    this.lastStateChangeTime = Date.now()
 
     console.log(`[CircuitBreaker] [${this.serviceName}] [状态转换] 熔断器关闭，服务恢复正常`, {
       previousState,
@@ -438,6 +434,13 @@ export class CircuitBreaker {
   }
 
   /**
+   * 获取配置
+   */
+  getConfig(): CircuitBreakerConfig {
+    return this.config
+  }
+
+  /**
    * 获取统计快照
    */
   getStatistics(): CircuitStatisticsSnapshot {
@@ -449,7 +452,6 @@ export class CircuitBreaker {
    */
   reset(): void {
     this.state.setState(CircuitStateType.CLOSED)
-    this.lastStateChangeTime = Date.now()
     this.recoveryTracker.reset()
     this.statistics.reset()
     this.failureDetector.reset()

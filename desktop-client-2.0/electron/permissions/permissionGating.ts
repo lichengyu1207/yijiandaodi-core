@@ -10,7 +10,8 @@
  * - 开机自启动按 autoStart 权限同步
  */
 
-import { buildMonitorStartPlan, loadPermissionConfig, PermissionConfig } from './permissionConfig'
+import { buildMonitorStartPlan, loadPermissionConfig, MONITOR_KEY_TO_PERMISSION, MONITOR_KEYS, MonitorKey, PermissionConfig } from './permissionConfig'
+import type { MonitorProvider } from '../monitoring/monitorProvider'
 
 /** 门控依赖（注入，便于测试） */
 export interface PermissionGatingDeps {
@@ -20,8 +21,8 @@ export interface PermissionGatingDeps {
   isAutoStartEnabled: () => boolean
   /** 设置开机自启动 */
   setAutoStartEnabled: (enabled: boolean) => void
-  /** 按监控 key 解析其 label 与启动/停止函数 */
-  getMonitor: (key: string) => { label: string; start(): void; stop(): void }
+  /** 按监控 key 解析其监控提供者（A5：统一接缝 MonitorProvider，可替换实现） */
+  getMonitor: (key: MonitorKey) => MonitorProvider | undefined
   /** API 调用监控是否在设置页启用（双条件之一） */
   isApiCallMonitorEnabled: () => boolean
   logger: {
@@ -45,9 +46,7 @@ export interface PermissionGating {
   reloadAndApply(): void
 }
 
-/** 需要门控的监控 key（与 runningMonitors 记录一致） */
-const MONITOR_KEYS = ['file', 'clipboard', 'process', 'network', 'apiCall', 'resource'] as const
-
+/** 需要门控的监控 key（单一来源：permissionConfig.MONITOR_KEYS） */
 export function createPermissionGating(deps: PermissionGatingDeps): PermissionGating {
   let permissionConfig: PermissionConfig = {
     granted: {
@@ -66,21 +65,19 @@ export function createPermissionGating(deps: PermissionGatingDeps): PermissionGa
   }
   const runningMonitors = new Set<string>()
 
-  /** 解析某监控 key 对应的启动/停止函数（复用 buildMonitorStartPlan 的键名映射） */
-  function planFor(key: string): { want: boolean; label: string; start: () => void; stop: () => void } {
+  /** 解析某监控 key 对应的启动/停止函数（授权键名经 MONITOR_KEY_TO_PERMISSION 统一映射） */
+  function planFor(key: MonitorKey): { want: boolean; label: string; start: () => void; stop: () => void } {
     const granted = permissionConfig.granted
-    const plan = buildMonitorStartPlan(granted)
     const spec = deps.getMonitor(key)
-    const wantMap: Record<string, boolean> = {
-      file: plan.fileMonitor,
-      clipboard: plan.clipboardMonitor,
-      process: plan.processMonitor,
-      network: plan.networkMonitor,
-      // API 调用监控：权限 + 设置页"启用"开关双条件
-      apiCall: plan.apiCallMonitor && deps.isApiCallMonitorEnabled(),
-      resource: plan.resourceMonitor,
+    let want = granted[MONITOR_KEY_TO_PERMISSION[key]]
+    // API 调用监控：权限 + 设置页"启用"开关双条件
+    if (key === 'apiCall') want = want && deps.isApiCallMonitorEnabled()
+    // A5：监控未装配（配置未启用）→ 不启动、不追踪，记录状态避免误以为在运行
+    if (!spec) {
+      deps.logger.debug(`[权限] ⏭ ${key} 未装配（配置未启用），跳过`, { module: 'PermissionGate' }, { monitor: key, want })
+      return { want: false, label: key, start: () => {}, stop: () => {} }
     }
-    return { want: wantMap[key], label: spec.label, start: spec.start, stop: spec.stop }
+    return { want, label: spec.label, start: spec.start, stop: spec.stop }
   }
 
   function apply() {

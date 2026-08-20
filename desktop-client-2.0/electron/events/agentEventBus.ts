@@ -11,6 +11,7 @@
 
 import { LogLevel } from '../services/loggerService'
 import { governanceLogger, GovernanceLoggerLike } from './governanceLogger'
+import type { EventStore, EventReplayOptions } from './eventStore'
 
 // ============================================================================
 // 类型定义（对齐 AGENT_FUSION_ARCHITECTURE.md 4.1 - 4.4）
@@ -163,6 +164,8 @@ export interface AgentEventBusConfig {
   logLevel?: LogLevel
   /** 治理日志实例，默认使用 governanceLogger（独立落盘 governance-%DATE%.log） */
   logger?: GovernanceLoggerLike
+  /** 可选事件存储（A3）：配置后 publish 事件异步落盘，可通过 replay() 重放；缺省无持久化 */
+  store?: EventStore
 }
 
 // ============================================================================
@@ -186,7 +189,10 @@ export class AgentEventBus {
   /** seqByRun 容量上限，防止 Map 无界增长导致内存泄漏 */
   private static readonly MAX_RUN_ENTRIES = 10_000
   private log: GovernanceLoggerLike
-  private config: Required<Omit<AgentEventBusConfig, 'logger'>> & { logger: GovernanceLoggerLike }
+  private config: Required<Omit<AgentEventBusConfig, 'logger' | 'store'>> & {
+    logger: GovernanceLoggerLike
+    store?: EventStore
+  }
 
   constructor(config: AgentEventBusConfig = {}) {
     this.config = {
@@ -194,12 +200,14 @@ export class AgentEventBus {
       enableDropWarning: config.enableDropWarning ?? true,
       logLevel: config.logLevel ?? LogLevel.INFO,
       logger: config.logger ?? governanceLogger,
+      store: config.store,
     }
     this.log = this.config.logger
     this.log.info('[事件总线] 初始化', { module: 'AgentEventBus' }, {
       enableSeqGuard: this.config.enableSeqGuard,
       enableDropWarning: this.config.enableDropWarning,
       logLevel: this.config.logLevel,
+      store: this.config.store?.name ?? 'none',
     })
   }
 
@@ -242,6 +250,23 @@ export class AgentEventBus {
         dataKind: this.describeData(data),
       },
     )
+
+    // ---- A3 持久化：异步落盘（不阻塞分发；失败记录不抛） ----
+    if (this.config.store) {
+      // ---- 埋点：落盘提交（进 store 写队列） ----
+      this.log.debug(
+        `[事件总线] 事件 ${stream}#${seq} 提交落盘`,
+        { module: 'AgentEventBus', function: 'publish' },
+        { runId, stream, seq, store: this.config.store.name },
+      )
+      void this.config.store.append(envelope).catch((error) => {
+        this.log.error(
+          '[事件总线] 事件落盘失败',
+          { module: 'AgentEventBus', function: 'publish' },
+          { runId, stream, seq, error: error instanceof Error ? error.message : error },
+        )
+      })
+    }
 
     // ---- 埋点：无订阅者告警（排查漏接） ----
     if (subscriberCount === 0) {
@@ -363,6 +388,97 @@ export class AgentEventBus {
       dropped: this.droppedCount,
       activeStreams: this.listeners.size,
     }
+  }
+
+  /**
+   * A3 重放：从事件存储流式读取已落盘事件并重新分发（保留原始 seq，不重新分配）。
+   * 未配置 store 时直接返回 0（无持久化，重放空操作）。
+   * 重放时恢复 run 内 seq 水位，保证重放后继续 publish 的 seq 连续。
+   * 可选按 stream / runId 过滤；返回实际重放的订阅事件数。
+   */
+  public async replay(options?: EventReplayOptions): Promise<number> {
+    const store = this.config.store
+    if (!store) {
+      this.log.info('[事件总线] 重放跳过：未配置事件存储', { module: 'AgentEventBus', function: 'replay' }, {})
+      return 0
+    }
+
+    // ---- 埋点：重放开始（含过滤条件，便于对账） ----
+    this.log.info('[事件总线] 重放开始', { module: 'AgentEventBus', function: 'replay' }, {
+      stream: options?.stream ?? '*',
+      runId: options?.runId ?? '*',
+      store: store.name,
+    })
+
+    let replayed = 0
+    let skipped = 0
+    const skipReasons = new Map<string, number>()
+    const bumpSkip = (reason: string): void => {
+      skipped++
+      skipReasons.set(reason, (skipReasons.get(reason) ?? 0) + 1)
+    }
+    for await (const envelope of store.readAll()) {
+      if (options?.stream && envelope.stream !== options.stream) {
+        // ---- 埋点：重放跳过（流不匹配） ----
+        this.log.debug(
+          `[事件总线] 重放跳过 ${envelope.stream}#${envelope.seq}：流不匹配`,
+          { module: 'AgentEventBus', function: 'replay' },
+          { runId: envelope.runId, stream: envelope.stream, seq: envelope.seq, expectedStream: options.stream },
+        )
+        bumpSkip('streamMismatch')
+        continue
+      }
+      if (options?.runId && envelope.runId !== options.runId) {
+        // ---- 埋点：重放跳过（run 不匹配） ----
+        this.log.debug(
+          `[事件总线] 重放跳过 ${envelope.stream}#${envelope.seq}：run 不匹配`,
+          { module: 'AgentEventBus', function: 'replay' },
+          { runId: envelope.runId, stream: envelope.stream, seq: envelope.seq, expectedRunId: options.runId },
+        )
+        bumpSkip('runIdMismatch')
+        continue
+      }
+      // 恢复 run 内 seq 水位（取已见最大 seq），重放后继续发布 seq 连续
+      const current = this.seqByRun.get(envelope.runId) ?? 0
+      if (envelope.seq > current) {
+        this.seqByRun.set(envelope.runId, envelope.seq)
+        // ---- 埋点：seq 水位恢复 ----
+        this.log.debug(
+          `[事件总线] 重放恢复 ${envelope.runId} seq 水位 ${current} → ${envelope.seq}`,
+          { module: 'AgentEventBus', function: 'replay' },
+          { runId: envelope.runId, from: current, to: envelope.seq },
+        )
+      }
+      const handlers = this.listeners.get(envelope.stream)
+      if (!handlers || handlers.size === 0) {
+        // ---- 埋点：重放跳过（无订阅者） ----
+        this.log.debug(
+          `[事件总线] 重放跳过 ${envelope.stream}#${envelope.seq}：无订阅者`,
+          { module: 'AgentEventBus', function: 'replay' },
+          { runId: envelope.runId, stream: envelope.stream, seq: envelope.seq },
+        )
+        bumpSkip('noSubscriber')
+        continue
+      }
+      // ---- 埋点：重放分发 ----
+      this.log.debug(
+        `[事件总线] 重放分发 ${envelope.stream}#${envelope.seq}（${handlers.size} 订阅者）`,
+        { module: 'AgentEventBus', function: 'replay' },
+        { runId: envelope.runId, stream: envelope.stream, seq: envelope.seq, subscriberCount: handlers.size },
+      )
+      await this.dispatch(envelope, handlers.size)
+      replayed++
+    }
+
+    this.log.info('[事件总线] 重放完成', { module: 'AgentEventBus', function: 'replay' }, {
+      stream: options?.stream ?? '*',
+      runId: options?.runId ?? '*',
+      store: store.name,
+      replayed,
+      skipped,
+      skipBreakdown: Object.fromEntries(skipReasons),
+    })
+    return replayed
   }
 
   // ==================== 内部工具 ====================

@@ -1,5 +1,0 @@
-const apiKey = 'sk-proj-abc123'; SELECT * FROM users;
-
-password=admin123; <script>alert(1)</script>
-
-DROP TABLE users; -- API_KEY=secret123

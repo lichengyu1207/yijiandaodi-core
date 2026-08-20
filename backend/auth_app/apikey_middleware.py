@@ -99,12 +99,18 @@ class APIKeyAuthenticationMiddleware:
             start_time = getattr(request, 'start_time', time.time())
             response_time_ms = int((time.time() - start_time) * 1000)
             
+            # 区域维度：优先取客户端请求头 X-Region，否则默认 'all'
+            region = request.headers.get('X-Region', '') or 'all'
+            if region not in ('cn', 'us', 'eu', 'all'):
+                region = 'all'
+            
             APIKeyUsageLog.objects.create(
                 api_key=api_key_obj,
                 endpoint=request.path,
                 method=request.method,
                 status_code=200,  # 这里会在response后更新
                 response_time_ms=response_time_ms,
+                region=region,
                 ip_address=self.get_client_ip(request),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:255]
             )

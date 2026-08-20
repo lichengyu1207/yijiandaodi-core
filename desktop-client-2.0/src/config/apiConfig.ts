@@ -35,6 +35,22 @@ export class APIConfig {
     return this.baseURL;
   }
 
+  /**
+   * 官网（Web 端）地址解析（P1 账号互通）
+   * - 允许通过 localStorage 'web_base_url' 显式配置；
+   * - 开发环境：后端 localhost:8000 → 官网 Vite dev server localhost:3000；
+   * - 生产环境：官网与后端同域部署。
+   */
+  getWebBaseURL(): string {
+    const stored = localStorage.getItem('web_base_url');
+    if (stored) return stored.replace(/\/+$/, '');
+    const api = this.getBaseURL();
+    if (api.includes('localhost:8000') || api.includes('127.0.0.1:8000')) {
+      return 'http://localhost:3000';
+    }
+    return api.replace(/\/+$/, '');
+  }
+
   setBaseURL(url: string): void {
     this.baseURL = url;
     localStorage.setItem('api_base_url', url);

@@ -4,21 +4,23 @@
  * 行数目标：<100行
  */
 
-import { app, Notification, dialog, BrowserWindow } from 'electron'
+import { app, Notification, dialog } from 'electron'
 import { MainWindow, PetWindow, PetState } from './windows'
 import type { PetCharacterInfo } from './windows'
 import { FileMonitor, ClipboardMonitor, RiskResult, ProcessMonitor, ProcessInfo, NetworkMonitor, NetworkRequest, HighRiskConfirmation, ApiCallMonitor, ApiCallInfo } from './monitoring'
 import { SmartAlerter, smartAlerter } from './monitoring/smartAlerter'
 import { AgentBehaviorParser } from './monitoring/agentBehaviorParser'
 import { BehaviorRiskScorer } from './monitoring/behaviorRiskScorer'
-import { proactiveAlerter } from './monitoring/proactiveAlerter'
-import { TrayService, ApiService, StorageService, syncService, logger } from './services'
+import { linkHighRiskToEvidence } from './monitoring/evidenceLinkage'
+import { ProactiveAlerter, proactiveAlerter } from './monitoring/proactiveAlerter'
+import { TrayService, ApiService, BackendService, StorageService, SyncService, syncService, logger, updaterService } from './services'
+import { ModuleControlService } from './services/moduleControlService'
+import { LocalAuthService, localAuthService } from './services/localAuthService'
 import { GovernanceHealthMonitor } from './services/governanceHealthMonitor'
-import { IPCHandlers } from './ipc'
-import { DIContainer } from './di'
-import { initSecurityKnowledgeBase, SecurityKnowledgeBase } from './securityKnowledgeBase'
 import { MemoryMonitorService } from './services/memoryMonitor'
 import { CPUMonitor } from './services/cpuMonitor'
+import { IPCHandlers } from './ipc'
+import { DIContainer } from './di'
 import { activateTaintTracking } from './monitoring/activateTaintTracking'
 import {
   createAgentEventBus,
@@ -27,41 +29,41 @@ import {
   AGENT_EVENT_BUS_PRODUCTION_CONFIG,
   GOVERNANCE_LOGGER_PRODUCTION_CONFIG,
   MonitorEventAdapter,
+  FileEventStore,
 } from './events'
 import type { ToolCallResultData } from './events'
 import axios from 'axios'
 import path from 'path'
 import * as fs from 'fs'
-import {
-  ToolRegistry,
-  ToolBridge,
-  RulePlanner,
-  GovernanceEngine,
-  PluginRegistry,
-  createRiskSummaryPlugin,
-  createPetPlugin,
-  createFileTools,
-  createVerifyTools,
-  createEvidenceTools,
-  setEvidenceConfig,
-  createReportTools,
-  createRiskTools,
-  setRiskConfig,
-  createBackendTools,
-  setBackendClientConfig,
-} from './agent'
+import { GovernanceEngine, PluginRegistry } from './agent'
+import type { PetDriver } from './agent/plugins/petPlugin'
 import { getCompanion, emptyProfile, RARITY_STARS } from './agent/pet/companion'
 import { analyzeLogs, renderReport, setPerfAnalyzerLogger } from './agent/perfLogAnalyzer'
 import {
+  MONITOR_KEYS,
   PermissionConfig,
 } from './permissions/permissionConfig'
 import { createPermissionGating } from './permissions/permissionGating'
+import { loadAssemblyConfig } from './config/assemblyConfig'
+import { createAssembler } from './assembly/assembler'
+import type { MonitorProviderRegistry } from './monitoring/monitorProvider'
+import { createGovernanceStack } from './assembly/bootstrap'
+import type { McpServerService } from './mcp/mcpServerService'
 
 // 依赖注入容器
 const container = new DIContainer()
 
+// A4 单例收敛：业务单例统一注册进容器（同一实例，行为不变），消费方一律 resolve 获取，不再直接 import 单例
+container.registerSingleton<SmartAlerter>('smartAlerter', smartAlerter)
+container.registerSingleton<ProactiveAlerter>('proactiveAlerter', proactiveAlerter)
+container.registerSingleton<SyncService>('syncService', syncService)
+container.registerSingleton<LocalAuthService>('localAuthService', localAuthService)
+
 // 应用状态
 let isQuitting = false
+
+// A5：监控注册表由装配器生成后注册进容器（key → MonitorProvider），getMonitor / cleanup 经容器延迟解析
+// 容器注册名：'monitorRegistry'
 
 // 操作权限门控：内部持有配置（首次启动引导授权 + 设置页可改；app ready 后加载）
 const permissionGating = createPermissionGating({
@@ -69,32 +71,9 @@ const permissionGating = createPermissionGating({
   isAutoStartEnabled: () => app.getLoginItemSettings().openAtLogin,
   setAutoStartEnabled: (enabled) => app.setLoginItemSettings({ openAtLogin: enabled }),
   getMonitor: (key) => {
-    switch (key) {
-      case 'file':
-        return { label: '文件系统监控', start: () => container.resolve<FileMonitor>('fileMonitor').start(), stop: () => container.resolve<FileMonitor>('fileMonitor').stop() }
-      case 'clipboard':
-        return { label: '剪贴板监控', start: () => container.resolve<ClipboardMonitor>('clipboardMonitor').start(), stop: () => container.resolve<ClipboardMonitor>('clipboardMonitor').stop() }
-      case 'process':
-        return { label: '进程监控', start: () => container.resolve<ProcessMonitor>('processMonitor').start(), stop: () => container.resolve<ProcessMonitor>('processMonitor').stop() }
-      case 'network':
-        return { label: '网络请求监控', start: () => container.resolve<NetworkMonitor>('networkMonitor').start(), stop: () => container.resolve<NetworkMonitor>('networkMonitor').stop() }
-      case 'apiCall':
-        return { label: 'API 调用监控', start: () => container.resolve<ApiCallMonitor>('apiCallMonitor').start(), stop: () => container.resolve<ApiCallMonitor>('apiCallMonitor').stop() }
-      case 'resource':
-        return {
-          label: '资源监控（内存/CPU）',
-          start: () => {
-            container.resolve<MemoryMonitorService>('memoryMonitor').start()
-            container.resolve<CPUMonitor>('cpuMonitor').start()
-          },
-          stop: () => {
-            container.resolve<MemoryMonitorService>('memoryMonitor').stop()
-            container.resolve<CPUMonitor>('cpuMonitor').stop()
-          },
-        }
-      default:
-        throw new Error(`未知监控 key: ${key}`)
-    }
+    const provider = container.resolveOptional<MonitorProviderRegistry>('monitorRegistry')?.[key]
+    logger.debug(`[监控] getMonitor 解析 key=${key}`, { module: 'MonitorRegistry', monitor: key, resolved: !!provider, label: provider?.label, running: provider?.isRunning() })
+    return provider
   },
   isApiCallMonitorEnabled: () => container.resolve<ApiCallMonitor>('apiCallMonitor').getConfig().enabled,
   logger,
@@ -107,9 +86,6 @@ function getPermissionConfig(): PermissionConfig {
 
 /** verify.flow 性能分析订阅退订函数（cleanup 时解除） */
 let perfAnalyzerUnsub: (() => void) | undefined
-
-/** Skill 插件安装退订函数（cleanup 时解除订阅 + 卸载插件） */
-let pluginRegistryUnsub: (() => void) | undefined
 
 /** 桌宠角色：治理画像统计订阅退订函数（cleanup 时解除） */
 let petProfileUnsub: (() => void) | undefined
@@ -141,8 +117,8 @@ function showRiskAlert(riskData: { risk_level: string; description: string; cont
   const mainWindow = container.resolve<MainWindow>('mainWindow')
   const petWindow = container.resolve<PetWindow>('petWindow')
 
-  // 使用智能提示器判断是否需要通知
-  const alertResult = smartAlerter.handleAlert({
+  // 使用智能提示器判断是否需要通知（A4：从容器 resolve 共享单例）
+  const alertResult = container.resolve<SmartAlerter>('smartAlerter').handleAlert({
     riskLevel: riskData.risk_level as any,
     riskType: 'security_risk',
     message: riskData.description
@@ -293,30 +269,14 @@ function updatePetState(state: PetState, message?: string) {
 }
 
 /**
- * 同步状态到ESP32
- */
-async function syncToESP32(state: PetState) {
-  try {
-    await axios.get(`http://192.168.1.100:80/status`, {
-      params: { state },
-      timeout: 2000
-    })
-    logger.info(`[ESP32] 状态同步: ${state}`, { module: 'ESP32' })
-  } catch (error: any) {
-    logger.error('[ESP32] 同步失败:', { module: 'ESP32' }, { error: error.message })
-  }
-}
-
-/**
  * 初始化所有服务
  */
 function initializeServices() {
+  // ============================================================
+  // 0) 基础：权限配置 + 治理日志 + 事件总线（特殊接线，不配置化）
+  // ============================================================
   // 加载操作权限配置（首次启动引导授权 + 设置页可改；异常时回退默认）
   permissionGating.load()
-
-  logger.info('[系统] 初始化安全知识库...', { module: 'System' })
-  const securityKB = initSecurityKnowledgeBase()
-  container.register('securityKB', securityKB)
 
   // 治理型 Agent：初始化事件总线 + 治理日志（生产配置）
   // - 日志节流：控制台 1s 窗口最多 50 条，防高频感知事件同步写 stdout 阻塞主进程
@@ -329,12 +289,20 @@ function initializeServices() {
     governanceLoggerInstance.setLevel(persistedLogLevel)
   }
 
+  // A3 事件总线持久化：挂载 FileEventStore 到用户数据目录，publish 事件落盘、可重放（userData/events/event-log.jsonl）
+  const eventStoreDir = path.join(app.getPath('userData'), 'events')
+  fs.mkdirSync(eventStoreDir, { recursive: true })
+  const eventStore = new FileEventStore(path.join(eventStoreDir, 'event-log.jsonl'), {
+    logger: governanceLoggerInstance,
+  })
   const agentEventBusInstance = createAgentEventBus({
     ...AGENT_EVENT_BUS_PRODUCTION_CONFIG,
     logger: governanceLoggerInstance,
+    store: eventStore,
   })
-  container.register('governanceLogger', governanceLoggerInstance)
-  container.register('agentEventBus', agentEventBusInstance)
+  container.setLogger(governanceLoggerInstance)
+  container.registerSingleton('governanceLogger', governanceLoggerInstance)
+  container.registerSingleton('agentEventBus', agentEventBusInstance)
 
   // 性能分析器去重链路日志注入治理日志器（trace/debug 级，级别为 TRACE 时可见去重键生成/合并细节）
   setPerfAnalyzerLogger(governanceLoggerInstance)
@@ -346,50 +314,82 @@ function initializeServices() {
     consoleThrottle: GOVERNANCE_LOGGER_PRODUCTION_CONFIG.consoleThrottle,
   })
 
-  // 创建窗口管理
+  // ============================================================
+  // 1) 窗口 + 桌宠驱动（特殊接线：governance-pet 插件依赖容器注册的 petDriver）
+  // ============================================================
   const mainWindow = new MainWindow()
   const petWindow = new PetWindow()
   container.register('mainWindow', mainWindow)
   container.register('petWindow', petWindow)
 
-  // 创建监控服务
-  const fileMonitor = new FileMonitor()
-  const clipboardMonitor = new ClipboardMonitor()
-  fileMonitor.setSecurityKnowledgeBase(securityKB)
-  clipboardMonitor.setSecurityKnowledgeBase(securityKB)
-  container.register('fileMonitor', fileMonitor)
-  container.register('clipboardMonitor', clipboardMonitor)
-
-  // 创建业务服务
-  const storageService = new StorageService()
-  const trayService = new TrayService()
-  const apiService = new ApiService()
-  container.register('storageService', storageService)
-  container.register('trayService', trayService)
-  container.register('apiService', apiService)
-
-  // 新增：创建性能监控服务（Sprint 2）
-  const memoryMonitor = new MemoryMonitorService({
-    interval: 10000,             // 监控间隔 10s
-    warningThreshold: 70,        // 堆内存警告阈值 70%
-    criticalThreshold: 85        // 堆内存严重阈值 85%
+  container.register<PetDriver>('petDriver', {
+    setState: (mood, message) => {
+      petWindow.setState(mood)
+      petWindow.send('pet-state-change', mood)
+      if (message) petWindow.showBubble(message)
+    },
+    showBubble: (text) => petWindow.showBubble(text),
   })
-  const cpuMonitor = new CPUMonitor({
-    interval: 5000,
-    historyLength: 60
+
+  // ============================================================
+  // 2) 配置驱动装配（方案 A1）：服务 + 监控 runner + 插件 全部按配置声明装配
+  //    新增服务/监控/插件只需改 assemblyConfig 声明 + factories 注册，不动本文件装配代码
+  // ============================================================
+  const pluginRegistry = new PluginRegistry({ logger: governanceLoggerInstance })
+  pluginRegistry.setActive()
+  container.register('pluginRegistry', pluginRegistry)
+
+  const assemblyConfig = loadAssemblyConfig(app.getPath('userData'))
+  const assembler = createAssembler(assemblyConfig, {
+    container,
+    logger: governanceLoggerInstance,
+    getUserDataPath: () => app.getPath('userData'),
+    bus: agentEventBusInstance,
+    registry: pluginRegistry,
   })
-  container.register('memoryMonitor', memoryMonitor)
-  container.register('cpuMonitor', cpuMonitor)
+  const { runners, services, plugins, toolCount } = assembler.assemble()
+  // A5：监控注册表注册进容器（getMonitor / cleanup 经容器解析，可整体替换实现）
+  container.registerSingleton<MonitorProviderRegistry>('monitorRegistry', runners)
 
-  // 新增：创建治理健康度监控器（MVP）
-  const healthMonitor = new GovernanceHealthMonitor(memoryMonitor, cpuMonitor)
-  container.register('healthMonitor', healthMonitor)
+  governanceLoggerInstance.info('[治理Agent] 配置驱动装配完成', { module: 'Assembler' }, {
+    services,
+    monitors: Object.keys(runners),
+    plugins,
+    toolCount,
+  })
 
-  // 新增：创建行为风险评分器（MVP）
-  const behaviorRiskScorer = new BehaviorRiskScorer()
-  container.register('behaviorRiskScorer', behaviorRiskScorer)
+  // ============================================================
+  // 3) 治理栈组装（bootstrap）：内置工具注册 + 后端配置 + ToolBridge/Planner/引擎
+  // ============================================================
+  createGovernanceStack({
+    logger: governanceLoggerInstance,
+    bus: agentEventBusInstance,
+    container,
+    app,
+    pluginRegistry,
+    storageService: container.resolve<StorageService>('storageService'),
+    getPermissionConfig,
+    notify,
+    showRiskConfirmDialog,
+  })
 
-  // 设置监控回调（集成主动监控）
+  // ============================================================
+  // 4) 监控事件适配器（特殊接线）：把 6 类监控器回调接入事件总线
+  //    （先 publish 再消费，UI 告警/桌宠行为经 opts 回调透传，不回退）
+  // ============================================================
+  const fileMonitor = container.resolve<FileMonitor>('fileMonitor')
+  const clipboardMonitor = container.resolve<ClipboardMonitor>('clipboardMonitor')
+  const storageService = container.resolve<StorageService>('storageService')
+  const behaviorRiskScorer = container.resolve<BehaviorRiskScorer>('behaviorRiskScorer')
+
+  // 监控器直连 UI 回调（不经过事件总线）：桌宠联动 / 记录落盘 / 高风险二次确认
+  fileMonitor.setPetStateChangeCallback(updatePetState)
+  clipboardMonitor.setPetStateChangeCallback(updatePetState)
+  fileMonitor.setSaveRecordCallback((record) => storageService.saveOperation(record))
+  clipboardMonitor.setSaveRecordCallback((record) => storageService.saveOperation(record))
+  fileMonitor.setConfirmRiskCallback(showRiskConfirmDialog)
+
+  // 风险检测消费回调（由监控事件适配器先发布事件到总线，再转交此回调）
   const riskDetectedCallback = (risks: RiskResult[], source: string, detectionResult?: any) => {
     // ===== 详细日志开始 =====
     logger.info('[监控回调] 触发检测', { module: 'MonitoringCallback' }, {
@@ -432,7 +432,7 @@ function initializeServices() {
         })
 
         // 解析为 Agent 行为日志
-        const behavior = source.includes('文件') 
+        const behavior = source.includes('文件')
           ? AgentBehaviorParser.parseFileEvent(
               source.replace('文件 ', ''),
               detectionResult.content || '',
@@ -461,12 +461,22 @@ function initializeServices() {
           recommendations: assessment.recommendations.slice(0, 3)
         })
 
-        // 主动告警
-        const alerted = proactiveAlerter.handleAssessment(behavior, assessment)
+        // 主动告警（A4：从容器 resolve 共享单例）
+        const alerted = container.resolve<ProactiveAlerter>('proactiveAlerter').handleAssessment(behavior, assessment)
 
         logger.info('[主动监控] 告警处理完成', { module: 'ProactiveMonitor' }, {
           alerted,
           behaviorId: behavior.timestamp
+        })
+
+        // 高风险行为自动联动存证：写入后端 LongTermMemory 链式哈希存证（与存证中心同链），
+        // 后端不可用时降级本地 operation 记录（详见 monitoring/evidenceLinkage.ts）
+        linkHighRiskToEvidence({
+          behavior,
+          assessment,
+          source,
+          risks,
+          sink: { saveOperation: (record) => storageService.saveOperation(record) },
         })
       } catch (error) {
         logger.error('[主动监控] 行为评估失败', { module: 'ProactiveMonitor' }, {
@@ -491,21 +501,6 @@ function initializeServices() {
       description: `${source}中发现${risks.length}个安全风险:\n${riskDescriptions.join('\n')}`
     })
   }
-
-  // 注意：file/clipboard 的 setRiskDetectedCallback 由「监控事件适配器」接管（见下方 adapter.attach），
-  // 先发布事件到总线，再转交 riskDetectedCallback 消费（兼容现有告警与桌宠）
-
-  fileMonitor.setPetStateChangeCallback(updatePetState)
-  clipboardMonitor.setPetStateChangeCallback(updatePetState)
-
-  fileMonitor.setSaveRecordCallback((record) => storageService.saveOperation(record))
-  clipboardMonitor.setSaveRecordCallback((record) => storageService.saveOperation(record))
-
-  // 高风险文件操作二次确认
-  fileMonitor.setConfirmRiskCallback(showRiskConfirmDialog)
-
-  // 新增：进程监控
-  const processMonitor = new ProcessMonitor()
 
   // 进程检测消费回调（由监控事件适配器先发布事件到总线，再转交此回调）
   const processDetectedCallback = (process: ProcessInfo) => {
@@ -541,7 +536,7 @@ function initializeServices() {
         shouldAlert: assessment.shouldAlert
       })
 
-      const alerted = proactiveAlerter.handleAssessment(behavior, assessment)
+      const alerted = container.resolve<ProactiveAlerter>('proactiveAlerter').handleAssessment(behavior, assessment)
 
       logger.info('[主动监控] 进程告警处理完成', { module: 'ProactiveMonitor' }, {
         alerted,
@@ -558,24 +553,13 @@ function initializeServices() {
       })
     }
   }
-  container.register('processMonitor', processMonitor)
-
-  // 联动：工具会话结束时，用会话时间窗查询文件监控，关联其操作过的文件
-  processMonitor.setRelatedFilesResolver((sessionStart, sessionEnd) => {
-    return fileMonitor.getRelatedFilePaths(sessionStart, sessionEnd)
-  })
-
-  // 新增：网络监控
-  const networkMonitor = new NetworkMonitor()
 
   // 网络请求消费回调（由监控事件适配器先发布事件到总线，再转交此回调）
   const networkRequestDetectedCallback = (request: NetworkRequest) => {
     // ===== 详细日志开始 =====
     logger.info('[网络监控] 检测到请求', { module: 'NetworkMonitor' }, {
       domain: request.domain,
-      port: request.port,
-      method: request.method,
-      isAIProvider: request.isAIProvider
+      foreignAddress: request.foreignAddress
     })
 
     updatePetState('yellow', `API 调用: ${request.domain}`)
@@ -584,14 +568,13 @@ function initializeServices() {
     try {
       logger.info('[主动监控] 开始解析网络行为', { module: 'ProactiveMonitor' }, {
         domain: request.domain,
-        port: request.port,
-        isAIProvider: request.isAIProvider
+        foreignAddress: request.foreignAddress
       })
 
       const behavior = AgentBehaviorParser.parseNetworkEvent(
         request.domain,
-        request.port || 443,
-        request.isAIProvider || false
+        request.foreignAddress ? Number(request.foreignAddress.split(':').pop()) || 443 : 443,
+        true
       )
 
       logger.info('[主动监控] 网络行为解析完成', { module: 'ProactiveMonitor' }, {
@@ -608,7 +591,7 @@ function initializeServices() {
         shouldAlert: assessment.shouldAlert
       })
 
-      const alerted = proactiveAlerter.handleAssessment(behavior, assessment)
+      const alerted = container.resolve<ProactiveAlerter>('proactiveAlerter').handleAssessment(behavior, assessment)
 
       logger.info('[主动监控] 网络告警处理完成', { module: 'ProactiveMonitor' }, {
         alerted,
@@ -621,14 +604,10 @@ function initializeServices() {
           stack: error.stack
         } : error,
         domain: request.domain,
-        port: request.port
+        foreignAddress: request.foreignAddress
       })
     }
   }
-  container.register('networkMonitor', networkMonitor)
-
-  // 新增：API 调用监控（第二优先级，本地代理模式）
-  const apiCallMonitor = new ApiCallMonitor()
 
   // API 高风险消费回调（由监控事件适配器先发布事件到总线，再转交此回调）
   const highRiskApiCallback = (info: ApiCallInfo) => {
@@ -649,15 +628,7 @@ function initializeServices() {
       updatePetState('yellow', `AI 调用: ${info.host}`)
     }
   }
-  container.register('apiCallMonitor', apiCallMonitor)
 
-  // ============================================================
-  // 治理型 Agent：接入监控事件适配器（A-收尾）
-  // 把 6 类监控器回调接到事件总线（先 publish 再消费），
-  // 供治理型 Agent 订阅 file/process/network/clipboard/api_call/resource 事件流。
-  // 原 UI 消费逻辑（riskDetectedCallback / processDetectedCallback / ...）作为
-  // 适配器 opts 透传，保证现有告警与桌宠行为不回退。
-  // ============================================================
   const monitorEventAdapter = new MonitorEventAdapter({
     bus: agentEventBusInstance,
     logger: governanceLoggerInstance,
@@ -671,164 +642,25 @@ function initializeServices() {
   monitorEventAdapter.attach({
     fileMonitor,
     clipboardMonitor,
-    processMonitor,
-    networkMonitor,
-    apiCallMonitor,
-    memoryMonitor,
-    cpuMonitor,
+    processMonitor: container.resolve<ProcessMonitor>('processMonitor'),
+    networkMonitor: container.resolve<NetworkMonitor>('networkMonitor'),
+    apiCallMonitor: container.resolve<ApiCallMonitor>('apiCallMonitor'),
+    memoryMonitor: container.resolve<MemoryMonitorService>('memoryMonitor'),
+    cpuMonitor: container.resolve<CPUMonitor>('cpuMonitor'),
   })
 
   // ============================================================
-  // 治理型 Agent：注册内置治理工具 + 实例化治理引擎（M8 接线）
-  // 组装顺序：ToolRegistry → ToolBridge → RulePlanner + GovernanceEngine → start()
+  // 5) 桌宠画像统计（特殊接线）：订阅感知流累计治理画像，确定性生成角色
+  //    （governance-pet 插件的决策链路钩子已由装配器安装，此处只做画像统计）
   // ============================================================
-  // 1) 工具注册表：注册全部内置治理工具（file/verify/evidence/report/risk/backend）
-  const toolRegistry = new ToolRegistry()
-  for (const tool of [
-    ...createFileTools(),
-    ...createVerifyTools(),
-    ...createEvidenceTools(),
-    ...createReportTools(),
-    ...createRiskTools(),
-    ...createBackendTools(),
-  ]) {
-    toolRegistry.register(tool)
-  }
-  container.register('toolRegistry', toolRegistry)
-
-  // 2) 执行分发桥：唯一工具执行入口，执行全程向 `tool` 流发布请求/结果（id 三端贯通）
-  // 先建 PluginRegistry（共享 HooksHost）并把 AOP 挂点注入 ToolBridge：
-  // beforeToolCall / afterToolCall（插件可在执行前改写 input、执行后改写结果）
-  const pluginRegistry = new PluginRegistry({ logger: governanceLoggerInstance })
-  pluginRegistry.setActive()
-  const toolBridge = new ToolBridge(toolRegistry, {
-    bus: agentEventBusInstance,
-    // 注入共享治理日志器：ToolBridge 的 AOP 埋点（beforeToolCall/afterToolCall 等）跟随
-    // 动态级别切换（INFO 过滤 debug、TRACE 开启决策路径），而非落到 silent logger
-    logger: governanceLoggerInstance,
-    onProgress: (p) => governanceLoggerInstance.info('[工具] 进度', { module: 'ToolBridge' }, p),
-    hooks: pluginRegistry.hooks,
-  })
-  container.register('toolBridge', toolBridge)
-
-  // 3) 注入后端真实配置（Django 治理后端：校验/存证/报告/工具桥，端口 8000）
-  setBackendClientConfig({
-    baseUrl: 'http://localhost:8000',
-    logger: governanceLoggerInstance,
-    retry: { maxRetries: 2, baseDelayMs: 1000, maxDelayMs: 5000 },
-  })
-
-  // 4) evidence.commit 本地降级：后端不可用时落盘 storageService（不静默失败）
-  setEvidenceConfig({
-    localFallback: async (content, metadata) => {
-      const action = String(metadata.action ?? 'evidence')
-      return storageService.saveOperation({
-        id: `evidence-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        type: 'governance_evidence',
-        title: `五元组存证 ${action}`,
-        content,
-        source: 'governance_agent',
-        status: 'recorded',
-        risk_level: 'info',
-        risk_score: 0,
-        should_block: false,
-        context: JSON.stringify(metadata),
-        explanation: '后端不可用时的本地存证降级',
-      })
-    },
-  })
-
-  // 5) risk.mark 风险标签 registry（用户数据目录下持久化 + 前端联动通知）
-  const riskTagsFile = path.join(app.getPath('userData'), 'governance', 'risk-tags.json')
-  setRiskConfig({
-    filePath: riskTagsFile,
-    notify: (tag) => {
-      try {
-        container.resolve<MainWindow>('mainWindow').send('governance-risk-marked', tag)
-      } catch {
-        // 主窗口未就绪时忽略（风险标记已落盘）
-      }
-    },
-  })
-
-  // 6) 规划层（规则路由）+ 决策引擎（订阅感知流 → 规划 → 执行 → 验证）
-  const planner = new RulePlanner({ logger: governanceLoggerInstance })
-
-  // 6.1) Skill 插件化（M8/阶段 D）：共享 HooksHost 已在创建 ToolBridge 时注入
-  // 引擎/toolBridge 只依赖 PluginHooksHost 接口（8 个决策链路挂点），与插件系统完全解耦；
-  // 插件本身在 6.5 步 install（需要 bus + toolRegistry）。
-
-  const governanceEngine = new GovernanceEngine(
-    { bus: agentEventBusInstance, bridge: toolBridge, planner, logger: governanceLoggerInstance },
-    {
-      maxConcurrentReadonly: 3,
-      // 决策链路钩子宿主：共享同一 HooksHost（引擎 + ToolBridge AOP 共用一套插件钩子）
-      hooks: pluginRegistry.hooks,
-      // 写动作权限钩子：受"治理 Agent 写操作"权限门控（未授权 fail-closed 直接拒绝）；
-      // 已授权时审计存证/风险标记自动放行，未知语义后端工具需用户二次确认
-      decision: async ({ tool, input, riskLevel, reason }) => {
-        if (!getPermissionConfig().granted.agentWrite) {
-          governanceLoggerInstance.warn('[权限] 治理 Agent 写操作未授权，已拒绝', { module: 'PermissionGate' }, { tool, riskLevel, reason })
-          return false
-        }
-        if (tool === 'evidence.commit' || tool === 'risk.mark') return true
-        return showRiskConfirmDialog({
-          filePath: String(input.path ?? input.object ?? input.tool ?? 'unknown'),
-          fileName: String(input.object ?? input.tool ?? '未知工具'),
-          fileKind: 'normal',
-          hash: '',
-          previousHash: '',
-          hashChanged: false,
-          operationType: 'agent_write',
-          riskLevel: riskLevel === 'critical' ? 'critical' : 'high',
-          riskTags: [String(tool)],
-          message: `治理引擎请求执行 ${tool}：${reason ?? ''}`,
-        })
-      },
-      // 告警：smartAlerter 节流 + 系统通知
-      alert: ({ level, title, description, runId, stream }) => {
-        const alertResult = smartAlerter.handleAlert({
-          riskLevel: level,
-          riskType: 'governance',
-          message: description,
-        })
-        if (alertResult.shouldNotify) {
-          notify(title, description.slice(0, 80))
-        }
-        logger.warn('[治理Agent] 治理告警', { module: 'GovernanceEngine' }, { level, title, description, runId, stream })
-      },
-    },
-  )
-  container.register('governanceEngine', governanceEngine)
-  governanceEngine.start()
-
-  governanceLoggerInstance.info('[治理Agent] 内置工具已注册 + 治理引擎已启动', { module: 'GovernanceEngine' }, {
-    toolCount: toolRegistry.size,
-    tools: toolRegistry.names(),
-    riskTagsFile,
-    hooks: pluginRegistry.hooks ? 'plugin-hooks-host' : 'none',
-  })
-
-  // 6.5) Skill 插件化（M8/阶段 D）：安装内置 Skill 插件
-  // 插件通过 subscribe 订阅感知流（OpenClaw 事件桥）、registerTools 注入工具，
-  // 无需修改主进程核心逻辑即可扩展治理能力；cleanup 时 uninstallAll 清理。
-  pluginRegistryUnsub = pluginRegistry.install(
-    createRiskSummaryPlugin({ logger: governanceLoggerInstance }),
-    agentEventBusInstance,
-    toolRegistry,
-  )
-
-  // 6.5.1) 治理桌宠（P1+P2）：把 Agent 执行、安全告警、AI 治理定级实时呈现为桌宠
-  //  - P1：安装 petPlugin，挂载 onRunStart/onRiskAssessed/beforeAlert/onRunEnd 钩子，
-  //    driver 适配 PetWindow（setState/showBubble）
-  //  - P2：订阅事件总线累计治理画像（真实数据），确定性 roll 生成角色并推送到桌宠窗口
-  const petWindow = container.resolve<PetWindow>('petWindow')
   const petProfile = emptyProfile()
   // 桌宠角色种子：userData 目录路径保证跨重启确定性（同一用户同一角色）
   const petSeed = app.getPath('userData')
 
   // 治理画像统计：订阅 tool 流（工具请求/结果）+ verify.flow 终态
-  const applyPetCharacter = () => {
+  // 共享计算：同一处产出角色（character）+ 治理画像快照（profile），
+  // 既推送给桌宠窗口（setCharacter），也通过 IPC get-pet-stats 提供给设置页角色面板
+  const computePetCharacter = () => {
     try {
       const companion = getCompanion(petSeed, petProfile)
       const character: PetCharacterInfo = {
@@ -839,10 +671,15 @@ function initializeServices() {
         shiny: companion.shiny,
         stats: companion.stats,
       }
-      petWindow.setCharacter(character)
+      return { character, profile: { ...petProfile } }
     } catch (error) {
       logger.warn('[桌宠] 角色生成失败', { module: 'PetWindow' }, { error: error instanceof Error ? error.message : String(error) })
+      return null
     }
+  }
+  const applyPetCharacter = () => {
+    const result = computePetCharacter()
+    if (result) petWindow.setCharacter(result.character)
   }
   // 初次推送：空画像 → 基础角色
   applyPetCharacter()
@@ -870,30 +707,9 @@ function initializeServices() {
     }
   }
 
-  // P1：桌宠插件 driver 适配（复用既有 updatePetState 通道以兼容托盘/主窗口联动）
-  pluginRegistry.install(
-    createPetPlugin(
-      {
-        setState: (mood, message) => {
-          petWindow.setState(mood)
-          petWindow.send('pet-state-change', mood)
-          if (message) petWindow.showBubble(message)
-        },
-        showBubble: (text) => petWindow.showBubble(text),
-      },
-      { logger: governanceLoggerInstance },
-    ),
-    agentEventBusInstance,
-    toolRegistry,
-  )
-
-  container.register('pluginRegistry', pluginRegistry)
-  governanceLoggerInstance.info('[治理Agent] Skill 插件已安装', { module: 'PluginRegistry' }, {
-    pluginCount: pluginRegistry.size,
-    plugins: pluginRegistry.list().map((p) => ({ id: p.id, version: p.version, status: p.status })),
-  })
-
-  // 7) 性能报告自动分析：每次 verify.flow 执行结束后自动解析治理日志并保存报告
+  // ============================================================
+  // 6) 性能报告自动分析（特殊接线）：每次 verify.flow 执行结束后自动解析治理日志
+  // ============================================================
   // 通过订阅 `tool` 流的 tool_result 事件感知 verify.flow 终态（id 贯通键=effective_tool_name）
   perfAnalyzerUnsub = agentEventBusInstance.subscribe('tool', async (envelope) => {
     const data = envelope.data as ToolCallResultData | undefined
@@ -924,7 +740,10 @@ function initializeServices() {
     }
   })
 
-  // 设置托盘回调
+  // ============================================================
+  // 7) 托盘 + IPC 处理器（IPCHandlers 注册全部 IPC 通道）
+  // ============================================================
+  const trayService = container.resolve<TrayService>('trayService')
   trayService.setShowMainWindowCallback(() => mainWindow.show())
   trayService.setQuitCallback(() => {
     isQuitting = true
@@ -933,20 +752,34 @@ function initializeServices() {
   })
 
   // 注册IPC处理器（新增 healthMonitor / governanceLogger / userDataPath / onPermissionChanged 参数）
+  // P0 统一控制面：ModuleControlService 注入 modules:* IPC（依赖经容器惰性解析）
+  const moduleControlService = new ModuleControlService({
+    logger: governanceLoggerInstance,
+    governanceLogger: governanceLoggerInstance,
+    resolve: <T>(name: string) => container.resolveOptional<T>(name),
+    cloudBaseUrl: 'http://127.0.0.1:8000',
+  })
+
   const ipcHandlers = new IPCHandlers(
     storageService,
     fileMonitor,
     clipboardMonitor,
     () => petWindow.getState(),
-    healthMonitor,
-    apiCallMonitor,
-    processMonitor,
+    container.resolve<SyncService>('syncService'),
+    container.resolve<LocalAuthService>('localAuthService'),
+    container.resolve<GovernanceHealthMonitor>('healthMonitor'),
+    container.resolve<ApiCallMonitor>('apiCallMonitor'),
+    container.resolve<ProcessMonitor>('processMonitor'),
     governanceLoggerInstance,
     app.getPath('userData'),
     // 权限变更回调：先重新加载配置到内存，再应用门控（保证实时生效）
     reloadPermissionAndApplyGating,
     // 插件注册表：插件管理 UI 通过 IPC 读取插件列表/钩子健康并启停
-    pluginRegistry
+    pluginRegistry,
+    // 桌宠角色+治理画像提供方：设置页「治理桌宠」面板通过 IPC get-pet-stats 读取
+    () => computePetCharacter(),
+    // P0 统一控制面：模块状态 / 日志级别 / 预算额度（modules:* IPC 数据源）
+    moduleControlService
   )
   ipcHandlers.registerAll()
 }
@@ -954,7 +787,7 @@ function initializeServices() {
 /**
  * 启动应用
  */
-function startApplication() {
+async function startApplication() {
   const mainWindow = container.resolve<MainWindow>('mainWindow')
   const petWindow = container.resolve<PetWindow>('petWindow')
   const trayService = container.resolve<TrayService>('trayService')
@@ -962,6 +795,15 @@ function startApplication() {
 
   // 启动后台服务
   apiService.start()
+
+  // 自动拉起 Django 后端（检测 8000 → 未运行则 spawn → 等待就绪）
+  // 非阻塞：窗口立即创建，前端 checkAuth 会轮询后端就绪后再校验登录态
+  const backendService = container.resolve<BackendService>('backendService')
+  backendService.start().then((ready) => {
+    logger.info(`[系统] Django 后端自动启动${ready ? '成功' : '未就绪'}`, { module: 'BackendService', ready })
+  }).catch((error) => {
+    logger.error('[系统] Django 后端自动启动异常', { module: 'BackendService', error: error instanceof Error ? error.message : error })
+  })
 
   // 启动同步服务
   try {
@@ -983,6 +825,12 @@ function startApplication() {
   // 创建主窗口和桌宠窗口
   mainWindow.create()
 
+  // 自动更新：主进程接入 + 静默检查（生产环境；开发环境跳过）
+  updaterService.init({
+    getMainWindow: () => container.resolve<MainWindow>('mainWindow').getWindow() ?? null,
+  })
+  updaterService.checkForUpdates()
+
   // 托盘常驻（受"托盘"权限门控；未授权则不创建）
   if (getPermissionConfig().granted.tray) {
     trayService.create()
@@ -1000,6 +848,17 @@ function startApplication() {
 
   // 按操作权限门控启动监控（文件/剪贴板/进程/网络/API/资源）
   applyPermissionGating()
+
+  // 启动 MCP Server（方案 C）：治理能力对外暴露；fail-closed 鉴权，写操作经 bootstrap 注入的权限钩子
+  if (container.has('mcpServer')) {
+    const mcpServer = container.resolve<McpServerService>('mcpServer')
+    try {
+      await mcpServer.start()
+      logger.info('[MCP] 治理能力 MCP Server 已启动', { module: 'McpServer' }, { url: mcpServer.getUrl() })
+    } catch (error) {
+      logger.error('[MCP] MCP Server 启动失败', { module: 'McpServer' }, { error: error instanceof Error ? error.message : error })
+    }
+  }
 
   logger.info('[一鉴到底] 所有监控服务已启动', { module: 'System' })
   logger.info('[一鉴到底] 主动监控和健康度监控已启用（MVP）', { module: 'System' })
@@ -1034,34 +893,41 @@ function cleanup() {
     logger.error('[清理] ❌ API 服务停止失败', { module: 'Cleanup' }, { error })
   }
 
-  // 按权限门控停止监控：仅停用"已按权限启动"的监控，并逐项记录停止结果
-  const monitorStops: Array<{ key: string; label: string; stop: () => void }> = [
-    { key: 'file', label: '文件系统监控', stop: () => container.resolve<FileMonitor>('fileMonitor').stop() },
-    { key: 'clipboard', label: '剪贴板监控', stop: () => container.resolve<ClipboardMonitor>('clipboardMonitor').stop() },
-    { key: 'process', label: '进程监控', stop: () => container.resolve<ProcessMonitor>('processMonitor').stop() },
-    { key: 'network', label: '网络请求监控', stop: () => container.resolve<NetworkMonitor>('networkMonitor').stop() },
-    { key: 'apiCall', label: 'API 调用监控', stop: () => container.resolve<ApiCallMonitor>('apiCallMonitor').stop() },
-    {
-      key: 'resource',
-      label: '资源监控（内存/CPU）',
-      stop: () => {
-        container.resolve<MemoryMonitorService>('memoryMonitor').stop()
-        container.resolve<CPUMonitor>('cpuMonitor').stop()
-      },
-    },
-  ]
+  // 停止自动拉起的 Django 后端（外部已启动的复用进程不回收）
+  try {
+    container.resolve<BackendService>('backendService').stop()
+    logger.info('[清理] ✅ Django 后端已停止', { module: 'Cleanup' })
+  } catch (error) {
+    logger.error('[清理] ❌ Django 后端停止失败', { module: 'Cleanup' }, { error })
+  }
 
-  for (const spec of monitorStops) {
-    if (!permissionGating.runningMonitors.has(spec.key)) {
-      logger.info(`[清理] 跳过停止 ${spec.label}（未启动/未授权）`, { module: 'Cleanup' }, { monitor: spec.key, running: false })
+  // 停止 MCP Server（治理能力对外暴露；随应用退出）
+  if (container.has('mcpServer')) {
+    container.resolve<McpServerService>('mcpServer').stop().catch((error) => {
+      logger.error('[清理] ❌ MCP Server 停止失败', { module: 'McpServer' }, { error })
+    })
+    logger.info('[清理] ✅ MCP Server 已停止', { module: 'McpServer' })
+  }
+
+  // 按权限门控停止监控：仅停用"已按权限启动"的监控，并逐项记录停止结果
+  const monitorRegistry = container.resolveOptional<MonitorProviderRegistry>('monitorRegistry')
+  for (const key of MONITOR_KEYS) {
+    const runner = monitorRegistry?.[key]
+    if (!runner) {
+      logger.info(`[清理] 跳过停止 ${key}（装配器中未启用）`, { module: 'Cleanup' }, { monitor: key, running: false })
+      continue
+    }
+    const { label, stop } = runner
+    if (!permissionGating.runningMonitors.has(key)) {
+      logger.info(`[清理] 跳过停止 ${label}（未启动/未授权）`, { module: 'Cleanup' }, { monitor: key, running: false })
       continue
     }
     try {
-      spec.stop()
-      permissionGating.runningMonitors.delete(spec.key)
-      logger.info(`[清理] ✅ ${spec.label}已停止`, { module: 'Cleanup' }, { monitor: spec.key, stopped: true })
+      stop()
+      permissionGating.runningMonitors.delete(key)
+      logger.info(`[清理] ✅ ${label}已停止`, { module: 'Cleanup' }, { monitor: key, stopped: true })
     } catch (error) {
-      logger.error(`[清理] ❌ ${spec.label}停止失败`, { module: 'Cleanup' }, { monitor: spec.key, stopped: false, error })
+      logger.error(`[清理] ❌ ${label}停止失败`, { module: 'Cleanup' }, { monitor: key, stopped: false, error })
     }
   }
 
@@ -1089,15 +955,22 @@ function cleanup() {
     perfAnalyzerUnsub = undefined
   }
 
-  // 治理型 Agent：卸载 Skill 插件（解除事件订阅 + 清理插件缓存）
-  if (pluginRegistryUnsub) {
+  // 治理型 Agent：卸载 Skill 插件（解除事件订阅 + 清理插件缓存；装配器已按配置安装，此处整体卸载）
+  try {
+    container.resolve<PluginRegistry>('pluginRegistry').uninstallAll()
+    logger.info('[清理] ✅ Skill 插件已卸载', { module: 'PluginRegistry' })
+  } catch (error) {
+    logger.warn('[系统] Skill 插件卸载失败', { module: 'PluginRegistry' }, { error })
+  }
+
+  // 桌宠角色：解除治理画像统计订阅
+  if (petProfileUnsub) {
     try {
-      pluginRegistryUnsub()
-      logger.info('[清理] ✅ Skill 插件已卸载', { module: 'PluginRegistry' })
+      petProfileUnsub()
     } catch (error) {
-      logger.warn('[系统] Skill 插件卸载失败', { module: 'PluginRegistry' }, { error })
+      logger.warn('[系统] 桌宠画像订阅解绑失败', { module: 'PetWindow' }, { error })
     }
-    pluginRegistryUnsub = undefined
+    petProfileUnsub = undefined
   }
 
   // 停止同步服务
@@ -1110,12 +983,12 @@ function cleanup() {
 }
 
 // 应用生命周期
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   initializeServices()
-  startApplication()
+  await startApplication()
 })
 
-app.on('window-all-closed', (event) => {
+app.on('window-all-closed', (event: Electron.Event) => {
   // 托盘权限未授予时关闭窗口即退出应用；已授予则常驻后台
   if (getPermissionConfig().granted.tray) {
     event.preventDefault()
@@ -1136,6 +1009,15 @@ app.on('before-quit', () => {
 })
 
 app.on('will-quit', () => {
+  // 强制把渲染进程 localStorage 等持久存储落盘：避免退出未 flush 导致登录态/凭据丢失
+  try {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.session.flushStorageData()
+    }
+    logger.debug('[控制面] 已 flush 渲染进程存储数据', { module: 'AppLifecycle' })
+  } catch (e) {
+    logger.warn('[控制面] flushStorageData 失败', { module: 'AppLifecycle', error: e })
+  }
   cleanup()
 })
 

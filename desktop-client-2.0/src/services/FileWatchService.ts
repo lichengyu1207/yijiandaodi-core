@@ -10,7 +10,7 @@
  * 创建时间：2026-08-12
  */
 
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { BrowserWindow } from 'electron'
 import { FileWatcher, FileWatchConfig } from './FileWatcher'
 import { httpClient, HttpClient } from './http'
 
@@ -258,7 +258,7 @@ export class FileWatchService {
     try {
       console.log('[File-Watch-Service] 启动所有激活的监控...')
       
-      for (const [id, config] of this.configs) {
+      for (const [, config] of this.configs) {
         if (config.is_active && this.fileWatcher) {
           await this.fileWatcher.startWatch(config)
         }

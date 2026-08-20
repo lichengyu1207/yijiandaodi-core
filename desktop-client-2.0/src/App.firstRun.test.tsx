@@ -12,13 +12,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 
 // ---- 服务层 mock（App.tsx 的依赖）----
+// 模拟「新用户首次安装」：尚未登录（isAuthenticated=false）、后端无账号
 vi.mock('./services/authService', () => ({
   authService: {
-    isAuthenticated: () => true,
+    isAuthenticated: () => false,
     getToken: () => 'mock-token',
     getCurrentUser: () => ({ username: 'newuser' }),
     validateToken: () => Promise.resolve(true),
     refreshToken: () => Promise.resolve(true),
+    refreshTokenGuarded: () => Promise.resolve(true),
+    restoreFromMain: () => Promise.resolve(false),
+    getBackendSetupStatus: () => Promise.resolve({ has_users: false }),
+    setupAccount: () => Promise.resolve(undefined),
+    login: () => Promise.resolve(true),
     logout: () => Promise.resolve(),
   },
 }))
@@ -71,12 +77,20 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   ;(window as any).electronAPI = createNewUserMockApi()
+
+  // 模拟后端健康检查：waitForBackend 立即判定就绪，避免真实请求 localhost:8000 卡住
+  global.fetch = vi.fn(async (input: any) => {
+    if (String(input).includes('/api/health/')) {
+      return { ok: true, status: 200 } as Response
+    }
+    return { ok: false, status: 404 } as Response
+  })
 })
 
 async function completeSetupWizard() {
   // 第 1 步：账号
   fireEvent.change(screen.getByPlaceholderText('至少 3 个字符'), { target: { value: 'admin' } })
-  fireEvent.change(screen.getByPlaceholderText('至少 6 位'), { target: { value: 'secret123' } })
+  fireEvent.change(screen.getByPlaceholderText('至少 8 位'), { target: { value: 'secret123' } })
   fireEvent.change(screen.getByPlaceholderText('再次输入密码'), { target: { value: 'secret123' } })
   fireEvent.click(screen.getByRole('button', { name: /下一步/ }))
   await waitFor(() => expect(screen.getByText('允许操作权限')).toBeInTheDocument(), { timeout: 5000 })

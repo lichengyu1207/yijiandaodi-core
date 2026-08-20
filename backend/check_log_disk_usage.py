@@ -33,30 +33,58 @@ class LogDiskMonitor:
         self.log_files = []
         self.total_size = 0
         
-    def scan_log_files(self) -> List[Tuple[str, int]]:
+    def scan_log_files(self, recursive: bool = True) -> List[Tuple[str, int, float, str]]:
         """
-        扫描所有日志文件
+        扫描所有日志文件和相关文件
         
+        Args:
+            recursive: 是否递归扫描子目录
+            
         Returns:
-            日志文件列表: [(文件名, 大小), ...]
+            文件列表: [(文件名, 大小, 修改时间, 文件类型), ...]
         """
         if not self.log_dir.exists():
             print(f"❌ 日志目录不存在: {self.log_dir}")
             return []
         
-        log_files = []
+        all_files = []
         
-        # 扫描所有.log和.log.*文件
-        for pattern in ['*.log', '*.log.*']:
-            for log_file in self.log_dir.glob(pattern):
-                if log_file.is_file():
-                    size = log_file.stat().st_size
-                    log_files.append((log_file.name, size, log_file.stat().st_mtime))
+        # 定义文件类型和对应的模式
+        file_patterns = {
+            'Celery日志': ['*.log', '*.log.*'],
+            '数据库文件': ['*.sqlite3', '*.db', '*.sqlite'],
+            'Python缓存': ['*.pyc', '*.pyo', '__pycache__'],
+            '测试覆盖率': ['.coverage', '*.coverage', 'htmlcov/*'],
+            '性能分析': ['*.prof', '*.lprof'],
+            '临时文件': ['*.tmp', '*.bak', '*.swp', '*~'],
+            '压缩文件': ['*.gz', '*.zip', '*.tar', '*.rar'],
+        }
+        
+        # 扫描每种类型的文件
+        for file_type, patterns in file_patterns.items():
+            for pattern in patterns:
+                # 使用rglob进行递归扫描，或glob进行当前目录扫描
+                if recursive:
+                    matched_files = self.log_dir.rglob(pattern)
+                else:
+                    matched_files = self.log_dir.glob(pattern)
+                
+                for file_path in matched_files:
+                    if file_path.is_file():
+                        try:
+                            size = file_path.stat().st_size
+                            mtime = file_path.stat().st_mtime
+                            # 使用相对路径（便于显示）
+                            rel_path = file_path.relative_to(self.log_dir)
+                            all_files.append((str(rel_path), size, mtime, file_type))
+                        except (OSError, PermissionError) as e:
+                            # 跳过无法访问的文件
+                            pass
         
         # 按大小排序
-        log_files.sort(key=lambda x: x[1], reverse=True)
+        all_files.sort(key=lambda x: x[1], reverse=True)
         
-        return log_files
+        return all_files
     
     def format_size(self, size_bytes: int) -> str:
         """
@@ -101,62 +129,51 @@ class LogDiskMonitor:
         print(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}".center(80))
         print("="*80)
         
-        # 扫描日志文件
-        log_files = self.scan_log_files()
+        # 扫描文件（递归）
+        all_files = self.scan_log_files(recursive=True)
         
-        if not log_files:
-            print("\n✅ 未发现日志文件")
+        if not all_files:
+            print("\n✅ 未发现日志或相关文件")
             return
         
         # 统计信息
-        total_size = sum(size for _, size, _ in log_files)
-        total_count = len(log_files)
+        total_size = sum(size for _, size, _, _ in all_files)
+        total_count = len(all_files)
         
-        print(f"\n📁 日志目录: {self.log_dir}")
+        print(f"\n📁 扫描目录: {self.log_dir}")
         print(f"📊 总文件数: {total_count}")
         print(f"📊 总大小: {self.format_size(total_size)}")
         
-        # 按类型分组统计
+        # 按类型分组统计（使用新的file_type字段）
         print("\n" + "-"*80)
-        print("日志文件统计（按类型）:")
+        print("文件统计（按类型）:")
         print("-"*80)
         
         file_groups = {}
         
-        for filename, size, mtime in log_files:
-            # 提取文件类型（去除轮转后缀）
-            base_name = filename.split('.')[0]
+        for filename, size, mtime, file_type in all_files:
+            if file_type not in file_groups:
+                file_groups[file_type] = {'count': 0, 'size': 0}
             
-            if 'worker' in base_name:
-                group_key = 'Celery Worker日志'
-            elif 'error' in base_name:
-                group_key = '错误日志'
-            elif 'monitor' in base_name:
-                group_key = '监控日志'
-            else:
-                group_key = '其他日志'
-            
-            if group_key not in file_groups:
-                file_groups[group_key] = {'count': 0, 'size': 0}
-            
-            file_groups[group_key]['count'] += 1
-            file_groups[group_key]['size'] += size
+            file_groups[file_type]['count'] += 1
+            file_groups[file_type]['size'] += size
         
-        for group_name, stats in sorted(file_groups.items()):
+        # 按大小排序显示
+        for group_name, stats in sorted(file_groups.items(), key=lambda x: x[1]['size'], reverse=True):
             print(f"  {group_name}:")
             print(f"    文件数: {stats['count']}")
             print(f"    大小: {self.format_size(stats['size'])}")
         
         # 大文件告警（>10MB）
-        large_files = [(name, size) for name, size, _ in log_files if size > 10 * 1024 * 1024]
+        large_files = [(name, size, ftype) for name, size, _, ftype in all_files if size > 10 * 1024 * 1024]
         
         if large_files:
             print("\n" + "-"*80)
-            print("⚠️ 大文件告警（>10MB）:")
+            print(f"⚠️ 大文件告警（>10MB）:")
             print("-"*80)
             
-            for filename, size in large_files[:10]:  # 只显示前10个
-                print(f"  {filename}: {self.format_size(size)}")
+            for filename, size, file_type in large_files[:10]:  # 只显示前10个
+                print(f"  [{file_type}] {filename}: {self.format_size(size)}")
         
         # 磁盘使用情况
         print("\n" + "-"*80)
@@ -202,30 +219,39 @@ class LogDiskMonitor:
         
         print("\n" + "="*80)
     
-    def clean_old_logs(self, days: int = 7) -> int:
+    def clean_old_logs(self, days: int = 7, file_types: List[str] = None) -> int:
         """
-        清理旧日志文件
+        清理旧日志文件和缓存文件
         
         Args:
             days: 保留最近几天的日志
+            file_types: 要清理的文件类型列表（默认：所有类型）
             
         Returns:
             删除的文件数量
         """
         import time
         
+        if file_types is None:
+            file_types = ['Celery日志', 'Python缓存', '临时文件']
+        
         cutoff_time = time.time() - (days * 86400)
         deleted_count = 0
         
-        for log_file in self.log_dir.glob('*.log.*'):
-            if log_file.is_file():
-                if log_file.stat().st_mtime < cutoff_time:
+        # 扫描所有文件
+        all_files = self.scan_log_files(recursive=True)
+        
+        for filename, size, mtime, file_type in all_files:
+            if file_type in file_types:
+                file_path = self.log_dir / filename
+                
+                if mtime < cutoff_time:
                     try:
-                        log_file.unlink()
+                        file_path.unlink()
                         deleted_count += 1
-                        print(f"✅ 删除: {log_file.name}")
+                        print(f"✅ 删除: {filename} ({self.format_size(size)})")
                     except Exception as e:
-                        print(f"❌ 删除失败: {log_file.name} - {e}")
+                        print(f"❌ 删除失败: {filename} - {e}")
         
         return deleted_count
 
@@ -243,13 +269,24 @@ def main():
     parser.add_argument(
         '--clean',
         action='store_true',
-        help='清理7天前的旧日志'
+        help='清理旧文件'
     )
     parser.add_argument(
         '--days',
         type=int,
         default=7,
-        help='保留最近几天的日志（默认: 7）'
+        help='保留最近几天的文件（默认: 7）'
+    )
+    parser.add_argument(
+        '--file-types',
+        nargs='+',
+        default=['Celery日志', 'Python缓存', '临时文件'],
+        help='要清理的文件类型（默认: Celery日志 Python缓存 临时文件）'
+    )
+    parser.add_argument(
+        '--no-recursive',
+        action='store_true',
+        help='不递归扫描子目录'
     )
     
     args = parser.parse_args()
@@ -259,13 +296,14 @@ def main():
     # 生成监控报告
     monitor.generate_report()
     
-    # 清理旧日志（如果指定）
+    # 清理旧文件（如果指定）
     if args.clean:
         print("\n" + "="*80)
-        print(f"🗑️ 清理{args.days}天前的旧日志...")
+        print(f"🗑️ 清理{args.days}天前的旧文件...")
+        print(f"文件类型: {', '.join(args.file_types)}")
         print("="*80)
         
-        deleted = monitor.clean_old_logs(days=args.days)
+        deleted = monitor.clean_old_logs(days=args.days, file_types=args.file_types)
         
         print(f"\n✅ 共删除 {deleted} 个文件")
         

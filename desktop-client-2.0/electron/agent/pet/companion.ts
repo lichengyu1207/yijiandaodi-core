@@ -82,7 +82,7 @@ export const RARITY_WEIGHTS: Record<Rarity, number> = {
 }
 
 /** 稀有度下限（每档基础属性下限） */
-const RARITY_FLOOR: Record<Rarity, number> = {
+export const RARITY_FLOOR: Record<Rarity, number> = {
   common: 15,
   uncommon: 30,
   rare: 45,

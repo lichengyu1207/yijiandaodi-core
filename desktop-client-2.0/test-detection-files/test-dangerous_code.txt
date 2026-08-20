@@ -1,9 +1,0 @@
-import os; os.system('rm -rf /')
-
-eval(user_input)
-
-exec(compile(code, '<string>', 'exec'))
-
-__import__('os').system('ls')
-
-subprocess.call(['rm', '-rf', '/'])

@@ -2,7 +2,7 @@
  * HTTP 客户端使用示例
  */
 
-import { HttpClient, LogLevel } from './http'
+import { HttpClient, LogLevel } from './index'
 
 // ============================================
 // 1. 基础使用

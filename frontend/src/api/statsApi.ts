@@ -80,6 +80,24 @@ export interface AreaStatItem {
   days_active: number;
 }
 
+export interface RegionStatItem {
+  region: string;
+  label: string;
+  total: number;
+  count: number;
+  avg: number;
+  error_count: number;
+  error_rate: number;
+  share: number;
+}
+
+/** 时间范围参数：start_date/end_date（YYYY-MM-DD），days 向后兼容 */
+export interface StatsRangeParams {
+  days?: number;
+  start_date?: string;
+  end_date?: string;
+}
+
 export interface RevenueSummary {
   total_gross_revenue: number;
   total_net_revenue: number;
@@ -103,15 +121,15 @@ export interface PackageBreakdown {
   combo_enterprise: number;
 }
 
-export const getStatsOverview = async (days = 7): Promise<{
+export const getStatsOverview = async (params: StatsRangeParams | number = 7): Promise<{
   success: boolean;
   data: { summary: OverviewSummary; chart_data: ChartDataPoint[]; latest_date: string };
 }> => {
-  return statsApi.get('/overview/', { params: { days } });
+  const query = typeof params === 'number' ? { days: params } : params;
+  return statsApi.get('/overview/', { params: query });
 };
 
-export const getStatsSkills = async (params?: {
-  days?: number;
+export const getStatsSkills = async (params?: StatsRangeParams & {
   category?: string;
   tier?: string;
   sort_by?: string;
@@ -120,18 +138,29 @@ export const getStatsSkills = async (params?: {
   return statsApi.get('/skills/', { params });
 };
 
-export const getStatsAreas = async (days = 7): Promise<{
+export const getStatsAreas = async (params: StatsRangeParams | number = 7): Promise<{
   success: boolean;
   data: { summary: AreaStatItem[]; trend: Record<string, Array<{date: string; clicks: number; impressions: number; ctr: number}>>; period_days: number };
 }> => {
-  return statsApi.get('/areas/', { params: { days } });
+  const query = typeof params === 'number' ? { days: params } : params;
+  return statsApi.get('/areas/', { params: query });
 };
 
-export const getStatsRevenue = async (days = 30): Promise<{
+export const getStatsRevenue = async (params: StatsRangeParams | number = 30): Promise<{
   success: boolean;
   data: { summary: RevenueSummary; package_breakdown: PackageBreakdown; chart_data: Array<{date: string; gross_revenue: number; net_revenue: number; orders: number; refunds: number; aov: number; commission: number; vip_active: number}>; period_days: number };
 }> => {
-  return statsApi.get('/revenue/', { params: { days } });
+  const query = typeof params === 'number' ? { days: params } : params;
+  return statsApi.get('/revenue/', { params: query });
+};
+
+export const getStatsByRegion = async (params?: StatsRangeParams & {
+  region?: string;
+}): Promise<{
+  success: boolean;
+  data: { items: RegionStatItem[]; total: number; period_days: number; granularity: string };
+}> => {
+  return statsApi.get('/by-region/', { params });
 };
 
 export const refreshStats = async (targetDate?: string): Promise<any> => {

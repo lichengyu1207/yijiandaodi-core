@@ -1,0 +1,15 @@
+[run]
+source = auth_app
+omit = 
+    */migrations/*
+    */tests/*
+    */test_*.py
+    */__init__.py
+
+[report]
+precision = 2
+show_missing = True
+skip_covered = False
+
+[html]
+directory = htmlcov

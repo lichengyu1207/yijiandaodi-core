@@ -13,30 +13,60 @@ files:
   - "!**/*.map"
   - "!**/node_modules/.cache/**/*"
 
+# 生产分发：只打包 PyInstaller 产出的两个自包含 EXE（dist/backend + dist/sandbox-api）
+# —— 零 Python 依赖，用户无需安装 Python/Node，Django 后端 + 沙箱服务随应用自动拉起。
+# PyInstaller 6.x onedir 各自含 _internal/，必须保持独立子目录，避免同名目录互相覆盖：
+#   resources/backend/backend/backend.exe
+#   resources/backend/sandbox-api/sandbox-api.exe
 extraResources:
   - from: public/logo.png
     to: logo.png
   # 确保 ffmpeg.dll 被包含
   - from: node_modules/electron/dist/ffmpeg.dll
     to: ffmpeg.dll
+  # 后端 onedir（backend.exe + _internal + Django 源码）
+  - from: ../backend/dist/backend
+    to: backend/backend
+    filter:
+      - '**/*'
+      - '!**/*.pyc'
+      - '!**/*.pyo'
+  # 沙箱 API onedir（sandbox-api.exe + _internal）
+  - from: ../backend/dist/sandbox-api
+    to: backend/sandbox-api
+    filter:
+      - '**/*'
+      - '!**/*.pyc'
+      - '!**/*.pyo'
 
-# Windows 配置
+# Windows 配置：NSIS 安装包（用户可选安装目录），替代 portable 便携版
 win:
   icon: build/icon.ico
   target:
-    - target: portable
+    - target: nsis
       arch:
         - x64
-  artifactName: ${productName}-${version}-Setup.${ext}
+  # ASCII 安全产物名：latest.yml 的 path 用 ASCII 名（非 ASCII 会被 safeArtifactName 改写导致
+  # 文件名与元数据不一致，用户自动更新 404）。安装界面显示名仍为中文 productName。
+  artifactName: ${name}-setup-${version}.${ext}
 
 nsis:
   oneClick: false
   perMachine: false
+  # 向导安装，允许用户选择安装目录（C/D 盘）
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: ${productName}
+  runAfterFinish: true
+
+# 自动更新：electron-updater 从 GitHub Releases 拉取 latest.yml
+# 真实发布仓库见 git remote（lichengyu1207/yijiandaodi-core）
+publish:
+  provider: github
+  owner: lichengyu1207
+  repo: yijiandaodi-core
 
 # 优化配置
 compression: maximum

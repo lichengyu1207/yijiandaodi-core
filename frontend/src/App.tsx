@@ -10,6 +10,21 @@ import PrivacyAgreementModal from '@/components/PrivacyAgreementModal';
 import IMChatWidget from '@/components/IMChatWidget';
 import VoiceAssistant from '@/components/VoiceAssistant';
 import { useAuthStore } from '@/store/useAuthStore';
+import { authApi } from '@/api/auth';
+import { profileApi } from '@/api/profile';
+
+/** 登录态就绪后拉取后端个性化 profile 覆盖 localStorage（P1-4 跨端持久化） */
+function syncProfileToLocal() {
+  profileApi
+    .getProfile()
+    .then((res: any) => {
+      const data = res?.data || res;
+      if (data) localStorage.setItem('user_profile', JSON.stringify(data));
+    })
+    .catch(() => {
+      // 拉取失败静默
+    });
+}
 
 const App: React.FC = () => {
   const [showPrivacy, setShowPrivacy] = useState(false);
@@ -18,6 +33,7 @@ const App: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const fetchUserInfo = useAuthStore((state) => state.fetchUserInfo);
   const logout = useAuthStore((state) => state.logout);
+  const setSession = useAuthStore((state) => state.setSession);
 
   /* 隐私协议弹窗 */
   useEffect(() => {
@@ -38,12 +54,48 @@ const App: React.FC = () => {
       fetchUserInfo()
         .then(() => {
           // session有效，用户信息已恢复
+          syncProfileToLocal();
         })
         .catch(() => {
           // token过期或session失效，清除所有残留状态
           logout();
         });
     }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* P1 账号互通：桌面端跳转携带一次性临时 token → 自动兑换正式登录态（免登录）。
+     兑换用后即销毁，无论成败都清理 URL 参数，避免刷新时重复兑换。 */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const tempToken = params.get('auth_token');
+    if (!tempToken) return;
+
+    // 先清理 URL，再兑换（失败也不残留敏感参数）
+    params.delete('auth_token');
+    const query = params.toString();
+    const cleanUrl = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+    window.history.replaceState({}, '', cleanUrl);
+
+    authApi
+      .exchangeDesktopLogin(tempToken)
+      .then((res: any) => {
+        const inner = res?.data || res;
+        const newToken = inner?.token || '';
+        const newUser = inner?.user;
+        if (newToken && newUser) {
+          setSession(newToken, newUser);
+          if (inner.refresh_token) {
+            localStorage.setItem('refresh_token', inner.refresh_token);
+          }
+          // P1-4：兑换成功后拉取后端个性化 profile
+          syncProfileToLocal();
+        }
+      })
+      .catch((err) => {
+        // token 无效/过期：保持未登录态（页面停留）
+        console.warn('桌面端临时登录 token 兑换失败:', err);
+      });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

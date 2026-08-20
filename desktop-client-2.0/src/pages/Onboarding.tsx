@@ -91,7 +91,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         <PermissionList granted={granted} onChange={toggle} />
 
         {error && (
-          <div style={{ padding: 10, marginTop: 12, background: '#FFF0F0', border: '1px solid #FFC2C2', borderRadius: 6, color: '#C0392B', fontSize: 13 }}>
+          <div className="notice-error" style={{ padding: 10, marginTop: 12, borderRadius: 6, fontSize: 13 }}>
             {error}
           </div>
         )}
