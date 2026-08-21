@@ -1,6 +1,6 @@
 {
   "name": "yijiandaodi-desktop",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "一鉴到底 - 本地运行的 AI 操作行为校验工具",
   "main": "dist-electron/main.js",
   "author": "一鉴到底团队",

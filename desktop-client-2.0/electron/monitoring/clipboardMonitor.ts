@@ -13,6 +13,7 @@ import { TaintTracker, taintTracker, TaintType } from './taintTracking'
 export class ClipboardMonitor {
   private clipboardWatcher: NodeJS.Timeout | null = null
   private lastClipboardContent: string = ''
+  private accessGranted: boolean = false
   private securityKB: SecurityKnowledgeBase | null = null
   private autoDetector: AutoDetector
   private onRiskDetected?: (risks: RiskResult[], content: string) => void
@@ -21,6 +22,14 @@ export class ClipboardMonitor {
 
   constructor() {
     this.autoDetector = new AutoDetector()
+  }
+
+  /** 权限门控：仅在用户授权剪贴板访问后，监控循环才会真正读取剪贴板内容（fail-closed） */
+  setAccessGranted(granted: boolean) {
+    this.accessGranted = granted
+    if (!granted) {
+      this.lastClipboardContent = ''
+    }
   }
 
   setSecurityKnowledgeBase(kb: SecurityKnowledgeBase) {
@@ -48,8 +57,11 @@ export class ClipboardMonitor {
 
     console.log('[剪贴板监控] 启动...')
 
-    // 每500ms检查一次剪贴板
+    // 每2s检查一次剪贴板；未授权时不读取内容
     this.clipboardWatcher = setInterval(() => {
+      if (!this.accessGranted) {
+        return
+      }
       try {
         const currentContent = clipboard.readText()
 
@@ -64,7 +76,7 @@ export class ClipboardMonitor {
       } catch (error: any) {
         console.error('[剪贴板监控] 错误:', error.message)
       }
-    }, 500)
+    }, 2000)
   }
 
   stop() {

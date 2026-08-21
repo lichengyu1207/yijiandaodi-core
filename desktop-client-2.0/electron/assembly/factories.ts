@@ -170,7 +170,7 @@ export const monitorFactories: Record<string, MonitorFactory> = {
   file: (ctx) =>
     createMonitorRunner('file', '文件系统监控', ctx.logger, () => ctx.resolve<FileMonitor>('fileMonitor'), (m) => m.start(), (m) => m.stop()),
   clipboard: (ctx) =>
-    createMonitorRunner('clipboard', '剪贴板监控', ctx.logger, () => ctx.resolve<ClipboardMonitor>('clipboardMonitor'), (m) => m.start(), (m) => m.stop()),
+    createMonitorRunner('clipboard', '剪贴板监控', ctx.logger, () => ctx.resolve<ClipboardMonitor>('clipboardMonitor'), (m) => { m.setAccessGranted(true); m.start() }, (m) => { m.stop(); m.setAccessGranted(false) }),
   process: (ctx) =>
     createMonitorRunner('process', '进程监控', ctx.logger, () => ctx.resolve<ProcessMonitor>('processMonitor'), (m) => m.start(), (m) => m.stop()),
   network: (ctx) =>

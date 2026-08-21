@@ -24,6 +24,9 @@ _EXCLUDE_TOP = {
 }
 _EXCLUDE_FILES = {
     'db.sqlite3', '.env', '.secret_key', '*.pyc', '*.pyo', '*.db', '*.sqlite3',
+    # 开发期数据播种命令，运行时后端 API 不会引用；源码内含教育性恶意代码示例，
+    # 排除以免被静态杀毒引擎当作攻击载荷字符串
+    'update_ai_security.py', 'seed_articles.py',
 }
 
 
@@ -129,7 +132,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     console=True,
 )
 
@@ -138,6 +141,6 @@ coll = COLLECT(
     a.binaries,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     name='backend',
 )
