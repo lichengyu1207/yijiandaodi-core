@@ -1,37 +1,13 @@
-/**
- * perfLogAnalyzer.ts — 治理日志性能分析器（统一日志分析工具）
- *
- * 解析 governance-%DATE%.log（JSON Lines，winston 文件格式）中的流式执行链路关键节点
- * 日志（RulePlanner 规划 / ToolBridge 调用 / 四官判定 / 治理引擎执行），按 runId 聚合，
- * 生成性能报告（min/avg/p50/p95/p99/max 耗时统计 + 最慢轮次 TopN）。
- *
- * 支持两类日志来源（与 loggerService.parseLogFile 同一兼容策略）：
- *  1. JSON Lines：`{"timestamp","level","message","context","metadata",...}`（机器可解析，首选）
- *  2. 控制台文本：`YYYY-MM-DD HH:mm:ss [INFO ] 消息 module=x function=y key=value`
- *
- * 纯 Node 实现（不依赖 electron），既可作为模块被主进程调用，也可作 CLI 独立运行：
- *   npx esbuild electron/agent/perfLogAnalyzer.ts --bundle --platform=node --format=cjs \
- *     --outfile=perf-analyzer.cjs
- *   node perf-analyzer.cjs <日志文件或目录> [--format text|json] [--limit N] [--output <path>]
- */
-
 import * as fs from 'fs'
 import * as path from 'path'
 import * as readline from 'readline'
 
-// ============================================================================
-// 可注入日志器（纯 Node 实现，不依赖 electron；主进程注入 governanceLoggerInstance，
-// 不注入则静默。用于排查去重键生成/合并是否正确）
-// ============================================================================
-
-/** 分析器日志方法签名（与 GovernanceLogger 兼容：message, context, metadata） */
 export type PerfAnalyzerLogMethod = (
   message: string,
   context?: Record<string, unknown>,
   metadata?: unknown,
 ) => void
 
-/** 分析器日志器接口（只需 trace/debug：去重链路属最细粒度埋点） */
 export interface PerfAnalyzerLogger {
   trace: PerfAnalyzerLogMethod
   debug: PerfAnalyzerLogMethod
@@ -39,16 +15,10 @@ export interface PerfAnalyzerLogger {
 
 let perfAnalyzerLogger: PerfAnalyzerLogger | undefined
 
-/** 注入分析器日志器（主进程在治理日志器就绪后调用；传 undefined 可恢复静默） */
 export function setPerfAnalyzerLogger(logger?: PerfAnalyzerLogger): void {
   perfAnalyzerLogger = logger
 }
 
-// ============================================================================
-// 类型定义
-// ============================================================================
-
-/** 解析后的单条日志 */
 export interface ParsedLogLine {
   ts: string
   level: string
@@ -57,7 +27,6 @@ export interface ParsedLogLine {
   meta: Record<string, unknown>
 }
 
-/** 单阶段（四官之一）判定样本 */
 export interface StageSample {
   step: string
   progress: number
@@ -65,16 +34,13 @@ export interface StageSample {
   gapMs: number
 }
 
-/** 单次桥调用样本（任意工具） */
 export interface BridgeSample {
   tool: string
   callMs: number
   isError: boolean
-  /** 失败时的错误消息（isError=true 时由 `[桥] 工具调用完成` 的 error 元数据捕获） */
   error?: string
 }
 
-/** 单次失败动作样本（来自治理引擎动作执行失败 / 权限拒绝 / 桥调用失败） */
 export interface ErrorSample {
   tool?: string
   code?: string
@@ -82,30 +48,24 @@ export interface ErrorSample {
   denied?: boolean
 }
 
-/** 单轮（runId）聚合出的性能数据 */
 export interface PerfRecord {
   runId: string
   startTs: string
   severity?: string
   planMs?: number
   actionCount?: number
-  /** tool → 该轮最近一次调用耗时 */
   tools: Record<string, number>
   bridge: BridgeSample[]
-  /** verify.flow 四官判定：后端段总耗时 + 逐官阶段帧 */
   flow: {
     backendMs?: number
     totalMs?: number
     attempts?: number
     stages: StageSample[]
   }
-  /** 治理引擎本轮执行耗时 */
   exec?: { readonlyMs?: number; writeMs?: number; execMs?: number; succeeded?: number; failed?: number }
-  /** 本轮失败动作样本（动作执行失败 / 权限拒绝 / 桥调用失败），按出现顺序去重 */
   errors: ErrorSample[]
 }
 
-/** 数值指标的分布统计 */
 export interface MetricSummary {
   count: number
   min: number
@@ -116,7 +76,6 @@ export interface MetricSummary {
   max: number
 }
 
-/** 性能报告 */
 export interface PerfReport {
   files: string[]
   span: { from: string; to: string }
@@ -129,24 +88,14 @@ export interface PerfReport {
     execMs: MetricSummary | null
     readonlyMs: MetricSummary | null
     writeMs: MetricSummary | null
-    /** 四官各阶段 elapsedMs 分布（key=step） */
     byStage: Record<string, MetricSummary>
-    /** 阶段帧间隔 gapMs 分布（>0 说明本地阶段管线存在卡顿） */
     stageGapMs: MetricSummary | null
-    /** 失败统计：总数 + 按工具分布 */
     errors: { count: number; byTool: Record<string, number> }
-    /** 含失败动作的轮次数 */
     failedRuns: number
   }
-  /** 最慢轮次 TopN（按 execMs/totalMs 排序） */
   slowest: PerfRecord[]
-  /** 含失败动作的轮次（按出现时间升序，含错误详情） */
   failures: PerfRecord[]
 }
-
-// ============================================================================
-// 关键节点日志消息（与各埋点处 message 保持一致）
-// ============================================================================
 
 const MSG = {
   planEntry: '[规划] 事件到达，开始路由',
@@ -160,11 +109,6 @@ const MSG = {
   actionDenied: '[治理引擎] 写动作被权限闸门拒绝',
 } as const
 
-// ============================================================================
-// 解析
-// ============================================================================
-
-/** 解析文本中的每行（JSON Lines 优先，控制台文本兜底），自动跳过空行/无关行 */
 export function parseLogLines(content: string): ParsedLogLine[] {
   const lines: ParsedLogLine[] = []
   for (const raw of content.split(/\r?\n/)) {
@@ -177,7 +121,6 @@ export function parseLogLines(content: string): ParsedLogLine[] {
 }
 
 function parseLine(raw: string): ParsedLogLine | null {
-  // 1) JSON Lines（winston 文件日志）
   try {
     const obj: unknown = JSON.parse(raw)
     if (obj && typeof obj === 'object') {
@@ -193,15 +136,12 @@ function parseLine(raw: string): ParsedLogLine | null {
       }
     }
   } catch {
-    // 非 JSON，落到文本解析
+    // non-JSON, fall through to plain-text parsing
   }
 
-  // 2) 控制台文本：`YYYY-MM-DD HH:mm:ss [INFO ] 消息 module=x function=y key=value`
-  // 消息可能包含空格（如 `[规划] 规则路由完成`），第一个 module= 之前全部为消息
   const m = raw.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \[(\w+)\s*\] (.+)$/)
   if (m) {
     const [, ts, level, rest] = m
-    // 分离消息部分（第一个 key=value 之前）与键值对部分
     const kvStart = rest.search(/\s\w+=/)
     let message: string
     let kvStr: string
@@ -245,11 +185,6 @@ function parseKvValue(s: string): unknown {
   return s
 }
 
-// ============================================================================
-// 分析：按 runId 聚合关键节点，产出耗时指标
-// ============================================================================
-
-/** 解析日志行 → 性能报告（不落盘，供模块内聚测试/流式聚合复用） */
 export function analyzeGovernanceLog(lines: ParsedLogLine[], files: string[] = [], limit = 5): PerfReport {
   const byRun = new Map<string, PerfRecord>()
   for (const line of lines) {
@@ -273,7 +208,6 @@ export function analyzeGovernanceLog(lines: ParsedLogLine[], files: string[] = [
   return buildReport(runs, files, limit)
 }
 
-/** 统一 runId 解析：规划/桥/引擎日志带 runId；verify 的 backendLog 仅带 session_id（run_<id>_network） */
 function resolveRunId(line: ParsedLogLine): string | undefined {
   const runId = line.meta.runId
   if (typeof runId === 'string' && runId) return runId
@@ -300,7 +234,6 @@ function applyLine(rec: PerfRecord, line: ParsedLogLine): void {
       rec.tools[tool] = callMs
       const isError = line.meta.isError === true
       rec.bridge.push({ tool, callMs, isError, error: isError ? (toStr(line.meta.error) ?? '未知错误') : undefined })
-      // 桥调用失败同样记入错误样本（与引擎动作执行失败去重）
       if (isError) {
         const sample: ErrorSample = { tool, error: toStr(line.meta.error) ?? '未知错误' }
         logErrorSource(rec, MSG.bridgeDone, sample)
@@ -348,7 +281,6 @@ function applyLine(rec: PerfRecord, line: ParsedLogLine): void {
   }
 }
 
-/** 记录错误样本来源与生成的去重键（排查实际运行时的 key 生成链路） */
 function logErrorSource(rec: PerfRecord, source: string, sample: ErrorSample): void {
   perfAnalyzerLogger?.trace(
     '[perfAnalyzer] 错误样本来源',
@@ -357,19 +289,15 @@ function logErrorSource(rec: PerfRecord, source: string, sample: ErrorSample): v
   )
 }
 
-/** 错误去重键：tool + denied 归一化（undefined/false → plain，true → denied）+ error。
- *  denied=true 的拒绝条目永不与普通失败合并；桥/引擎记录同一次失败（denied 均为 false/undefined）仍可合并。 */
 export function errorKey(e: ErrorSample): string {
   return `${e.tool ?? ''}|${e.denied === true ? 'denied' : 'plain'}|${e.error}`
 }
 
-/** 按去重键追加错误样本（桥调用失败与引擎动作失败可能重复记录同一次失败），重复时合并补齐缺失字段 */
 function pushError(rec: PerfRecord, sample: ErrorSample): void {
   const key = errorKey(sample)
   const existing = rec.errors.find((e) => errorKey(e) === key)
   if (existing) {
     let merged = false
-    // 同一次失败可能先由桥日志（无 code）记录、再由引擎日志（有 code/denied）记录，补齐缺失字段
     if (!existing.code && sample.code) {
       existing.code = sample.code
       merged = true
@@ -413,7 +341,6 @@ function toNum(v: unknown): number | undefined {
   return typeof v === 'number' && Number.isFinite(v) ? v : undefined
 }
 
-/** 数值分布统计 */
 export function summarize(values: number[]): MetricSummary | null {
   if (values.length === 0) return null
   const sorted = [...values].sort((a, b) => a - b)
@@ -430,7 +357,6 @@ export function summarize(values: number[]): MetricSummary | null {
   }
 }
 
-/** 慢轮排序分数：优先引擎执行耗时，其次 verify.flow 总耗时，再退到规划耗时 */
 function runScore(r: PerfRecord): number {
   return r.exec?.execMs ?? r.flow.totalMs ?? r.planMs ?? 0
 }
@@ -450,7 +376,6 @@ function buildReport(runs: PerfRecord[], files: string[], limit: number): PerfRe
 
   const slowest = [...runs].sort((a, b) => runScore(b) - runScore(a)).slice(0, limit)
 
-  // 失败统计：errors 总数 + 按工具分布 + 含失败动作的轮次（按时间升序，含错误详情）
   const errorByTool: Record<string, number> = {}
   let errorCount = 0
   for (const r of runs) {
@@ -486,15 +411,10 @@ function buildReport(runs: PerfRecord[], files: string[], limit: number): PerfRe
   }
 }
 
-// ============================================================================
-// 报告渲染
-// ============================================================================
-
 function fmt(ms: number): string {
   return ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${ms.toFixed(1)}ms`
 }
 
-/** 渲染单个指标区块：`名称  样本  平均  P50  P95  P99  最大` */
 function renderMetricSection(title: string, unit: string, m: MetricSummary | null): string[] {
   if (!m) return [`─ ${title}  （无样本）`]
   return [
@@ -503,7 +423,6 @@ function renderMetricSection(title: string, unit: string, m: MetricSummary | nul
   ]
 }
 
-/** 渲染性能报告（text 人读 / json 机器读） */
 export function renderReport(report: PerfReport, format: 'text' | 'json' = 'text'): string {
   if (format === 'json') return JSON.stringify(report, null, 2)
 
@@ -588,11 +507,6 @@ export function renderReport(report: PerfReport, format: 'text' | 'json' = 'text
   return lines.join('\n')
 }
 
-// ============================================================================
-// 文件读取（流式，适配大日志文件）+ 顶层 API
-// ============================================================================
-
-/** 逐行流式读取日志文件（异步，不整文件载入内存） */
 async function* readLogLines(filePath: string): AsyncGenerator<string> {
   const rl = readline.createInterface({
     input: fs.createReadStream(filePath, { encoding: 'utf-8' }),
@@ -605,7 +519,6 @@ async function* readLogLines(filePath: string): AsyncGenerator<string> {
   rl.close()
 }
 
-/** 解析单个日志文件的日志行（流式） */
 export async function parseLogFile(filePath: string): Promise<ParsedLogLine[]> {
   const lines: ParsedLogLine[] = []
   for await (const raw of readLogLines(filePath)) {
@@ -615,7 +528,6 @@ export async function parseLogFile(filePath: string): Promise<ParsedLogLine[]> {
   return lines
 }
 
-/** 解析日志目录下所有 governance-*.log */
 export async function resolveGovernanceLogFiles(input: string): Promise<string[]> {
   const stat = await fs.promises.stat(input).catch(() => null)
   if (!stat) throw new Error(`日志路径不存在: ${input}`)
@@ -627,7 +539,6 @@ export async function resolveGovernanceLogFiles(input: string): Promise<string[]
     .map((n) => path.join(input, n))
 }
 
-/** 顶层 API：解析文件/目录 → 性能报告 */
 export async function analyzeLogs(
   input: string,
   opts: { limit?: number } = {},
@@ -643,10 +554,6 @@ export async function analyzeLogs(
   }
   return analyzeGovernanceLog(all, files, opts.limit ?? 5)
 }
-
-// ============================================================================
-// CLI 入口：node perf-analyzer.cjs <文件|目录> [--format text|json] [--limit N] [--output <path>]
-// ============================================================================
 
 export interface CliOptions {
   input: string
@@ -675,7 +582,6 @@ function parseCliArgs(argv: string[]): CliOptions {
   return { input: positional[0], format, limit, output: flags.output || undefined }
 }
 
-/** CLI 入口：返回退出码 */
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
   const cli = parseCliArgs(argv)
   const report = await analyzeLogs(cli.input, { limit: cli.limit })
@@ -689,9 +595,15 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
   return 0
 }
 
-// 直接作为 CLI 运行（node perf-analyzer.cjs <文件|目录> ...）时自启动；
-// 被模块 import / 测试环境（vitest ESM）不触发。
-if (typeof require !== 'undefined' && require.main === module) {
+const isCliEntry =
+  typeof require !== 'undefined' &&
+  require.main === module &&
+  typeof process !== 'undefined' &&
+  !(process.versions as NodeJS.ProcessVersions).electron &&
+  process.argv[1] !== undefined &&
+  /perf[-_.]?analyzer(\.c?js)?$/i.test(path.basename(process.argv[1]))
+
+if (isCliEntry) {
   main().then(
     (code) => process.exit(code),
     (err: unknown) => {
