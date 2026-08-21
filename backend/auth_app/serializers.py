@@ -71,7 +71,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'avatar', 'role', 'date_joined', 'last_login', 'is_creator', 'is_developer']
+        fields = ['id', 'username', 'email', 'avatar', 'role', 'date_joined', 'last_login', 'is_active', 'is_creator', 'is_developer']
         read_only_fields = ['id', 'date_joined', 'last_login', 'is_creator', 'is_developer']
 
     def get_is_creator(self, obj):

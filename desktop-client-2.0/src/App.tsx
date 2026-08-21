@@ -1,12 +1,14 @@
-import { BrowserRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import Dashboard from './pages/Dashboard'
+import Diary from './pages/Diary'
 import Evidence from './pages/Evidence'
 import Auth from './pages/Auth'
 import RealNameAuth from './pages/RealNameAuth'
 import Settings from './pages/Settings'
 import SyncSettings from './pages/SyncSettings'
 import ProcessStats from './pages/ProcessStats'
+import UserRegistrations from './pages/UserRegistrations'
 import TrendAnalysis from './pages/TrendAnalysis'
 import HourlyRegionHeatmap from './pages/HourlyRegionHeatmap'
 import Billing from './pages/Billing'
@@ -25,12 +27,14 @@ import './index.css'
 
 const NAV_ITEMS = [
   { path: '/', label: '实时审计', icon: 'audit' },
+  { path: '/diary', label: '行为日记', icon: 'diary' },
   { path: '/evidence', label: '存证中心', icon: 'evidence' },
   { path: '/health', label: '健康度', icon: 'health' },
   { path: '/trend', label: '消费趋势', icon: 'trend' },
   { path: '/hourly', label: '区域监控', icon: 'hourly' },
   { path: '/billing', label: '月度账单', icon: 'billing' },
   { path: '/process', label: '工具统计', icon: 'process' },
+  { path: '/users', label: '注册记录', icon: 'users' },
   { path: '/sync', label: '云端同步', icon: 'sync' },
   { path: '/auth', label: '实名认证', icon: 'auth' },
   { path: '/settings', label: '系统设置', icon: 'settings' },
@@ -52,6 +56,8 @@ async function waitForBackend(maxAttempts = 25, intervalMs = 1000): Promise<bool
 
 function Sidebar() {
   const [serviceStatus, setServiceStatus] = useState<'running' | 'stopped'>('running')
+  const isAdmin = authService.isAdmin()
+  const visibleItems = NAV_ITEMS.filter((item) => item.path !== '/users' || isAdmin)
   
   useEffect(() => {
     // 检查服务状态
@@ -73,7 +79,7 @@ function Sidebar() {
     <aside className="app-sider" style={{ width: 220 }}>
       <div className="sider-header">
         <img 
-          src="/logo.png" 
+          src="./logo.png" 
           alt="一鉴到底" 
           style={{
             width: 32,
@@ -102,7 +108,7 @@ function Sidebar() {
       
       <nav className="sider-nav">
         <div className="nav-section">
-          {NAV_ITEMS.map(item => (
+          {visibleItems.map(item => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -114,6 +120,15 @@ function Sidebar() {
                     <path d="M12 2L2 7l10 5 10-5-10-5z" />
                     <path d="M2 17l10 5 10-5" />
                     <path d="M2 12l10 5 10-5" />
+                  </svg>
+                )}
+                {item.icon === 'diary' && (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 20h9" />
+                    <path d="M17 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1z" />
+                    <line x1="9" y1="8" x2="14" y2="8" />
+                    <line x1="9" y1="12" x2="14" y2="12" />
+                    <line x1="9" y1="16" x2="13" y2="16" />
                   </svg>
                 )}
                 {item.icon === 'evidence' && (
@@ -129,6 +144,14 @@ function Sidebar() {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
+                  </svg>
+                )}
+                {item.icon === 'users' && (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="9" cy="7" r="3.5" />
+                    <path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1" />
+                    <path d="M16 4.5a3.5 3.5 0 0 1 0 5" />
+                    <path d="M18 15a5 5 0 0 1 3 4.6V20" />
                   </svg>
                 )}
                 {item.icon === 'settings' && (
@@ -161,6 +184,21 @@ function Sidebar() {
                     <rect x="14" y="3" width="7" height="7" rx="1" />
                     <rect x="3" y="14" width="7" height="7" rx="1" />
                     <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                )}
+                {item.icon === 'billing' && (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="4" y="4" width="16" height="16" rx="2" />
+                    <path d="M8 8h8M8 12h8M8 16h5" />
+                  </svg>
+                )}
+                {item.icon === 'process' && (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="5" width="7" height="5" rx="1" />
+                    <rect x="14" y="5" width="7" height="5" rx="1" />
+                    <rect x="3" y="14" width="7" height="5" rx="1" />
+                    <rect x="14" y="14" width="7" height="5" rx="1" />
+                    <path d="M10 7.5h4M10 16.5h4" />
                   </svg>
                 )}
               </span>
@@ -621,7 +659,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div className="app-layout">
         {isAuthenticated && <Sidebar />}
         <div className="app-main">
@@ -665,12 +703,14 @@ export default function App() {
                 ) : (
                   <>
                     <Route path="/" element={<Dashboard />} />
+                    <Route path="/diary" element={<Diary />} />
                     <Route path="/evidence" element={<Evidence />} />
                     <Route path="/health" element={<HealthDashboard />} />
                     <Route path="/trend" element={<TrendAnalysis />} />
                     <Route path="/hourly" element={<HourlyRegionHeatmap />} />
                     <Route path="/billing" element={<Billing />} />
                     <Route path="/process" element={<ProcessStats />} />
+                    <Route path="/users" element={<UserRegistrations />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/sync" element={<SyncSettings />} />
                     <Route path="/auth" element={<RealNameAuth />} />
@@ -710,6 +750,6 @@ export default function App() {
         </div>
         {isAuthenticated && <DesktopPet character={petCharacter} />}
       </div>
-    </BrowserRouter>
+    </HashRouter>
   )
 }

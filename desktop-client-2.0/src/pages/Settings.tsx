@@ -89,6 +89,23 @@ const PET_STAT_LABELS: Record<string, string> = {
 }
 
 // 桌宠属性配色
+/** 设置分组：折叠 + 优先级（defaultOpen=true 的高频项默认展开，高级项默认收起） */
+function SettingsGroup({ title, hint, defaultOpen, children }: {
+  title: string; hint?: string; defaultOpen?: boolean; children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen !== false)
+  return (
+    <div className="settings-group">
+      <button type="button" className="settings-group-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        <span className="settings-group-title">{title}</span>
+        {hint && <span className="settings-group-hint">{hint}</span>}
+        <span className="settings-group-arrow">{open ? '收起 ▴' : '展开 ▾'}</span>
+      </button>
+      {open && <div className="settings-group-body">{children}</div>}
+    </div>
+  )
+}
+
 const PET_STAT_COLORS: Record<string, string> = {
   VIGILANCE: '#58D68D',
   WISDOM: '#5DADE2',
@@ -889,6 +906,7 @@ export default function Settings() {
 
   return (
     <div className="settings-page">
+      <SettingsGroup title="账户与外观" hint="账号信息、外观主题、桌宠形象" defaultOpen>
       {/* 用户信息 */}
       {currentUser && (
         <section className="settings-section">
@@ -1080,6 +1098,9 @@ export default function Settings() {
         </div>
       </section>
 
+      </SettingsGroup>
+
+      <SettingsGroup title="会员与消费" hint="API 密钥与消费预警（占用与花费，优先看）" defaultOpen>
       {/* API 密钥（P1 消费控制：自带 Key 免平台配额） */}
       <section className="settings-section">
         <div className="section-header">
@@ -1287,6 +1308,9 @@ export default function Settings() {
         )}
       </section>
 
+      </SettingsGroup>
+
+      <SettingsGroup title="官网入口" hint="桌面端与官网的账号互通" defaultOpen>
       {/* 官网入口（P1 账号互通一期：桌面端→官网跳转 + 登录态同步） */}
       <section className="settings-section">
         <div className="section-header">
@@ -1330,6 +1354,9 @@ export default function Settings() {
         )}
       </section>
 
+      </SettingsGroup>
+
+      <SettingsGroup title="系统与服务" hint="节点资源与后端服务状态" defaultOpen={false}>
       {/* 节点资源监控 */}
       <section className="settings-section">
         <h2 className="section-title">节点资源监控</h2>
@@ -1415,6 +1442,9 @@ export default function Settings() {
         </div>
       </section>
 
+      </SettingsGroup>
+
+      <SettingsGroup title="监控与告警" hint="文件/API 等操作监控与预警（核心能力）" defaultOpen>
       {/* 文件系统监控（第一优先级） */}
       <section className="settings-section">
         <div className="section-header">
@@ -1553,6 +1583,9 @@ export default function Settings() {
         </div>
       </section>
       
+      </SettingsGroup>
+
+      <SettingsGroup title="治理与扩展" hint="治理日志、桌宠与插件（多为高级项）" defaultOpen={false}>
       {/* 治理日志 */}
       <section className="settings-section">
         <div className="section-header">
@@ -2005,6 +2038,9 @@ export default function Settings() {
         )}
       </section>
 
+      </SettingsGroup>
+
+      <SettingsGroup title="权限与策略" hint="操作权限与 AI 策略建议（安全核心）" defaultOpen>
       {/* 操作权限 */}
       <section className="settings-section">
         <div className="section-header">
@@ -2136,6 +2172,9 @@ export default function Settings() {
         ))}
       </section>
       
+      </SettingsGroup>
+
+      <SettingsGroup title="接入与数据" hint="API 接入、智能分析、更新与数据管理（高级项）" defaultOpen={false}>
       {/* API 配置 */}
       <section className="settings-section">
         <h2 className="section-title">API 配置</h2>
@@ -2372,6 +2411,9 @@ export default function Settings() {
         </div>
       </section>
       
+      </SettingsGroup>
+
+      <SettingsGroup title="法律声明" defaultOpen={false}>
       {/* 法律声明 */}
       <section className="settings-section warning-section">
         <h2 className="section-title" style={{ color: '#F85149' }}>免责声明</h2>
@@ -2384,6 +2426,7 @@ export default function Settings() {
           <button className="btn btn-secondary btn-sm">查看隐私政策</button>
         </div>
       </section>
+      </SettingsGroup>
     </div>
   )
 }

@@ -212,7 +212,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
   const renderLogin = () => (
     <div className="auth-card">
       <div className="auth-header">
-        <img src="/logo.png" alt="一鉴到底" className="auth-logo" />
+        <img src="./logo.png" alt="一鉴到底" className="auth-logo" />
         <h1>欢迎回来</h1>
         <p>登录您的账户以继续</p>
       </div>
@@ -280,7 +280,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
   const renderRegister = () => (
     <div className="auth-card">
       <div className="auth-header">
-        <img src="/logo.png" alt="一鉴到底" className="auth-logo" />
+        <img src="./logo.png" alt="一鉴到底" className="auth-logo" />
         <h1>创建账户</h1>
         <p>注册新账户</p>
       </div>
@@ -414,7 +414,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
 
       <div className="auth-brand">
         <h2>一鉴到底</h2>
-        <p>AI Agent行为安全平台</p>
+        <p>大模型行为安全治理平台</p>
         <div className="features">
           <div className="feature">
             <span className="icon">🤖</span>

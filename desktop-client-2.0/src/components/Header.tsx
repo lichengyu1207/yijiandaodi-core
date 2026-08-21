@@ -29,7 +29,7 @@ export default function Header({ username, onLogout }: HeaderProps) {
     <header className="header">
       <div className="header-left">
         <div className="logo">
-          <img src="/yi.jpg" alt="一鉴到底" className="logo-img" />
+          <img src="./logo.png" alt="一鉴到底" className="logo-img" />
           <span className="logo-text">一鉴到底</span>
         </div>
       </div>

@@ -194,12 +194,32 @@ class RegisterView(APIView):
             password = serializer.validated_data['password']
             email = serializer.validated_data.get('email', '')
 
+            # 本地数据主权：本地实例尚未存在任何管理员时，该注册账号自动成为管理员，
+            # 以便设备所有者（超级管理员/管理员）能查看全部用户注册记录（least privilege，未授权不可见）。
+            is_first_admin = not User.objects.filter(is_staff=True).exists()
             user = User.objects.create_user(
                 username=username,
                 email=email or None,
                 password=password,
-                role='viewer'
+                role='admin' if is_first_admin else 'viewer',
+                is_staff=is_first_admin
             )
+
+            # 首次注册自动赠送 1 个月基础版（本地数据主权：新用户无需手动兑换码即可体验会员能力）。
+            # 到期后在账单页可选：兑换码开通/续期，或联系管理员（支付未接入前的兜底）。
+            try:
+                from .payment_models import UserQuota
+                quota, _ = UserQuota.objects.get_or_create(user=user)
+                now = timezone.now()
+                quota.is_vip = True
+                quota.vip_level = max(quota.vip_level or 0, 1)
+                quota.vip_expire_at = now + timedelta(days=30)
+                quota.trial_claimed = True
+                quota.save(update_fields=['is_vip', 'vip_level', 'vip_expire_at', 'trial_claimed', 'updated_at'])
+                logger.info('[赠送] 新用户 %s(%s) 自动开通 1 个月基础版, 到期 %s',
+                            user.id, user.username, quota.vip_expire_at)
+            except Exception as e:
+                logger.warning('[赠送] 新用户 %s 自动赠送套餐失败: %s', user.id, e)
 
             # 创建隐私政策同意记录
             from .system_models import PrivacyAgreement, UserConsentRecord
@@ -566,10 +586,27 @@ class UserListView(generics.ListAPIView):
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
+        # 管理员视野：附每个用户的套餐/用量/剩余（需真实调用落账 APICallLog）
+        from .billing_service import get_billing_summary
+        for row, user in zip(data, queryset):
+            try:
+                s = get_billing_summary(user)
+                row['billing'] = {
+                    'plan_type': s['plan']['plan_type'],
+                    'plan_name': s['plan']['plan_name'],
+                    'api_limit': s['plan']['api_limit'],
+                    'used_calls': s['usage']['calls'],
+                    'remaining': s['plan_remaining'] if s['plan']['is_plan'] else s['usage']['calls'],
+                    'is_vip': s['plan']['is_plan'],
+                    'trial_claimed': getattr(user.usage_quota, 'trial_claimed', False),
+                }
+            except Exception:
+                row['billing'] = None
         return Response({
             'success': True,
             'message': '获取用户列表成功',
-            'data': serializer.data
+            'data': data
         })
 
 

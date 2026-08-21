@@ -70,6 +70,18 @@ interface ConsoleThrottleConfig {
 const DEFAULT_CONSOLE_THROTTLE: ConsoleThrottleConfig = { intervalMs: 1000, maxPerInterval: 50 }
 
 /**
+ * 安全写入 stdout：忽略管道断裂（EPIPE / ERR_STREAM_DESTROYED），避免主进程崩溃。
+ * 在 win-unpacked 目录直接运行或宿主管道提前关闭时，写已断开的 stdout 会抛 EPIPE。
+ */
+function safeStdoutWrite(line: string): void {
+  try {
+    if (process.stdout.writable) process.stdout.write(line)
+  } catch {
+    // 忽略：stdout 管道已断开或流已销毁
+  }
+}
+
+/**
  * 带节流的控制台传输。
  * 高频日志（感知事件全量 info 后）同步写 stdout 会阻塞主进程事件循环，
  * 这里按时间窗口限流：窗口内最多输出 maxPerInterval 条，超出的丢弃并累计摘要，窗口切换时输出一次。
@@ -100,7 +112,7 @@ class ThrottledConsoleTransport extends winston.Transport {
 
     if (this.countInWindow < this.config.maxPerInterval) {
       this.countInWindow++
-      process.stdout.write(formatConsoleLine(info) + '\n')
+      safeStdoutWrite(formatConsoleLine(info) + '\n')
     } else {
       this.droppedInWindow++
       this.lastDroppedMessage = formatConsoleLine(info)
@@ -112,7 +124,7 @@ class ThrottledConsoleTransport extends winston.Transport {
   /** 输出上一个窗口被节流丢弃的摘要（避免静默丢日志，同时不刷屏） */
   private emitWindowSummary(): void {
     if (this.droppedInWindow > 0) {
-      process.stdout.write(
+      safeStdoutWrite(
         `... 上 1s 内另有 ${this.droppedInWindow} 条治理日志被节流（最新: ${this.lastDroppedMessage}）\n`
       )
     }

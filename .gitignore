@@ -57,6 +57,7 @@ backups/
 
 # 构建产物 / 打包输出（含真实密钥，禁止入库）
 desktop-client-2.0/release-new/
+desktop-client-2.0/release-fresh/
 desktop-client-2.0/release-new-2/
 desktop-client-2.0/release-new-3/
 desktop-client-2.0/dist/

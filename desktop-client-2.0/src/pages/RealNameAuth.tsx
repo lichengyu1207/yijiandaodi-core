@@ -14,6 +14,26 @@ interface RealNameStatus {
   message?: string
 }
 
+// GB11643-1999 18 位身份证校验
+const ID_WEIGHTS = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2]
+const ID_CHECK_MAP = '10X98765432'
+const ID_REGION_HINT = /^(11|12|13|14|15|21|22|23|31|32|33|34|35|36|37|41|42|43|44|45|46|50|51|52|53|54|61|62|63|64|65|71|81|82)/
+
+function isValidIdCard(idCard: string): boolean {
+  const v = idCard.trim().toUpperCase()
+  if (!/^[1-9]\d{5}(18|19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dX]$/.test(v)) return false
+  if (!ID_REGION_HINT.test(v)) return false
+  const year = Number(v.slice(6, 10))
+  const month = Number(v.slice(10, 12))
+  const day = Number(v.slice(12, 14))
+  const birth = new Date(year, month - 1, day)
+  if (birth.getFullYear() !== year || birth.getMonth() !== month - 1 || birth.getDate() !== day) return false
+  if (birth.getTime() > Date.now()) return false
+  let total = 0
+  for (let i = 0; i < 17; i++) total += Number(v[i]) * ID_WEIGHTS[i]
+  return ID_CHECK_MAP[total % 11] === v[17]
+}
+
 export default function RealNameAuth() {
   const [status, setStatus] = useState<RealNameStatus | null>(null)
   const [loading, setLoading] = useState(true)
@@ -57,13 +77,13 @@ export default function RealNameAuth() {
     setError('')
 
     // 前端校验
-    if (!name || name.trim().length < 2) {
-      setError('请输入正确的姓名（至少2个字符）')
+    const nameTrim = name.trim()
+    if (!/^[a-zA-Z\u4e00-\u9fa5·\s]{2,30}$/.test(nameTrim)) {
+      setError('请输入正确的姓名（2~30位，中文或英文，不含数字）')
       return
     }
-    const idCardPattern = /^[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$/
-    if (!idCardPattern.test(idCard)) {
-      setError('请输入正确的身份证号')
+    if (!isValidIdCard(idCard)) {
+      setError('身份证号校验未通过（请核对号码，含校验位/出生日期）')
       return
     }
 
@@ -72,7 +92,7 @@ export default function RealNameAuth() {
       const res = await fetch(`${baseURL}/api/auth/realname/verify/`, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ name: name.trim(), id_card: idCard }),
+        body: JSON.stringify({ name: name.trim(), id_card: idCard.trim().toUpperCase() }),
       })
       const data = await res.json()
       if (!res.ok || !data.success) {

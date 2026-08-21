@@ -9,12 +9,28 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { billingService, BillingSummary, BillingDayItem } from '../services/billingService'
+import { authService } from '../services/authService'
+
+/** 短时间格式：MM-DD HH:mm */
+function formatShortTime(iso?: string): string {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '-'
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
 
 const PLAN_META: Record<string, { label: string; color: string }> = {
   free: { label: '免费版', color: 'var(--text-tertiary)' },
   basic: { label: '基础版', color: 'var(--brand-primary)' },
   professional: { label: '专业版', color: 'var(--status-info)' },
   enterprise: { label: '企业版', color: 'var(--status-warning)' },
+}
+
+const VIP_META: Record<number, { label: string; color: string }> = {
+  1: { label: '基础版', color: 'var(--brand-primary)' },
+  2: { label: '专业版', color: 'var(--status-info)' },
+  3: { label: '企业版', color: 'var(--status-warning)' },
 }
 
 const ADVICE_META: Record<string, { title: string; detail: string; color: string; bg: string }> = {
@@ -72,6 +88,176 @@ function DailyCostBars({ days, maxCost }: { days: BillingDayItem[]; maxCost: num
   )
 }
 
+/** 会员 / 兑换码（所有用户）+ 管理员生成兑换码 */
+function RedeemSection({ isAdmin, onChanged, summary }: {
+  isAdmin: boolean; onChanged: () => void; summary: BillingSummary | null
+}) {
+  const [code, setCode] = useState('')
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [notice, setNotice] = useState('')
+  const [busy, setBusy] = useState<'redeem' | 'gen' | null>(null)
+
+  // 管理员生成兑换码表单
+  const [genDays, setGenDays] = useState('30')
+  const [genCount, setGenCount] = useState('1')
+  const [genUses, setGenUses] = useState('1')
+  const [genExpireDays, setGenExpireDays] = useState('')
+  const [genRemark, setGenRemark] = useState('')
+  const [codesList, setCodesList] = useState<Array<Record<string, any>>>([])
+
+  const loadCodes = async () => {
+    if (!isAdmin) return
+    try {
+      setCodesList(await authService.listRedemptions())
+    } catch { /* 忽略 */ }
+  }
+  useEffect(() => { loadCodes() }, [isAdmin])
+
+  const doRedeem = async () => {
+    setBusy('redeem')
+    setMsg(null)
+    try {
+      const res = await authService.redeemCode(code.trim())
+      setMsg({ ok: true, text: res.message })
+      setCode('')
+      onChanged()
+    } catch (e: any) {
+      setMsg({ ok: false, text: e?.message || '兑换失败' })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const contactAdmin = () => {
+    setNotice('请通过前往「系统设置 → 关于/帮助」或直接告知本机设备所有者（管理员），由管理员为您开通或续期会员。支付开通功能暂未接入。')
+  }
+
+  const doGenerate = async () => {
+    setBusy('gen')
+    setMsg(null)
+    try {
+      let expire_at: string | null = null
+      const days = genExpireDays ? Math.max(1, parseInt(genExpireDays || '0', 10) || 1) : 0
+      if (days > 0) {
+        expire_at = new Date(Date.now() + days * 86400000).toISOString()
+      }
+      const res = await authService.generateRedemptions({
+        days: parseInt(genDays || '30', 10) || 30,
+        count: Math.max(1, parseInt(genCount || '1', 10) || 1),
+        total_uses: Math.max(1, parseInt(genUses || '1', 10) || 1),
+        expire_at,
+        remark: genRemark.trim(),
+      })
+      const list: string[] = res?.data?.codes || []
+      setMsg({ ok: true, text: `${res.message}${list.length ? '：' + list.join('、') : ''}` })
+      await loadCodes()
+    } catch (e: any) {
+      setMsg({ ok: false, text: e?.message || '生成失败' })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const fieldStyle: React.CSSProperties = {
+    padding: '7px 10px', borderRadius: 6,
+    border: '1px solid var(--border-primary)',
+    background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13,
+  }
+  const actBtn: React.CSSProperties = {
+    padding: '7px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+    background: 'var(--brand-primary)', color: '#fff', fontSize: 13, fontWeight: 600,
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr' : '1fr', gap: 16, alignItems: 'start' }}>
+      {/* 用户：兑换 / 试用 */}
+      <div className="card" style={{ padding: 20 }}>
+        <div className="card-title" style={{ margin: 0 }}>会员 / 兑换码</div>
+        <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: (summary?.is_vip ? VIP_META[summary.vip_level]?.color : 'var(--text-tertiary)') || 'var(--text-tertiary)' }}>
+            {summary?.is_vip ? (VIP_META[summary.vip_level]?.label || '会员') : '免费版'}
+          </span>
+          {summary?.vip_expire_at && (
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+              到期 {summary.vip_expire_at.slice(0, 10)}
+            </span>
+          )}
+          {!summary?.is_vip && (
+            <span style={{ fontSize: 12, color: 'var(--status-warning)' }}>会员已过期，请开通/续期</span>
+          )}
+        </div>
+        <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="输入兑换码，如 YJD-XXXX-XXXX-XXXX"
+            style={{ ...fieldStyle, flex: 1 }}
+            onKeyDown={(e) => { if (e.key === 'Enter') doRedeem() }}
+          />
+          <button type="button" style={{ ...actBtn, background: 'var(--status-success)' }} disabled={busy === 'redeem'} onClick={doRedeem}>
+            {busy === 'redeem' ? '兑换中...' : '开通/续期'}
+          </button>
+        </div>
+        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+          支付开通功能暂未接入，如需开通/续期请
+          <a type="button" onClick={contactAdmin} style={{ color: 'var(--brand-primary)', cursor: 'pointer', textDecoration: 'underline', marginLeft: 4 }}>
+            联系管理员
+          </a>
+          ，或使用管理员发放的兑换码。
+        </div>
+        {msg && (
+          <div style={{ marginTop: 10, fontSize: 12, color: msg.ok ? 'var(--status-success)' : 'var(--status-error)' }}>
+            {msg.text}
+          </div>
+        )}
+        {notice && (
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--brand-primary)', lineHeight: 1.6 }}>
+            {notice}
+          </div>
+        )}
+        <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-tertiary)' }}>
+          首次注册已自动赠送 1 个月基础版；兑换码由管理员生成，过期/已用完/无效均会明确提示，错误兑换不影响登录。
+        </div>
+      </div>
+
+      {/* 管理员：生成兑换码 */}
+      {isAdmin && (
+        <div className="card" style={{ padding: 20 }}>
+          <div className="card-title" style={{ margin: 0 }}>生成兑换码（管理员）</div>
+          <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <input value={genDays} onChange={(e) => setGenDays(e.target.value)} placeholder="开通天数(默认30)" style={fieldStyle} />
+            <input value={genCount} onChange={(e) => setGenCount(e.target.value)} placeholder="数量(默认1)" style={fieldStyle} />
+            <input value={genUses} onChange={(e) => setGenUses(e.target.value)} placeholder="每码可兑次数(1=一次性)" style={fieldStyle} />
+            <input value={genExpireDays} onChange={(e) => setGenExpireDays(e.target.value)} placeholder="兑换码有效期(天,可空)" style={fieldStyle} />
+            <input value={genRemark} onChange={(e) => setGenRemark(e.target.value)} placeholder="备注（如：9.9元/月活动）" style={{ ...fieldStyle, gridColumn: '1 / -1' }} />
+          </div>
+          <button type="button" style={{ ...actBtn, marginTop: 10 }} disabled={busy === 'gen'} onClick={doGenerate}>
+            {busy === 'gen' ? '生成中...' : '生成兑换码'}
+          </button>
+          {codesList.length > 0 && (
+            <div style={{ marginTop: 12, maxHeight: 220, overflow: 'auto' }}>
+              {codesList.map((r) => (
+                <div key={r.code} style={{ fontSize: 11, padding: '4px 0', borderTop: '1px solid var(--border-secondary)', color: 'var(--text-secondary)' }}>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--text-primary)' }}>{r.code}</span>
+                  {' '}· {r.days}天 · 已兑 {r.used_count}/{r.total_uses} · {r.status}
+                  {r.remark ? ` · ${r.remark}` : ''}
+                  {(r.records || []).length > 0 && (
+                    <div style={{ marginTop: 4, paddingLeft: 8, color: 'var(--text-tertiary)' }}>
+                      {(r.records || []).map((rec: any, i: number) => (
+                        <div key={i}>兑换用户 #{rec.user_id ?? '-'} {rec.username} · {formatShortTime(rec.created_at)}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Billing() {
   const today = new Date()
   const [month, setMonth] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`)
@@ -108,6 +294,7 @@ export default function Billing() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <RedeemSection isAdmin={authService.isAdmin()} summary={summary} onChanged={() => load(month)} />
       {/* 头部：标题 + 月份切换 */}
       <div className="card" style={{ padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>

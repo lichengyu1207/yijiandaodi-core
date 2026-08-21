@@ -92,6 +92,24 @@ def _month_usage(user_id: int, start_dt, end_dt) -> dict:
     }
 
 
+def grant_membership(quota, vip_level: int, days: int) -> datetime:
+    """开通/续期会员：置 is_vip、升级到指定等级、到期时间取当前有效与本次的更长者。
+
+    返回新的到期时间（aware datetime）。quota 为 UserQuota 实例（已含 user）。
+    """
+    now = timezone.now()
+    if quota.is_vip and quota.vip_expire_at and quota.vip_expire_at > now:
+        base = quota.vip_expire_at
+    else:
+        base = now
+    new_expire = base + timedelta(days=days)
+    quota.is_vip = True
+    quota.vip_level = max(vip_level, quota.vip_level)
+    quota.vip_expire_at = new_expire
+    quota.save(update_fields=['is_vip', 'vip_level', 'vip_expire_at', 'updated_at'])
+    return new_expire
+
+
 def get_billing_summary(user) -> dict:
     """实时消费账单摘要：本月已用 / 套餐剩余 / 预估费用 / 建议。"""
     quota, _ = UserQuota.objects.get_or_create(user=user)
@@ -132,6 +150,9 @@ def get_billing_summary(user) -> dict:
     summary = {
         'month': start_date.strftime('%Y-%m'),
         'plan': plan,
+        'is_vip': quota.is_vip,
+        'vip_level': quota.vip_level,
+        'vip_expire_at': quota.vip_expire_at.isoformat() if quota.is_vip and quota.vip_expire_at else None,
         'usage': usage,
         'plan_remaining': plan_remaining,
         'over_quota': {

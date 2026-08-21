@@ -28,12 +28,14 @@ export default function Evidence() {
     // 初始验证链完整性
     verifyChain()
 
-    // 启动 5 秒轮询同步
-    console.log('[Evidence] 启动长期记忆轮询同步（间隔5秒）')
+    // 启动 5 秒轮询同步，每次收到新数据同步刷新哈希链状态
+    console.log('[Evidence] 启动长期记忆轮询同步（间隔5秒，随数据一起刷新哈希链状态）')
     longTermApi.startSync((memories) => {
       console.log(`[Evidence] 收到轮询数据: ${memories.length} 条`)
       setRecords(memories)
       setLoading(false)
+      // 新数据到达后重新验证哈希链，保证「总记录/最后哈希」与审计流实时同步
+      verifyChain()
     })
 
     // 清理函数：停止轮询

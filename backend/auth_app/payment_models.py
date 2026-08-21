@@ -47,6 +47,8 @@ class UserQuota(models.Model):
     vip_level = models.PositiveSmallIntegerField('会员等级', default=0, choices=[(0,'普通'),(1,'基础'),(2,'高级'),(3,'企业')])
     vip_expire_at = models.DateTimeField('会员到期时间', null=True, blank=True)
 
+    trial_claimed = models.BooleanField('是否已领取过免费试用', default=False)
+
     total_paid_uses = models.PositiveIntegerField('付费使用总次数', default=0)
     total_free_uses = models.PositiveIntegerField('免费使用总次数', default=0)
 
@@ -204,3 +206,66 @@ class UserCoupon(models.Model):
 
     def __str__(self):
         return f'{self.coupon_code} [{self.get_status_display()}] {self.user.username}'
+
+
+class RedemptionCode(models.Model):
+    """兑换码：管理员成套生成，用户兑换后开通/续期套餐会员（可支持 9.9元/月 等活动码）。
+
+    兑换最终作用于 UserQuota：is_vip=True、vip_level、vip_expire_at（取当前时间与有效期内更长的）。
+    """
+    REDEEM_STATUS = [
+        ('active', '有效'),
+        ('disabled', '已停用'),
+        ('expired', '已过期'),
+    ]
+
+    code = models.CharField('兑换码', max_length=32, unique=True, db_index=True)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='redemption_owner', verbose_name='生成者')
+    type = models.CharField('类型', max_length=20, default='vip_monthly')
+    days = models.PositiveIntegerField('开通时长(天)', default=30)
+    vip_level = models.PositiveSmallIntegerField(
+        '开通等级', default=1, choices=[(1, '基础'), (2, '高级'), (3, '企业')])
+
+    total_uses = models.PositiveIntegerField('总可兑换次数', default=1, help_text='1=一次性；N=批量码/可多次')
+    used_count = models.PositiveIntegerField('已兑换次数', default=0)
+    redeem_code_count = models.PositiveIntegerField('生成数量', default=0, help_text='批量生成时同批数量')
+
+    status = models.CharField('状态', max_length=15, choices=REDEEM_STATUS, default='active')
+    expire_at = models.DateTimeField('兑换码过期时间', null=True, blank=True)
+    remark = models.CharField('备注', max_length=200, blank=True, default='')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'redemption_code'
+        verbose_name = '兑换码'
+        verbose_name_plural = verbose_name
+        ordering = ['-created_at']
+
+    def __str__(self):
+        used = f'{self.used_count}/{self.total_uses}' if self.total_uses > 0 else '任'
+        return f'{self.code} 基础x{self.days}天 已兌{used}'
+
+    # 兑换记录：谁在何时兑换了哪个码
+    def redeem_records(self):
+        return self.redemption_records.all()
+
+
+class RedemptionRecord(models.Model):
+    """兑换码使用记录（审计留存：谁/何时/兑换了哪个码，符合数据安全可追溯）。"""
+    redemption = models.ForeignKey(
+        RedemptionCode, on_delete=models.CASCADE, related_name='redemption_records')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='redemption_uses')
+    granted_days = models.PositiveIntegerField('发放天数', default=0)
+    granted_level = models.PositiveSmallIntegerField('发放等级', default=1)
+    new_expire_at = models.DateTimeField('兑换后到期时间', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'redemption_record'
+        verbose_name = '兑换码使用记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-created_at']

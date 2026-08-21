@@ -29,6 +29,9 @@ export interface OverQuota {
 export interface BillingSummary {
   month: string;
   plan: BillingPlan;
+  is_vip: boolean;
+  vip_level: number;
+  vip_expire_at: string | null;
   usage: MonthlyUsage;
   plan_remaining: number | null;
   over_quota: OverQuota;

@@ -306,7 +306,13 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [])
   
-  const filteredRecords = records.filter(record => {
+  const filteredRecords = records.map(r => ({ ...r })).sort((a, b) => {
+    const ta = new Date(a.timestamp).getTime()
+    const tb = new Date(b.timestamp).getTime()
+    // 有有效时间戳则按时间新→旧；时间缺失时按 id 新→旧兜底
+    if (!Number.isNaN(ta) && !Number.isNaN(tb)) return tb - ta
+    return (Number(b.id) || 0) - (Number(a.id) || 0)
+  }).filter(record => {
     if (filter === 'all') return true
     if (filter === 'success') return record.risk_level === 'low'
     if (filter === 'warning') return record.risk_level === 'medium'
@@ -315,11 +321,15 @@ export default function Dashboard() {
   })
   
   const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
+    const d = new Date(timestamp)
+    if (Number.isNaN(d.getTime())) return '-'
+    const now = new Date()
+    const sameDay = d.toDateString() === now.toDateString()
+    const p = (n: number) => String(n).padStart(2, '0')
+    const clock = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+    // 当天只显示时分秒，非当天带日期前缀，避免把旧记录误看成本小时
+    if (sameDay) return clock
+    return `${d.getMonth() + 1}-${p(d.getDate())} ${clock}`
   }
   
   return (
@@ -571,6 +581,20 @@ export default function Dashboard() {
           </div>
           
           {/* 基本信息 */}
+          {selectedRecord.id != null && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 4 }}>日志 ID</div>
+              <code style={{
+                fontSize: 13,
+                color: 'var(--primary-color)',
+                background: 'var(--bg-tertiary)',
+                padding: '4px 8px',
+                borderRadius: 4
+              }}>
+                {selectedRecord.id}
+              </code>
+            </div>
+          )}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 4 }}>AI Agent</div>
             <div style={{ fontWeight: 500, fontSize: 15 }}>{selectedRecord.agent}</div>

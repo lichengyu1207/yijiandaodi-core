@@ -35,6 +35,22 @@ export interface AuthResponse {
   error?: string;
 }
 
+/** 从后端响应中提取用户可读的错误信息（兼容 DRF 字段错误 / message / error / detail） */
+function extractApiError(data: any): string {
+  if (!data) return '';
+  if (typeof data.message === 'string' && data.message) return data.message;
+  if (typeof data.error === 'string' && data.error) return data.error;
+  if (typeof data.detail === 'string' && data.detail) return data.detail;
+  if (typeof data === 'object') {
+    const values: any[] = Object.values(data);
+    const firstArray = values.find((v) => Array.isArray(v) && v.length > 0);
+    if (Array.isArray(firstArray) && firstArray.length) return String(firstArray[0]);
+    const firstString = values.find((v) => typeof v === 'string' && v);
+    if (firstString) return String(firstString);
+  }
+  return '';
+}
+
 export class AuthService {
   private static instance: AuthService;
   private token: string | null = null;
@@ -203,7 +219,7 @@ export class AuthService {
 
         return data;
       } else {
-        throw new Error(data.error || '登录失败');
+        throw new Error(extractApiError(data) || '登录失败');
       }
     } catch (error) {
       console.error('登录失败:', error);
@@ -234,7 +250,7 @@ export class AuthService {
           password: credentials.password
         });
       } else {
-        throw new Error(data.error || '注册失败');
+        throw new Error(extractApiError(data) || '注册失败');
       }
     } catch (error) {
       console.error('注册失败:', error);
@@ -526,6 +542,73 @@ export class AuthService {
       headers,
       credentials: 'include'
     });
+  }
+
+  /**
+   * 当前用户是否为管理员（data.user.role 或 is_staff）
+   */
+  isAdmin(): boolean {
+    const u = this.user as any;
+    if (!u) return false;
+    if (u.is_staff || u.is_superuser) return true;
+    return u.role === 'admin' || u.role === 'super_admin';
+  }
+
+  /**
+   * 查询用户注册记录（仅管理员可调；后端已校验 is_staff，非管理员返回 403）。
+   * 返回注册用户列表：id / username / email / role / date_joined / last_login / is_active。
+   */
+  async listUsers(): Promise<Array<Record<string, any>>> {
+    const baseURL = apiConfig.getBaseURL();
+    const response = await this.authenticatedFetch(`${baseURL}/api/auth/users/`);
+    const data = await response.json().catch(() => null);
+    if (response.ok && data?.success) {
+      return Array.isArray(data.data) ? data.data : [];
+    }
+    throw new Error(extractApiError(data) || (response.status === 403 ? '需要管理员权限' : '获取用户注册记录失败'));
+  }
+
+  /** 通用：带认证的 POST，返回 {data,message}，失败抛错并带出后端明确原因 */
+  private async authedPost(path: string, body: object): Promise<Record<string, any>> {
+    const baseURL = apiConfig.getBaseURL();
+    const response = await this.authenticatedFetch(`${baseURL}${path}`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    const data = await response.json().catch(() => null);
+    if (response.ok && data?.success) {
+      return data;
+    }
+    throw new Error(extractApiError(data) || '请求失败');
+  }
+
+  /** 用户兑换码（有效/过期/已用完/无效都会给出明确原因；与登录无关） */
+  redeemCode(code: string): Promise<Record<string, any>> {
+    return this.authedPost('/api/billing/redeem/', { code });
+  }
+
+  /** 一次性免费试用（1个月基础版，每位用户仅一次） */
+  claimTrial(): Promise<Record<string, any>> {
+    return this.authedPost('/api/billing/trial/', {});
+  }
+
+  /** 管理员批量生成兑换码 */
+  generateRedemptions(params: {
+    days?: number; vip_level?: number; count?: number; total_uses?: number;
+    expire_at?: string | null; remark?: string;
+  }): Promise<Record<string, any>> {
+    return this.authedPost('/api/billing/redemptions/generate/', params);
+  }
+
+  /** 管理员查看已生成兑换码及使用统计 */
+  async listRedemptions(): Promise<Array<Record<string, any>>> {
+    const baseURL = apiConfig.getBaseURL();
+    const response = await this.authenticatedFetch(`${baseURL}/api/billing/redemptions/`);
+    const data = await response.json().catch(() => null);
+    if (response.ok && data?.success) {
+      return Array.isArray(data.data) ? data.data : [];
+    }
+    throw new Error(extractApiError(data) || '获取兑换码列表失败');
   }
 }
 

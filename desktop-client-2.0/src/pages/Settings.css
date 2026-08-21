@@ -384,3 +384,61 @@
   font-weight: 500;
   color: var(--text-primary);
 }
+
+/* 设置分组：收纳 + 折叠 + 优先级 */
+.settings-group {
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.settings-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg-elevated, rgba(128, 128, 128, 0.06));
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+.settings-group-toggle:hover {
+  background: var(--bg-input, rgba(128, 128, 128, 0.12));
+}
+
+.settings-group-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-group-hint {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-group-arrow {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.settings-group-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 1px solid var(--border-primary);
+}
+
+.settings-group-body .settings-section {
+  border: none;
+  background: transparent;
+  padding: 0;
+}

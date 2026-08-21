@@ -2,8 +2,66 @@
  * 主窗口管理模块
  */
 
-import { BrowserWindow, Notification, app } from 'electron'
+import { BrowserWindow, Notification, app, Menu, shell } from 'electron'
 import path from 'path'
+
+/** 替代 Electron 自带英文默认菜单栏（File/Edit/View…）为中文应用菜单 */
+function setupAppMenu(): void {
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: '一鉴到底',
+      submenu: [
+        { role: 'about', label: '关于 一鉴到底' },
+        { type: 'separator' },
+        { role: 'quit', label: '退出' },
+      ],
+    },
+    {
+      label: '编辑',
+      submenu: [
+        { role: 'undo', label: '撤销' },
+        { role: 'redo', label: '重做' },
+        { type: 'separator' },
+        { role: 'cut', label: '剪切' },
+        { role: 'copy', label: '复制' },
+        { role: 'paste', label: '粘贴' },
+        { role: 'selectAll', label: '全选' },
+      ],
+    },
+    {
+      label: '视图',
+      submenu: [
+        { role: 'reload', label: '重新加载' },
+        { role: 'forceReload', label: '强制重新加载' },
+        { type: 'separator' },
+        { role: 'toggleDevTools', label: '开发者工具' },
+        { type: 'separator' },
+        { role: 'resetZoom', label: '实际大小' },
+        { role: 'zoomIn', label: '放大' },
+        { role: 'zoomOut', label: '缩小' },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: '全屏' },
+      ],
+    },
+    {
+      label: '窗口',
+      submenu: [
+        { role: 'minimize', label: '最小化' },
+        { role: 'close', label: '关闭' },
+      ],
+    },
+    {
+      label: '帮助',
+      submenu: [
+        {
+          label: '官方网站',
+          click: () => { shell.openExternal('https://yijiandaodi.com') },
+        },
+      ],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
 
 export class MainWindow {
   private mainWindow: BrowserWindow | null = null
@@ -19,6 +77,8 @@ export class MainWindow {
       ? path.join(process.resourcesPath, 'logo.png')
       : path.join(__dirname, '../public/logo.png')
 
+    setupAppMenu()
+
     this.mainWindow = new BrowserWindow({
       width: 1200,
       height: 800,
@@ -31,6 +91,7 @@ export class MainWindow {
       },
       titleBarStyle: 'hiddenInset',
       trafficLightPosition: { x: 16, y: 16 },
+      autoHideMenuBar: true,
       icon: appIcon,
       show: false,
       backgroundColor: '#F5F7FA',
@@ -47,7 +108,7 @@ export class MainWindow {
       this.mainWindow.loadURL('http://localhost:5173')
       this.mainWindow.webContents.openDevTools()
     } else {
-      this.mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'))
+      this.mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
     }
 
     // 关闭窗口时隐藏到托盘，不退出应用

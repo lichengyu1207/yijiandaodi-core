@@ -80,7 +80,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     <div className="onboarding-page">
       <div className="onboarding-card">
         <div className="onboarding-header">
-          <img src="/logo.png" alt="一鉴到底" style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover' }} />
+          <img src="./logo.png" alt="一鉴到底" style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover' }} />
           <h1>欢迎使用一鉴到底</h1>
           <p>
             本应用会在本地进行文件、剪贴板、网络、API 调用等监控，并为治理 Agent 提供自动操作能力。

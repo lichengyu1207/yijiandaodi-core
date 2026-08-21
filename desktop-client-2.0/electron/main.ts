@@ -53,6 +53,15 @@ import type { McpServerService } from './mcp/mcpServerService'
 // 依赖注入容器
 const container = new DIContainer()
 
+// 兜底：吞掉 stdout/stderr 管道断裂（EPIPE）。在 win-unpacked 目录直接运行或
+// 宿主管道提前关闭时，winston 控制台传输写日志可能触发 EPIPE，挂上 error 监听避免主进程崩溃。
+for (const stream of [process.stdout, process.stderr]) {
+  stream.on('error', (err: NodeJS.ErrnoException) => {
+    if (err && err.code === 'EPIPE') return // 管道断裂：忽略，不中断主进程
+    logger.error('[Main] 日志流写入异常', { module: 'Main' }, { code: err?.code, message: err?.message })
+  })
+}
+
 // A4 单例收敛：业务单例统一注册进容器（同一实例，行为不变），消费方一律 resolve 获取，不再直接 import 单例
 container.registerSingleton<SmartAlerter>('smartAlerter', smartAlerter)
 container.registerSingleton<ProactiveAlerter>('proactiveAlerter', proactiveAlerter)
@@ -230,12 +239,21 @@ function reloadPermissionAndApplyGating() {
 /**
  * 更新桌宠状态
  */
+// 检测中（yellow）状态短暂保持后自动恢复绿色，避免桌宠一直被卡在黄色
+let petGreenResetTimer: NodeJS.Timeout | null = null
+
 function updatePetState(state: PetState, message?: string) {
   // ===== 详细日志开始 =====
   logger.info('[桌宠状态] 更新', { module: 'PetWindow' }, {
     newState: state,
     message: message?.substring(0, 100)
   })
+
+  // 任何新状态都会取消未触发的自动恢复定时器
+  if (petGreenResetTimer) {
+    clearTimeout(petGreenResetTimer)
+    petGreenResetTimer = null
+  }
 
   const mainWindow = container.resolve<MainWindow>('mainWindow')
   const petWindow = container.resolve<PetWindow>('petWindow')
@@ -265,6 +283,11 @@ function updatePetState(state: PetState, message?: string) {
       state,
       message
     })
+  }
+
+  // 检测中（yellow）状态：保持片刻后若无新事件则自动恢复绿色
+  if (state === 'yellow') {
+    petGreenResetTimer = setTimeout(() => updatePetState('green'), 8000)
   }
 }
 
@@ -327,6 +350,11 @@ function initializeServices() {
       petWindow.setState(mood)
       petWindow.send('pet-state-change', mood)
       if (message) petWindow.showBubble(message)
+      // 检测中（yellow）状态同样走自动恢复绿色的机制
+      if (mood === 'yellow') {
+        if (petGreenResetTimer) clearTimeout(petGreenResetTimer)
+        petGreenResetTimer = setTimeout(() => updatePetState('green'), 8000)
+      }
     },
     showBubble: (text) => petWindow.showBubble(text),
   })
@@ -664,7 +692,7 @@ function initializeServices() {
     try {
       const companion = getCompanion(petSeed, petProfile)
       const character: PetCharacterInfo = {
-        name: companion.name,
+        name: '小鉴',
         species: companion.species,
         rarity: companion.rarity,
         rarityStars: RARITY_STARS[companion.rarity],

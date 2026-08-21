@@ -337,7 +337,7 @@ export default function SetupWizard({ onComplete, onLoginSuccess, hasAccount }: 
     <div className="setup-wizard-page">
       <div className="setup-wizard-card">
         <div className="setup-wizard-header">
-          <img src="/logo.png" alt="一鉴到底" className="setup-wizard-logo" />
+          <img src="./logo.png" alt="一鉴到底" className="setup-wizard-logo" />
           <h1>欢迎使用一鉴到底</h1>
           <p>首次使用需要完成以下 3 个简单设置，即可开始使用。</p>
         </div>
