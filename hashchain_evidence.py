@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 """
 一鉴到底 - 哈希链不可篡改存证系统
-
-实现原理：
-1. 每条记录的哈希包含前一条记录的哈希（链式结构）
-2. 任何修改都会导致后续所有哈希失效
-3. 支持验证整个链的完整性
+每条记录的哈希包含前一条记录的哈希，任何修改都会导致后续哈希失效
 """
 
 import os
@@ -32,7 +28,6 @@ class AuditRecord:
     risk_tags: List[str]
     decision: str
     analysis_result: str
-    # 哈希链字段
     record_hash: str  # 当前记录的哈希
     prev_hash: str    # 前一条记录的哈希
     chain_index: int   # 链中的位置
@@ -72,7 +67,6 @@ class HashChainEvidence:
             )
         ''')
         
-        # 创建索引
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_record_hash ON evidence_chain(record_hash)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_chain_index ON evidence_chain(chain_index)')
         
@@ -81,7 +75,6 @@ class HashChainEvidence:
     
     def _compute_hash(self, record: Dict) -> str:
         """计算记录哈希（包含前一条记录的哈希）"""
-        # 需要哈希的字段
         hash_data = {
             'timestamp': record['timestamp'],
             'agent_name': record['agent_name'],
@@ -94,7 +87,6 @@ class HashChainEvidence:
             'chain_index': record['chain_index']
         }
         
-        # 序列化并计算 SHA-256
         data_str = json.dumps(hash_data, sort_keys=True)
         return hashlib.sha256(data_str.encode()).hexdigest()
     
@@ -135,10 +127,8 @@ class HashChainEvidence:
     def add_record(self, record: Dict) -> Dict:
         """添加记录到哈希链"""
         
-        # 获取最后一条记录
         last_record = self.get_last_record()
         
-        # 设置前一条记录的哈希
         if last_record:
             prev_hash = last_record['record_hash']
             chain_index = last_record['chain_index'] + 1
@@ -146,14 +136,11 @@ class HashChainEvidence:
             prev_hash = '0'  # 第一条记录的前置哈希为 0
             chain_index = 1
         
-        # 更新记录
         record['prev_hash'] = prev_hash
         record['chain_index'] = chain_index
         
-        # 计算当前记录的哈希
         record['record_hash'] = self._compute_hash(record)
         
-        # 保存到数据库
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -221,7 +208,6 @@ class HashChainEvidence:
                 'chain_index': row[13]
             }
             
-            # 验证前置哈希是否匹配
             if record['prev_hash'] != prev_hash:
                 errors.append({
                     'record_id': record['id'],
@@ -231,7 +217,6 @@ class HashChainEvidence:
                     'actual': record['prev_hash']
                 })
             
-            # 验证当前记录的哈希是否正确
             computed_hash = self._compute_hash(record)
             if computed_hash != record['record_hash']:
                 errors.append({
@@ -242,7 +227,6 @@ class HashChainEvidence:
                     'actual': record['record_hash']
                 })
             
-            # 更新前置哈希
             prev_hash = record['record_hash']
         
         return {
@@ -322,21 +306,18 @@ class HashChainEvidence:
         """导出审计报告"""
         
         if record_id:
-            # 导出单条记录
             record = self.get_record_by_id(record_id)
             if not record:
                 return {'error': '记录不存在'}
             
             return self._generate_report([record], format)
         else:
-            # 导出所有记录
             records = self.get_all_records(limit=1000)
             return self._generate_report(records, format)
     
     def _generate_report(self, records: List[Dict], format: str) -> Dict:
         """生成报告"""
         
-        # 验证链完整性
         chain_status = self.verify_chain()
         
         report = {
@@ -353,17 +334,13 @@ class HashChainEvidence:
             'records': records
         }
         
-        # 统计
         for record in records:
-            # 按风险等级统计
             level = record['risk_level']
             report['summary']['by_risk_level'][level] = report['summary']['by_risk_level'].get(level, 0) + 1
             
-            # 按 Agent 统计
             agent = record['agent_name']
             report['summary']['by_agent'][agent] = report['summary']['by_agent'].get(agent, 0) + 1
             
-            # 按决策统计
             decision = record['decision']
             report['summary']['by_decision'][decision] = report['summary']['by_decision'].get(decision, 0) + 1
         
@@ -400,8 +377,6 @@ class HashChainEvidence:
         return None
 
 
-# ===== 测试 =====
-
 def test_hash_chain():
     """测试哈希链"""
     print("\n" + "="*60)
@@ -410,7 +385,6 @@ def test_hash_chain():
     
     chain = HashChainEvidence('data/test_evidence_chain.db')
     
-    # 添加测试记录
     records = [
         {
             'timestamp': datetime.now().isoformat(),
@@ -451,7 +425,6 @@ def test_hash_chain():
         print(f"     哈希: {added['record_hash'][:16]}...")
         print(f"     前置: {added['prev_hash'][:16]}...")
     
-    # 验证链
     print("\n[验证哈希链完整性]")
     status = chain.verify_chain()
     print(f"   完整性: {'✓ 有效' if status['valid'] else '✗ 无效'}")
@@ -463,7 +436,6 @@ def test_hash_chain():
         for error in status['errors']:
             print(f"     - 记录 #{error['record_id']}: {error['error']}")
     
-    # 导出报告
     print("\n[导出审计报告]")
     report = chain.export_report()
     print(f"   报告 ID: {report['report_id']}")

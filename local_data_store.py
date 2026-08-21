@@ -12,11 +12,9 @@ import hashlib
 from datetime import datetime
 from typing import List, Dict, Optional
 
-# 本地数据目录
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# 数据库路径
 DB_PATH = os.path.join(DATA_DIR, 'yijiandaodi_local.db')
 
 
@@ -35,7 +33,6 @@ class LocalDataStore:
         conn = self._get_conn()
         cursor = conn.cursor()
         
-        # 审计日志表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS audit_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,7 +53,6 @@ class LocalDataStore:
             )
         ''')
         
-        # 用户配置表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS user_config (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,7 +62,6 @@ class LocalDataStore:
             )
         ''')
         
-        # API Key 表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS api_keys (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,7 +76,6 @@ class LocalDataStore:
             )
         ''')
         
-        # 存证记录表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS evidence_records (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,8 +92,6 @@ class LocalDataStore:
         
         conn.commit()
         conn.close()
-    
-    # ===== 审计日志 =====
     
     def add_log(self, log_data: Dict) -> Dict:
         """添加审计日志"""
@@ -230,7 +222,6 @@ class LocalDataStore:
         conn = self._get_conn()
         cursor = conn.cursor()
         
-        # 构建 UPDATE 语句
         update_fields = []
         values = []
         
@@ -275,19 +266,15 @@ class LocalDataStore:
         conn = self._get_conn()
         cursor = conn.cursor()
         
-        # 总数
         cursor.execute('SELECT COUNT(*) FROM audit_logs')
         total = cursor.fetchone()[0]
         
-        # 按风险等级统计
         cursor.execute('SELECT risk_level, COUNT(*) FROM audit_logs GROUP BY risk_level')
         risk_stats = {row[0]: row[1] for row in cursor.fetchall()}
         
-        # 按决策统计
         cursor.execute('SELECT decision, COUNT(*) FROM audit_logs GROUP BY decision')
         decision_stats = {row[0]: row[1] for row in cursor.fetchall()}
         
-        # 按 Agent 统计
         cursor.execute('SELECT agent_name, COUNT(*) FROM audit_logs GROUP BY agent_name')
         agent_stats = {row[0]: row[1] for row in cursor.fetchall()}
         
@@ -299,8 +286,6 @@ class LocalDataStore:
             'by_decision': decision_stats,
             'by_agent': agent_stats
         }
-    
-    # ===== 用户配置 =====
     
     def set_config(self, key: str, value: str):
         """设置配置"""
@@ -325,8 +310,6 @@ class LocalDataStore:
         conn.close()
         
         return row[0] if row else None
-    
-    # ===== API Key =====
     
     def create_api_key(self, scopes: List[str] = None, rate_limit: int = 1000) -> Dict:
         """创建 API Key"""
@@ -395,7 +378,6 @@ class LocalDataStore:
             conn.close()
             return False
         
-        # 更新使用次数
         cursor.execute('''
             UPDATE api_keys SET used_count = used_count + 1, last_used = ?
             WHERE id = ?
@@ -405,8 +387,6 @@ class LocalDataStore:
         conn.close()
         
         return True
-    
-    # ===== 存证记录 =====
     
     def create_evidence(self, audit_hash: str, audit_log_id: int, 
                         evidence_type: str = 'json') -> Dict:
@@ -464,8 +444,6 @@ class LocalDataStore:
             }
             for row in rows
         ]
-    
-    # ===== 初始化测试数据 =====
     
     def init_test_data(self):
         """初始化测试数据（仅用于演示）"""
@@ -533,11 +511,8 @@ class LocalDataStore:
         print(f"已初始化 {len(test_logs)} 条测试数据")
 
 
-# 全局实例
 local_store = LocalDataStore()
 
-
-# ===== 使用示例 =====
 
 if __name__ == '__main__':
     print("\n" + "="*60)
@@ -546,17 +521,14 @@ if __name__ == '__main__':
     
     print(f"\n   数据库路径: {DB_PATH}")
     
-    # 初始化测试数据
     print("\n   初始化测试数据...")
     local_store.init_test_data()
     
-    # 获取日志
     print("\n   审计日志:")
     logs = local_store.get_logs(limit=5)
     for log in logs:
         print(f"   - [{log['risk_level']}] {log['agent_name']}: {log['operation_content'][:30]}")
     
-    # 获取统计
     stats = local_store.get_stats()
     print(f"\n   统计: {stats}")
     

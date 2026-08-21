@@ -1,16 +1,7 @@
 #!/usr/bin/env python
 """
 一鉴到底 - 增强版代码安全检测引擎
-
-应对AI代码生成爆发，提供更全面的安全检测能力
-
-新增功能：
-1. AI生成代码特征检测
-2. 更多安全漏洞检测（SSRF、XXE、反序列化、原型链污染等）
-3. 依赖包安全检测
-4. 代码注入检测
-5. 敏感数据泄露检测
-6. AI Agent特有风险检测
+提供 AI 代码特征检测、多种安全漏洞与敏感数据泄露检测
 """
 
 import re
@@ -250,7 +241,6 @@ class EnhancedCodeSecurityAnalyzer:
         categories = set()
         ai_related_risks = []
 
-        # 检查所有规则
         for rule in self.all_patterns:
             if re.search(rule.pattern, code, re.IGNORECASE | re.MULTILINE):
                 risks.append(rule.name)
@@ -260,7 +250,6 @@ class EnhancedCodeSecurityAnalyzer:
                 if rule.ai_related:
                     ai_related_risks.append(rule.name)
 
-        # 计算风险等级
         if risk_score >= 80:
             risk_level = 'critical'
             decision = 'block'
@@ -357,7 +346,6 @@ class EnhancedCodeSecurityAnalyzer:
         return recommendations
 
 
-# 创建全局实例
 enhanced_code_analyzer = EnhancedCodeSecurityAnalyzer()
 
 
@@ -389,7 +377,6 @@ def generate_security_report(code: str, file_path: str = '') -> Dict:
     return enhanced_code_analyzer.get_enhanced_report(code, file_path)
 
 
-# 测试代码
 if __name__ == '__main__':
     test_code = '''
 import requests

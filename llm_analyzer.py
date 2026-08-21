@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 """
 一鉴到底 - LLM 智能分析引擎
-
-支持：
-1. 内置默认模型（用户开箱即用）
-2. 用户自定义模型（用户配置 API Key）
+支持内置默认模型与用户自定义模型
 """
 
 import os
@@ -159,9 +156,7 @@ class LLMAnalyzer:
                 data = response.json()
                 text = data['choices'][0]['message']['content']
                 
-                # 尝试解析 JSON
                 try:
-                    # 提取 JSON 部分
                     if '```json' in text:
                         json_str = text.split('```json')[1].split('```')[0].strip()
                     elif '```' in text:
@@ -224,7 +219,6 @@ class LLMAnalyzer:
         
         rule_engine = RuleEngine()
         
-        # 简单的关键词检测
         if 'api_key' in prompt.lower() or 'api-key' in prompt.lower():
             return {
                 'risk_level': 'critical',
@@ -251,8 +245,6 @@ class LLMAnalyzer:
             'analysis': '未检测到明显风险。'
         }
 
-
-# ===== 使用示例 =====
 
 def test_llm_analyzer():
     """测试 LLM 分析器"""

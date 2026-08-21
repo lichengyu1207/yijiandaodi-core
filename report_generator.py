@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 """
 一鉴到底 - 审计报告生成器
-
-支持导出：
-1. JSON 格式报告（完整数据）
-2. HTML 格式报告（可视化）
-3. PDF 格式报告（打印友好）
+支持导出 JSON、HTML 格式的审计报告
 """
 
 import os
@@ -340,15 +336,12 @@ class ReportGenerator:
         }
         
         for record in records:
-            # 按风险等级统计
             level = record.get('risk_level', 'unknown')
             summary['by_risk_level'][level] = summary['by_risk_level'].get(level, 0) + 1
             
-            # 按 Agent 统计
             agent = record.get('agent_name', 'unknown')
             summary['by_agent'][agent] = summary['by_agent'].get(agent, 0) + 1
             
-            # 按决策统计
             decision = record.get('decision', 'unknown')
             summary['by_decision'][decision] = summary['by_decision'].get(decision, 0) + 1
         
@@ -391,8 +384,6 @@ class ReportGenerator:
         return filepath
 
 
-# ===== 测试 =====
-
 def test_report_generator():
     """测试报告生成器"""
     print("\n" + "="*60)
@@ -401,10 +392,8 @@ def test_report_generator():
     
     from hashchain_evidence import HashChainEvidence
     
-    # 创建哈希链
     chain = HashChainEvidence('data/test_report_chain.db')
     
-    # 添加测试记录
     for i in range(3):
         chain.add_record({
             'timestamp': datetime.now().isoformat(),
@@ -417,20 +406,16 @@ def test_report_generator():
             'decision': ['block', 'ask_user', 'allow'][i]
         })
     
-    # 获取记录和链状态
     records = chain.get_all_records()
     chain_status = chain.verify_chain()
     
-    # 创建报告生成器
     generator = ReportGenerator()
     
-    # 生成 JSON 报告
     print("\n[生成 JSON 报告]")
     json_report = generator.generate_json_report(records, chain_status)
     json_path = generator.save_report(json_report, 'data/report.json', 'json')
     print(f"   ✓ 已保存: {json_path}")
     
-    # 生成 HTML 报告
     print("\n[生成 HTML 报告]")
     html_report = generator.generate_html_report(records, chain_status)
     html_path = generator.save_report(html_report, 'data/report.html', 'html')

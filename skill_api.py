@@ -1,8 +1,6 @@
 """
 一鉴到底 Skill 集成模块
-
-将 .trae/skills 中的 14 个 Skill 集成到沙箱 API 中
-支持本地调用和对外开放
+将 .trae/skills 中的 Skill 集成到沙箱 API，支持本地调用与对外开放
 """
 
 import os
@@ -14,7 +12,6 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 
-# 添加 skills 目录到路径
 SKILLS_PATH = os.path.join(os.path.dirname(__file__), '.trae', 'skills')
 if SKILLS_PATH not in sys.path:
     sys.path.insert(0, SKILLS_PATH)
@@ -49,7 +46,6 @@ class SkillResponse:
 class SkillRegistry:
     """Skill 注册中心"""
     
-    # 可用的 Skill 列表
     AVAILABLE_SKILLS = {
         'ass-gateway': {
             'name': 'ASS 安全网关',
@@ -156,11 +152,9 @@ class SkillRegistry:
         if skill_id in self.loaded_skills:
             return self.loaded_skills[skill_id]
         
-        # 转换 skill_id 为模块名
         module_name = skill_id.replace('-', '_')
         
         try:
-            # 尝试导入
             module = __import__(f'skills.{module_name}', fromlist=[''])
             self.loaded_skills[skill_id] = module
             return module
@@ -179,12 +173,10 @@ class SkillRegistry:
         }
         return builtin_skills.get(skill_id, self._default_skill_impl)
     
-    # 内置 Skill 实现
     def _ass_gateway_impl(self, action: str, params: Dict) -> Dict:
         """ASS 安全网关实现"""
         if action == 'inspect':
             input_data = params.get('input', '')
-            # 检测危险模式
             dangerous_patterns = ['<script>', 'javascript:', 'onerror=', 'eval(']
             risks = [p for p in dangerous_patterns if p in input_data.lower()]
             return {
@@ -195,7 +187,6 @@ class SkillRegistry:
         
         elif action == 'sanitize':
             input_data = params.get('input', '')
-            # 简单净化
             import html
             sanitized = html.escape(input_data)
             return {'sanitized': sanitized}
@@ -216,7 +207,6 @@ class SkillRegistry:
         """代码风险检测实现"""
         if action == 'analyze':
             code = params.get('code', '')
-            # 检测危险函数
             dangerous_funcs = ['eval', 'exec', 'compile', 'os.system', 'subprocess']
             risks = [f for f in dangerous_funcs if f in code]
             return {
@@ -234,7 +224,6 @@ class SkillRegistry:
             prev_hash = params.get('prev_hash', '0' * 64)
             timestamp = datetime.now().isoformat()
             
-            # 计算哈希
             content = json.dumps(data, sort_keys=True) + prev_hash + timestamp
             current_hash = hashlib.sha256(content.encode()).hexdigest()
             
@@ -308,7 +297,6 @@ class SkillAPI:
     
     def execute(self, request: SkillRequest) -> SkillResponse:
         """执行 Skill"""
-        # 记录调用
         call_record = {
             'skill_id': request.skill_id,
             'action': request.action,
@@ -316,7 +304,6 @@ class SkillAPI:
             'user_id': request.user_id
         }
         
-        # 检查 Skill 是否存在
         skill_info = self.registry.get_skill_info(request.skill_id)
         if not skill_info:
             return SkillResponse(
@@ -326,7 +313,6 @@ class SkillAPI:
                 error=f'Skill not found: {request.skill_id}'
             )
         
-        # 检查 action 是否有效
         if request.action not in skill_info['actions']:
             return SkillResponse(
                 success=False,
@@ -336,7 +322,6 @@ class SkillAPI:
             )
         
         try:
-            # 加载并执行 Skill
             skill_module = self.registry.load_skill(request.skill_id)
             
             if callable(skill_module):
@@ -349,7 +334,6 @@ class SkillAPI:
                 else:
                     result = {'message': 'Action executed'}
             
-            # 生成审计哈希
             audit_hash = hashlib.sha256(
                 json.dumps({
                     'skill_id': request.skill_id,
@@ -359,7 +343,6 @@ class SkillAPI:
                 }, sort_keys=True).encode()
             ).hexdigest()
             
-            # 记录成功调用
             call_record['success'] = True
             call_record['audit_hash'] = audit_hash
             self.call_log.append(call_record)
@@ -397,12 +380,10 @@ class SkillAPI:
         }
 
 
-# 创建全局实例
 skill_registry = SkillRegistry()
 skill_api = SkillAPI()
 
 
-# 对外开放的 API 接口
 def call_skill(skill_id: str, action: str, params: Dict, user_id: str = None, api_key: str = None) -> Dict:
     """
     调用 Skill（对外开放接口）
@@ -444,19 +425,16 @@ def get_skill_info(skill_id: str) -> Optional[Dict]:
     return skill_registry.get_skill_info(skill_id)
 
 
-# 测试
 if __name__ == '__main__':
     print("=" * 60)
     print("  一鉴到底 Skill API 测试")
     print("=" * 60)
     
-    # 列出所有 Skill
     skills = list_available_skills()
     print(f"\n可用 Skill: {len(skills)} 个")
     for skill in skills[:5]:
         print(f"  - {skill['id']}: {skill['name']}")
     
-    # 测试调用
     print("\n测试调用 ass-gateway.inspect:")
     result = call_skill(
         'ass-gateway',
@@ -481,7 +459,6 @@ if __name__ == '__main__':
     )
     print(f"  结果: {result}")
     
-    # 统计
     print("\n" + "=" * 60)
     stats = skill_api.get_stats()
     print(f"  调用统计: {stats}")

@@ -1,14 +1,7 @@
 #!/usr/bin/env python
 """
 一鉴到底 - 实时监控与拦截系统
-
-像 360 杀毒软件一样，实时监控 AI Agent 的操作，并在执行前拦截。
-
-监控目标：
-- 文件修改（代码生成、配置修改）
-- 命令执行（终端命令）
-- 网络请求（API 调用、数据上传）
-- 密钥泄露（硬编码密钥检测）
+实时监控 AI Agent 操作（文件修改、命令执行、密钥泄露），并在执行前拦截
 """
 
 import os
@@ -24,7 +17,6 @@ from typing import Dict, List, Optional, Callable
 from dataclasses import dataclass, asdict
 from enum import Enum
 
-# 导入本地数据存储
 from local_data_store import local_store
 
 
@@ -208,7 +200,6 @@ class RuleEngine:
                     risk_score = 70  # 中等风险，需要用户确认
                     break
 
-        # 检查内容中的密钥
         if content:
             for pattern in self.SECRET_PATTERNS:
                 matches = re.findall(pattern, content)
@@ -227,7 +218,6 @@ class RuleEngine:
         risks = []
         risk_score = 0
         
-        # 检查危险命令
         for pattern in self.DANGEROUS_COMMANDS:
             if re.search(pattern, command, re.IGNORECASE):
                 risks.append('危险命令')
@@ -251,7 +241,6 @@ class RuleEngine:
                 risks.append(f'硬编码密钥 ({len(matches)} 个)')
                 risk_score += 90 * len(matches)  # 提高到 90 分，确保 critical
 
-        # 检查危险函数调用中的命令
         dangerous_function_patterns = [
             r'subprocess\.(?:call|run|Popen)\s*\(\s*["\']([^"\']+)["\']',
             r'os\.system\s*\(\s*["\']([^"\']+)["\']',
@@ -260,7 +249,6 @@ class RuleEngine:
         for pattern in dangerous_function_patterns:
             matches = re.findall(pattern, code)
             for cmd in matches:
-                # 检查命令是否包含危险模式
                 cmd_analysis = self.analyze_command(cmd)
                 if cmd_analysis['risk_score'] > 0:
                     risks.append(f'危险命令: {cmd[:20]}...')
@@ -496,7 +484,6 @@ class Interceptor:
                 
                 self.pending_operations.remove(op)
                 
-                # 更新数据库
                 local_store.update_log(operation_id, {
                     'decision': op.decision,
                     'confirmed': True
@@ -516,12 +503,10 @@ class RealtimeMonitor:
         self.running = False
         self.operation_id = 0
         
-        # 监控的目录
         self.watch_paths = [
             os.getcwd(),  # 当前工作目录
         ]
         
-        # AI Agent 进程名
         self.agent_processes = [
             'cursor',
             'code',
@@ -543,7 +528,6 @@ class RealtimeMonitor:
         """创建操作"""
         op_id = self.generate_operation_id()
         
-        # 生成审计哈希
         audit_data = json.dumps({
             'agent': agent_name,
             'operation': operation_content,
@@ -574,10 +558,8 @@ class RealtimeMonitor:
     
     def intercept_file_modify(self, agent_name: str, file_path: str, content: str = None) -> Operation:
         """拦截文件修改"""
-        # 分析风险
         analysis = self.rule_engine.analyze_file_modify(file_path, content)
         
-        # 创建操作
         operation = self.create_operation(
             agent_name=agent_name,
             operation_type='file_modify',
@@ -591,20 +573,16 @@ class RealtimeMonitor:
             })
         )
         
-        # 决策
         decision = self.interceptor.decide(operation)
         
-        # 记录到数据库
         local_store.add_log(asdict(operation))
         
         return operation
     
     def intercept_command(self, agent_name: str, command: str) -> Operation:
         """拦截命令执行"""
-        # 分析风险
         analysis = self.rule_engine.analyze_command(command)
         
-        # 创建操作
         operation = self.create_operation(
             agent_name=agent_name,
             operation_type='command_execute',
@@ -618,20 +596,16 @@ class RealtimeMonitor:
             })
         )
         
-        # 决策
         decision = self.interceptor.decide(operation)
         
-        # 记录到数据库
         local_store.add_log(asdict(operation))
         
         return operation
     
     def intercept_code_generate(self, agent_name: str, code: str) -> Operation:
         """拦截代码生成"""
-        # 分析风险
         analysis = self.rule_engine.analyze_code_content(code)
         
-        # 创建操作
         operation = self.create_operation(
             agent_name=agent_name,
             operation_type='code_generate',
@@ -645,10 +619,8 @@ class RealtimeMonitor:
             })
         )
         
-        # 决策
         decision = self.interceptor.decide(operation)
         
-        # 记录到数据库
         local_store.add_log(asdict(operation))
         
         return operation
@@ -666,19 +638,15 @@ class RealtimeMonitor:
         print("\n✓ 实时监控已停止")
 
 
-# ===== 测试场景 =====
-
 def test_intercept():
     """测试拦截功能"""
     print("\n" + "="*60)
     print("   实时拦截测试")
     print("="*60)
     
-    # 创建监控器和拦截器
     interceptor = Interceptor(auto_block_critical=True)
     monitor = RealtimeMonitor(interceptor)
     
-    # 添加回调函数（模拟桌面端通知）
     def on_operation(op: Operation):
         print(f"\n[拦截] {op.agent_name}: {op.operation_content}")
         print(f"   风险: {op.risk_level} ({op.risk_score} 分)")
@@ -686,7 +654,6 @@ def test_intercept():
     
     interceptor.add_callback(on_operation)
     
-    # 启动监控
     monitor.start()
     
     # 测试场景 1: 硬编码密钥

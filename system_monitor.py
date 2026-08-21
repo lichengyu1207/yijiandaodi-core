@@ -1,14 +1,7 @@
 #!/usr/bin/env python
 """
 一鉴到底 - 系统级文件监控
-
-像 360 一样实时监控文件系统，检测 AI Agent 的操作。
-
-功能：
-- 实时监控文件修改
-- 检测 AI Agent 进程
-- 拦截风险操作
-- 弹窗通知用户
+实时监控文件系统，检测 AI Agent 操作并拦截风险操作、弹窗通知用户
 """
 
 import os
@@ -23,7 +16,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Set
 
-# 尝试导入 watchdog
 try:
     from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler, FileModifiedEvent, FileCreatedEvent
@@ -33,7 +25,6 @@ except ImportError:
     print("警告: watchdog 未安装，文件监控功能受限")
     print("安装: pip install watchdog")
 
-# 导入本地模块
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from local_data_store import local_store
 from realtime_interceptor import RealtimeMonitor, Interceptor, Operation, RiskLevel, Decision
@@ -98,7 +89,6 @@ class AIProcessDetector:
     @classmethod
     def is_ai_process(cls, file_path: str) -> tuple:
         """判断文件是否属于 AI 进程"""
-        # 检查路径中是否包含 AI 应用名
         for process_key, process_name in cls.AI_PROCESSES.items():
             if process_key in file_path.lower():
                 return True, process_name
@@ -128,14 +118,12 @@ class FileChangeHandler(FileSystemEventHandler if WATCHDOG_AVAILABLE else object
 
         self.recent_changes.add(file_path)
 
-        # 冷却后移除
         def remove_from_cache():
             time.sleep(self.cooldown)
             self.recent_changes.discard(file_path)
 
         threading.Thread(target=remove_from_cache, daemon=True).start()
 
-        # 检测是否是 AI 进程的修改
         is_ai, agent_name = AIProcessDetector.is_ai_process(file_path)
 
         if is_ai:
@@ -147,10 +135,8 @@ class FileChangeHandler(FileSystemEventHandler if WATCHDOG_AVAILABLE else object
             except:
                 pass
 
-            # 拦截操作
             operation = self.monitor.intercept_file_modify(agent_name, file_path, content)
 
-            # 显示通知
             self.show_notification(operation)
 
     def on_created(self, event):
@@ -160,7 +146,6 @@ class FileChangeHandler(FileSystemEventHandler if WATCHDOG_AVAILABLE else object
 
         file_path = event.src_path
 
-        # 检测是否是 AI 进程
         is_ai, agent_name = AIProcessDetector.is_ai_process(file_path)
 
         if is_ai:
@@ -176,7 +161,6 @@ class FileChangeHandler(FileSystemEventHandler if WATCHDOG_AVAILABLE else object
                 analysis_result='新建文件，请关注内容'
             )
 
-            # 记录
             from dataclasses import asdict
             local_store.add_log(asdict(operation))
 
@@ -191,7 +175,6 @@ class FileChangeHandler(FileSystemEventHandler if WATCHDOG_AVAILABLE else object
         else:
             return
 
-        # 发送系统通知
         try:
             if platform.system() == 'Windows':
                 # Windows 通知
@@ -234,7 +217,6 @@ class SystemMonitor:
         print("   一鉴到底 - 系统级文件监控")
         print("="*60)
 
-        # 检测当前 AI 进程
         print("\n[检测] 正在检测 AI Agent 进程...")
         ai_processes = AIProcessDetector.get_ai_processes()
 
@@ -246,7 +228,6 @@ class SystemMonitor:
             print("   未检测到 AI 进程")
             print("   提示: 启动 Cursor/VS Code 后会自动检测")
 
-        # 启动文件监控
         if WATCHDOG_AVAILABLE:
             print("\n[监控] 启动文件监控...")
             self.observer = Observer()
@@ -275,7 +256,6 @@ class SystemMonitor:
         print("\n   按 Ctrl+C 停止监控")
         print("="*60)
 
-        # 添加回调 - 打印拦截信息
         def on_intercept(op: Operation):
             print(f"\n[拦截] {op.agent_name}: {op.operation_content}")
             print(f"   风险: {op.risk_level} ({op.risk_score} 分)")
@@ -303,7 +283,6 @@ class SystemMonitor:
         except KeyboardInterrupt:
             self.stop()
 
-        # 显示统计
         print("\n" + "="*60)
         print("   监控统计")
         print("="*60)
@@ -314,7 +293,6 @@ class SystemMonitor:
 
 def main():
     """主函数"""
-    # 默认监控当前目录
     watch_paths = [
         os.getcwd(),
     ]

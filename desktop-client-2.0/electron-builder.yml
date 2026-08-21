@@ -59,7 +59,8 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: ${productName}
-  runAfterFinish: true
+  # false：安装完成不自动运行，减少杀毒启发式“安装后立即执行”误报；用户需从桌面/开始菜单手动启动
+  runAfterFinish: false
 
 # 自动更新：electron-updater 从 GitHub Releases 拉取 latest.yml
 # 真实发布仓库见 git remote（lichengyu1207/yijiandaodi-core）
@@ -69,5 +70,6 @@ publish:
   repo: yijiandaodi-core
 
 # 优化配置
-compression: maximum
+# 使用 normal 而非 maximum：maximum(LZMA/NFCI) 高压缩易触发杀毒启发式误报
+compression: normal
 asar: true

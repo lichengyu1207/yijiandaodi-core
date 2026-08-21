@@ -2,21 +2,6 @@
 """
 一鉴到底 - 沙箱 API 服务
 集成 Grok 迷你沙箱核心，提供 AI Agent 安全运行环境
-
-API 端点：
-- POST /api/v1/sandbox/start      - 启动沙箱会话
-- POST /api/v1/sandbox/execute     - 执行操作（拦截 → 分析 → 决策）
-- POST /api/v1/sandbox/respond     - 用户响应待确认操作
-- GET  /api/v1/sandbox/pending     - 获取待确认操作
-- GET  /api/v1/sandbox/logs        - 获取操作日志
-- GET  /api/v1/sandbox/stats       - 获取统计信息
-- POST /api/v1/keys/generate       - 生成 API Key
-- GET  /api/v1/keys/list           - 列出所有 Key
-
-安全机制：
-- API Key 格式：yjd_1_{secret}
-- 签名算法：HMAC-SHA256
-- 防重放：nonce + timestamp
 """
 
 import os
@@ -36,13 +21,10 @@ if hasattr(sys.stdout, 'reconfigure'):
     except Exception:
         pass
 
-# 导入本地数据存储
 from local_data_store import local_store
 
-# 添加模块路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'grok', 'grok-python'))
 
-# Skill 模块
 try:
     from skill_api import (
         skill_registry,
@@ -57,7 +39,6 @@ except ImportError as e:
     print(f"[警告] Skill 模块导入失败: {e}")
     SKILL_API_AVAILABLE = False
 
-# 沙箱模块
 try:
     from xai_grok_sandbox import (
         MiniSandbox,
@@ -87,18 +68,14 @@ except ImportError as e:
     CRYPTO_AVAILABLE = False
     APIKeyManager = RequestVerifier = RequestSigner = None
 
-# 配置
 API_PORT = int(os.environ.get('SANDBOX_PORT', 9092))
 DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 
-# 全局实例
 sandbox: MiniSandbox = None
 key_manager: APIKeyManager = None
 request_verifier: RequestVerifier = None
-require_auth = True  # 是否需要认证
+require_auth = True
 
-
-# ==================== API 处理器 ====================
 
 class SandboxAPIHandler(BaseHTTPRequestHandler):
     """沙箱 API 处理器"""
@@ -118,7 +95,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
         if not require_auth or not CRYPTO_AVAILABLE:
             return True, None, ""
         
-        # 获取认证头
         api_key = self.headers.get('X-API-Key', '')
         signature = self.headers.get('X-Signature', '')
         timestamp = self.headers.get('X-Timestamp', '')
@@ -127,7 +103,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
         if not all([api_key, signature, timestamp, nonce]):
             return False, None, "Missing authentication headers"
         
-        # 读取 body
         content_length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else ""
         
@@ -185,12 +160,10 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
-        # Key 管理端点（需要认证）
         if path == '/api/v1/keys/generate':
             self.handle_generate_key()
             return
 
-        # Skill 调用端点（对外开放）
         if path == '/api/v1/skills/call':
             self.handle_call_skill()
             return
@@ -205,7 +178,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
                 self.handle_skill_action(skill_id, action)
                 return
 
-        # 其他端点需要认证
         if require_auth and CRYPTO_AVAILABLE:
             valid, key, error = self.verify_auth()
             if not valid:
@@ -253,10 +225,8 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             data = json.loads(body.decode('utf-8'))
             
-            # 创建沙箱
             sandbox = MiniSandbox(deepseek_api_key=DEEPSEEK_API_KEY)
             
-            # 启动请求
             request = SandboxStartRequest(
                 environment_id=data.get('environment_id'),
                 repository=data.get('repository'),
@@ -290,7 +260,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             data = json.loads(body.decode('utf-8'))
             
-            # 创建操作对象
             operation = InterceptedOperation(
                 agent_name=data.get('agent', 'Unknown'),
                 operation_type=data.get('operation_type', 'unknown'),
@@ -300,7 +269,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
                 parameters=data.get('parameters', {})
             )
             
-            # 执行操作（拦截 → 分析 → 决策 → 日志）
             result = sandbox.execute(operation)
             
             self.send_json({
@@ -378,7 +346,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
         risk_level = params.get('risk_level', [None])[0]
         decision = params.get('decision', [None])[0]
         
-        # 从本地数据库读取
         logs = local_store.get_logs(limit, agent, risk_level, decision)
         
         self.send_json({
@@ -412,7 +379,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
             
             user_response = data.get('response', 'confirmed')
             
-            # 更新数据库
             success = local_store.confirm_log(log_id, user_response)
             
             if success:
@@ -437,7 +403,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
             return
         
         try:
-            # 更新决策为 block
             success = local_store.update_log(log_id, {'decision': 'block'})
             
             if success:
@@ -462,7 +427,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
             return
         
         try:
-            # 更新决策为 allow
             success = local_store.update_log(log_id, {'decision': 'allow'})
             
             if success:
@@ -477,8 +441,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
         except Exception as e:
             self.send_json({'success': False, 'error': str(e)}, 500)
     
-    # ==================== Key 管理 ====================
-    
     def handle_generate_key(self):
         """生成 API Key"""
         global key_manager
@@ -492,7 +454,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length) if content_length > 0 else b'{}'
             data = json.loads(body.decode('utf-8'))
             
-            # 生成 Key
             key = key_manager.generate_key(
                 scopes=data.get('scopes', ['*']),
                 expires_days=data.get('expires_days'),
@@ -528,8 +489,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
             'count': len(keys),
             'keys': keys
         })
-
-    # ==================== Skill API (对外开放) ====================
 
     def handle_list_skills(self):
         """列出所有可用 Skill"""
@@ -585,7 +544,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
                 self.send_json({'error': 'Missing skill_id or action'}, 400)
                 return
 
-            # 调用 Skill
             result = call_skill(skill_id, action, params, user_id, api_key)
 
             self.send_json(result)
@@ -607,7 +565,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
             user_id = self.headers.get('X-User-ID')
             api_key = self.headers.get('X-API-Key')
 
-            # 调用 Skill
             result = call_skill(skill_id, action, params, user_id, api_key)
 
             self.send_json(result)
@@ -618,8 +575,6 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         """自定义日志"""
         print(f"[{datetime.now().strftime('%H:%M:%S')}] {format % args}")
-    
-    # ==================== 哈希链存证 API ====================
     
     def handle_get_evidence_records(self, parsed):
         """获取存证记录"""
@@ -689,13 +644,10 @@ class SandboxAPIHandler(BaseHTTPRequestHandler):
             self.send_json({'success': False, 'error': str(e)}, 500)
 
 
-# ==================== 启动服务 ====================
-
 def run_server():
     """运行沙箱 API 服务"""
     global key_manager, request_verifier
     
-    # 初始化密码学模块
     if CRYPTO_AVAILABLE:
         key_manager = APIKeyManager()
         request_verifier = RequestVerifier(key_manager)
@@ -705,7 +657,6 @@ def run_server():
     else:
         print("\n   ✗ 密码学模块未加载，认证已禁用")
 
-    # 初始化 Skill 模块
     if SKILL_API_AVAILABLE:
         print("   ✓ Skill API 已加载")
         print(f"   ✓ 可用 Skill: {len(list_available_skills())} 个")
