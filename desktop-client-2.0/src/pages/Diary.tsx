@@ -29,6 +29,13 @@ function toDayKey(iso: string): string {
   return iso.slice(0, 10)
 }
 
+function localDayKey(offset: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - offset)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
 function riskBorder(level: string): React.CSSProperties {
   const c = RISK_COLORS[level] || '#8b949e'
   return { background: c + '20', color: c }
@@ -38,6 +45,7 @@ export default function Diary() {
   const [records, setRecords] = useState<LongTermMemory[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [today, setToday] = useState(() => localDayKey(0))
 
   const longTermApi = LongTermMemoryApi.getInstance()
 
@@ -54,8 +62,11 @@ export default function Diary() {
   }
 
   useEffect(() => {
+    // 首次加载 + 每天午夜(00:00)日期翻转时自动刷新，让"今天"按自然日翻页
     load()
-  }, [])
+    const id = setInterval(() => setToday(localDayKey(0)), 30000)
+    return () => clearInterval(id)
+  }, [today])
 
   const groups = useMemo(() => {
     const filtered = searchTerm
@@ -172,8 +183,13 @@ export default function Diary() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 16, fontWeight: 600 }}>{day.date}</span>
+                {day.date === today ? (
+                  <span style={{ fontSize: 11, padding: '1px 8px', borderRadius: 999, background: 'var(--primary-color)', color: '#fff' }}>今天</span>
+                ) : day.date === localDayKey(1) ? (
+                  <span style={{ fontSize: 11, padding: '1px 8px', borderRadius: 999, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>昨天</span>
+                ) : null}
                 <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                   {WEEKDAYS[new Date(day.date + 'T00:00:00').getDay()]} · {day.items.length} 条
                 </span>

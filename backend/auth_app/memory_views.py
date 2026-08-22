@@ -7,6 +7,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.core.cache import cache
@@ -85,6 +86,13 @@ class ShortTermMemoryViewSet(viewsets.ModelViewSet):
             'total': queryset.count()
         })
 
+class LongTermMemoryLimitOffsetPagination(LimitOffsetPagination):
+    """长期记忆列表分页：按前端 limit 请求，支持近 30 天全量拉取"""
+    default_limit = 20
+    max_limit = 10000
+    limit_query_param = 'limit'
+    offset_query_param = 'offset'
+
 
 class LongTermMemoryViewSet(viewsets.ModelViewSet):
     """
@@ -97,6 +105,7 @@ class LongTermMemoryViewSet(viewsets.ModelViewSet):
     """
 
     queryset = LongTermMemory.objects.all()
+    pagination_class = LongTermMemoryLimitOffsetPagination
     permission_classes = [IsAuthenticated]
     filterset_fields = ['agent_id', 'operation_type', 'risk_level', 'decision']
     search_fields = ['operation_content']

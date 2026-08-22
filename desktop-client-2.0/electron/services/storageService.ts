@@ -45,12 +45,12 @@ export class StorageService {
       }
 
       operations.push(newOperation)
-      logger.info('[StorageService] 新增记录', { module: 'StorageService' }, { newOperationId: newOperation.id })
+      logger.info('[StorageService] 新增记录', { module: 'StorageService' }, { newOperationId: operation.id })
 
-      // 只保留最近100条记录
-      if (operations.length > 100) {
-        operations = operations.slice(-100)
-        logger.info('[StorageService] 保留最近100条记录', { module: 'StorageService' })
+      // 保留最近5000条记录（覆盖近30天级别，避免过早丢掉同一天内的记录）
+      if (operations.length > 5000) {
+        operations = operations.slice(-5000)
+        logger.info('[StorageService] 保留最近5000条记录', { module: 'StorageService' })
       }
 
       fs.writeFileSync(this.operationsFile, JSON.stringify(operations, null, 2))

@@ -44,11 +44,8 @@ export class APIConfig {
   getWebBaseURL(): string {
     const stored = localStorage.getItem('web_base_url');
     if (stored) return stored.replace(/\/+$/, '');
-    const api = this.getBaseURL();
-    if (api.includes('localhost:8000') || api.includes('127.0.0.1:8000')) {
-      return 'http://localhost:3000';
-    }
-    return api.replace(/\/+$/, '');
+    // 生产默认官网地址；开发联调可用 localStorage.web_base_url 覆盖为 http://localhost:3000
+    return 'https://yijiandaodi.com';
   }
 
   setBaseURL(url: string): void {
@@ -89,9 +86,9 @@ export class APIConfig {
       this.baseURL = 'http://localhost:8000';
       return 'http://localhost:8000';
     } else {
-      // 生产后端地址（需要替换为实际域名）
-      this.baseURL = 'https://your-production-domain.com';
-      return 'https://your-production-domain.com';
+      // 生产后端地址
+      this.baseURL = 'https://yijiandaodi.com';
+      return 'https://yijiandaodi.com';
     }
   }
 

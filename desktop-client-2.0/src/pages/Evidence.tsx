@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { LongTermMemoryApi, LongTermMemory } from '../services/memoryApi'
+import DaySwitcher from '../components/DaySwitcher'
 import './Evidence.css'
 
 interface ChainStatus {
@@ -21,6 +22,7 @@ export default function Evidence() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'critical'>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [dayFilter, setDayFilter] = useState('')
 
   const longTermApi = LongTermMemoryApi.getInstance()
 
@@ -119,7 +121,19 @@ export default function Evidence() {
     }
   }
 
+  const dayOfTs = (createdAt: string) => {
+    const d = new Date(createdAt)
+    if (Number.isNaN(d.getTime())) return ''
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+  }
+
   const filteredRecords = records.filter(record => {
+    // 按天筛选
+    if (dayFilter !== '' && dayOfTs(record.created_at) !== dayFilter) {
+      return false
+    }
+
     // 风险等级筛选
     if (filter !== 'all' && record.risk_level !== filter) {
       return false
@@ -193,7 +207,8 @@ export default function Evidence() {
         <h3 className="section-title">存证记录 ({filteredRecords.length})</h3>
 
         {/* 搜索和筛选 */}
-        <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
+        <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <DaySwitcher value={dayFilter} onChange={setDayFilter} />
           <input
             type="text"
             placeholder="搜索 Agent、操作内容..."
@@ -201,6 +216,7 @@ export default function Evidence() {
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
               flex: 1,
+              minWidth: 160,
               padding: '8px 12px',
               border: '1px solid var(--border-primary)',
               borderRadius: 6,
@@ -229,7 +245,7 @@ export default function Evidence() {
         {loading ? (
           <div className="loading">加载中...</div>
         ) : filteredRecords.length === 0 ? (
-          <div className="empty">暂无存证记录</div>
+          <div className="empty">{dayFilter === '' ? '暂无存证记录' : '当天暂无存证记录'}</div>
         ) : (
           <div className="records-list">
             {filteredRecords.map((record) => (

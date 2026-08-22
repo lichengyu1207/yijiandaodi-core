@@ -1,6 +1,6 @@
 {
   "name": "yijiandaodi-desktop",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "一鉴到底 - 本地运行的 AI 操作行为校验工具",
   "main": "dist-electron/main.js",
   "author": "一鉴到底团队",
@@ -31,7 +31,6 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@esbuild/win32-x64": "^0.28.2",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@mui/icons-material": "^9.3.1",
     "@mui/material": "^9.3.1",
@@ -41,7 +40,6 @@
     "cors": "^2.8.6",
     "date-fns": "^2.30.0",
     "electron-updater": "^6.1.7",
-    "esbuild": "^0.28.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.1",
     "helmet": "^8.3.0",

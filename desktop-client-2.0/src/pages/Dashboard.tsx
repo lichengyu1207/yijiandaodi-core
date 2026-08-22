@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { authService } from '../services/authService'
 import { ShortTermMemoryApi, ShortTermMemory } from '../services/memoryApi'
 import MemoryStatCard from '../components/MemoryStatCard'
 import RiskDistributionChart from '../components/RiskDistributionChart'
 import DateRangePicker, { DateRangeValue } from '../components/DateRangePicker'
+import DaySwitcher from '../components/DaySwitcher'
 import { statsService, RegionStatItem } from '../services/statsService'
 
 interface AuditRecord {
@@ -44,11 +45,15 @@ export default function Dashboard() {
   const [records, setRecords] = useState<AuditRecord[]>([])
   const [stats, setStats] = useState({ total: 0, success: 0, warning: 0, error: 0 })
   const [filter, setFilter] = useState<'all' | 'success' | 'warning' | 'error'>('all')
+  const [dayFilter, setDayFilter] = useState('')
   const [selectedRecord, setSelectedRecord] = useState<AuditRecord | null>(null)
   const [currentUser, setCurrentUser] = useState<UserInfo | null>(null)
 
   // ===== 新增：短期记忆状态 =====
   const [memories, setMemories] = useState<ShortTermMemory[]>([]);
+
+  // 审计流轮询观测：记录每次拉到的条数与最新时间戳，用于区分「到达上限」还是「没有新数据」
+  const pollObsRef = useRef<{ count: number | null; newest: number | null }>({ count: null, newest: null });
   const [memorySyncStatus, setMemorySyncStatus] = useState({
     isSyncing: false,
     lastSyncTime: new Date()
@@ -207,6 +212,25 @@ export default function Dashboard() {
 
   // 从本地IPC或沙箱API获取记录
   useEffect(() => {
+    // 轮询观测助手：对比条数上限与最新时间推进，判断「达上限」还是「无新数据」
+    const logPollObs = (src: string, list: any[]) => {
+      const ts = list.map((r: any) => new Date(r.timestamp).getTime()).filter((t: number) => !Number.isNaN(t))
+      const newest = ts.length ? Math.max(...ts) : null
+      const prev = pollObsRef.current
+      const hadNew = prev.newest != null && newest != null && newest !== prev.newest
+      const hitLimit = list.length >= 5000
+      console.log(
+        `${src} 拉取=${list.length}条 达上限5000=${hitLimit} ` +
+          `最新=${newest ? new Date(newest).toLocaleString() : '无'} ` +
+          (prev.count == null
+            ? '(首次)'
+            : hadNew
+              ? '(有新数据，正在推进)'
+              : '(无新数据：要么没有新产出，要么已到上限被截断)')
+      )
+      pollObsRef.current = { count: list.length, newest }
+    }
+
     const fetchRecords = async () => {
       try {
         // 优先从本地IPC获取操作记录
@@ -231,6 +255,8 @@ export default function Dashboard() {
               }))
 
               setRecords(mappedRecords)
+
+              logPollObs('[审计流·本地]', mappedRecords)
 
               const total = mappedRecords.length
               const success = mappedRecords.filter((r: AuditRecord) => r.risk_level === 'low').length
@@ -286,6 +312,8 @@ export default function Dashboard() {
 
             setRecords(mappedRecords)
 
+            logPollObs('[审计流·沙箱]', mappedRecords)
+
             const total = mappedRecords.length
             const success = mappedRecords.filter((r: AuditRecord) => r.risk_level === 'low').length
             const warning = mappedRecords.filter((r: AuditRecord) => r.risk_level === 'medium').length
@@ -318,7 +346,17 @@ export default function Dashboard() {
     if (filter === 'warning') return record.risk_level === 'medium'
     if (filter === 'error') return ['high', 'critical'].includes(record.risk_level)
     return true
+  }).filter(record => {
+    if (dayFilter === '') return true
+    return dayOfTs(record.timestamp) === dayFilter
   })
+  
+  const dayOfTs = (timestamp: string) => {
+    const d = new Date(timestamp)
+    if (Number.isNaN(d.getTime())) return ''
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+  }
   
   const formatTime = (timestamp: string) => {
     const d = new Date(timestamp)
@@ -502,7 +540,8 @@ export default function Dashboard() {
       <div className="card" style={{ height: 440, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div className="card-header">
           <div className="card-title">实时审计流</div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <DaySwitcher value={dayFilter} onChange={setDayFilter} />
             <button className={`filter-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>全部</button>
             <button className={`filter-btn ${filter === 'success' ? 'active' : ''}`} onClick={() => setFilter('success')}>正常</button>
             <button className={`filter-btn ${filter === 'warning' ? 'active' : ''}`} onClick={() => setFilter('warning')}>风险</button>
@@ -517,7 +556,7 @@ export default function Dashboard() {
               padding: 48, 
               color: 'var(--text-tertiary)' 
             }}>
-              暂无审计记录
+              {dayFilter === '' ? '暂无审计记录' : '当天暂无审计记录'}
             </div>
           ) : (
             filteredRecords.map(record => (
